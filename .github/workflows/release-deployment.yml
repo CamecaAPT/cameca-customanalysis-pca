@@ -19,5 +19,6 @@ jobs:
       build-configuration: Release
       dotnet-version: ${{ vars.DOTNET_VERSION }}
       azure-artifact-feed: ${{ vars.FEED_EXTENSION_DEVELOPMENT }}
+      package-csproj: ./Cameca.CustomAnalysis.Pca/Cameca.CustomAnalysis.Pca.csproj
     secrets:
       azure-package-read-write: ${{ secrets.AZURE_PACKAGE_READ_WRITE }}
