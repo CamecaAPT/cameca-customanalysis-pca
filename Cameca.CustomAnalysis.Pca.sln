@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.3.32825.248
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cameca.CustomAnalysis.Pca", "Cameca.CustomAnalysis.Pca\Cameca.CustomAnalysis.Pca.csproj", "{1F495DE7-EC58-44F5-9F1A-199503C0DB77}"
+	ProjectSection(ProjectDependencies) = postProject
+		{A23617C0-CB26-489B-91F9-097988909E9C} = {A23617C0-CB26-489B-91F9-097988909E9C}
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{97C69C85-DD16-4DDE-9C1A-C31666A12F54}"
 	ProjectSection(SolutionItems) = preProject

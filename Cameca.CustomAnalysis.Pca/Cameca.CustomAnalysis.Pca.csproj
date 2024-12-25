@@ -35,10 +35,6 @@
 		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <ProjectReference Include="..\Cameca.CustomAnalysis.PcaLib\Cameca.CustomAnalysis.PcaLib.vcxproj" />
-	</ItemGroup>
-
 	<PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
 		<ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
 		<Deterministic>true</Deterministic>
