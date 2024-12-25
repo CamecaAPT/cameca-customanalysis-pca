@@ -1,0 +1,79 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net6.0-windows7.0</TargetFramework>
+		<UseWPF>true</UseWPF>
+		<Platforms>x64</Platforms>
+		<Nullable>enable</Nullable>
+		<EnableDynamicLoading>true</EnableDynamicLoading>
+		<RuntimeIdentifier>win10-x64</RuntimeIdentifier>
+		<SelfContained>false</SelfContained>
+		<AssemblyName>Cameca.CustomAnalysis.Pca</AssemblyName>
+	</PropertyGroup>
+
+	<PropertyGroup Label="Direct Output" Condition="'$(Configuration)' == 'Debug'">
+		<OutputPath>$(LOCALAPPDATA)\CAMECA\AP Suite\Extensions\$(AssemblyName)</OutputPath>
+		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+		<AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+	</PropertyGroup>
+
+	<PropertyGroup Label="Package">
+		<Title>Cameca.CustomAnalysis.PrincipalComponentAnalysis</Title>
+		<Authors>Mike Keenan and CAMECA Instruments, Inc</Authors>
+		<Description>Phase segmentation through principal component analysis</Description>
+		<Copyright>Copyright © Mike Keenan and CAMECA Instruments, Inc 2024 All rights reserved.</Copyright>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<IncludeBuildOutput>true</IncludeBuildOutput>
+		<NuspecFile>Cameca.CustomAnalysis.PrincipalComponentAnalysis.nuspec</NuspecFile>
+	</PropertyGroup>
+
+	<ItemGroup Label="Package Dependencies">
+		<PackageReference Include="Cameca.CustomAnalysis.Utilities" Version="3.7.0-alpha.5" />
+		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\Cameca.CustomAnalysis.PcaLib\Cameca.CustomAnalysis.PcaLib.vcxproj" />
+	</ItemGroup>
+
+	<PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+		<ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+		<Deterministic>true</Deterministic>
+	</PropertyGroup>
+
+	<!-- Nuspec Initiaization and Configuration -->
+	<Target Name="InitializeStandardNuspecProperties" BeforeTargets="GenerateNuspec" Condition="'$(IsPackable)' == 'true'">
+		<PropertyGroup Condition="'$(NuspecFile)' != '' and '$(NuspecProperties)' == ''">
+			<NuspecProperties>
+				id=$(AssemblyName);
+				version=$(Version);
+				authors=$(Authors);
+				description=$(Description);
+				title=$(Title);
+				copyright=$(Copyright);
+				repoType=$(RepositoryType);
+				repoUrl=$(RepositoryUrl);
+				projectUrl=$(RepositoryUrl);
+				repoCommit=$(RepositoryCommit);
+				tfw=$(TargetFramework);
+				outDir=$(MSBuildThisFileDirectory)$(OutputPath)
+			</NuspecProperties>
+		</PropertyGroup>
+	</Target>
+
+	<PropertyGroup>
+		<NativeOutputFolder>..\$(Platform)\$(Configuration)</NativeOutputFolder>
+	</PropertyGroup>
+	<Target Name="CopyNativeBinaries" AfterTargets="Build">
+		<ItemGroup>
+			<NativeBinaries Include="$(NativeOutputFolder)\*" />
+		</ItemGroup>
+		<Copy
+		  SourceFiles="@(NativeBinaries)"
+		  DestinationFolder="$(OutputPath)"
+		  SkipUnchangedFiles="true" />
+	</Target>
+</Project>
