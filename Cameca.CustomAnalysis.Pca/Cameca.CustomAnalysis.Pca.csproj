@@ -47,6 +47,9 @@
 				id=$(AssemblyName);
 				version=$(Version);
 				authors=$(Authors);
+				company=$(Company);
+				license=$(PackageLicenseFile);
+				readme=$(PackageReadmeFile);
 				description=$(Description);
 				title=$(Title);
 				copyright=$(Copyright);
