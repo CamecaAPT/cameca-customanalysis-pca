@@ -54,7 +54,6 @@ internal class PcaNode : AnalysisFilterNodeBase
         {
             DataStateIsValid = false;
         };
-        AllowOverrideRanges = true;
     }
 
     protected override void OnDataIsValidChanged(bool isValid)

@@ -33,7 +33,7 @@
 	</PropertyGroup>
 
 	<ItemGroup Label="Package Dependencies">
-		<PackageReference Include="Cameca.CustomAnalysis.Utilities" Version="3.7.0-alpha.5" />
+		<PackageReference Include="Cameca.CustomAnalysis.Utilities" Version="3.6.0-beta.3" />
 		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
 	</ItemGroup>
 
@@ -72,9 +72,6 @@
 		<ItemGroup>
 			<NativeBinaries Include="$(NativeOutputFolder)\*" />
 		</ItemGroup>
-		<Copy
-		  SourceFiles="@(NativeBinaries)"
-		  DestinationFolder="$(OutputPath)"
-		  SkipUnchangedFiles="true" />
+		<Copy SourceFiles="@(NativeBinaries)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
 	</Target>
 </Project>
