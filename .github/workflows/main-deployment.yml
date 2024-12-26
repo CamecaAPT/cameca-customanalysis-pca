@@ -20,7 +20,7 @@ jobs:
       platform: x64
       build-configuration: Release
       dotnet-version: ${{ vars.DOTNET_VERSION }}
-      azure-artifact-feed: ${{ vars.FEED_EXTENSION_DEVELOPMENT }}
+      azure-artifact-feed: ${{ vars.FEED_EXTENSION }}
       validate-tag-main: true
       package-csproj: ./Cameca.CustomAnalysis.Pca/Cameca.CustomAnalysis.Pca.csproj
     secrets:
