@@ -42,6 +42,11 @@
 		<Deterministic>true</Deterministic>
 	</PropertyGroup>
 
+	<ItemGroup>
+		<None Include="..\README.md" Pack="True" PackagePath="\" />
+		<None Include="..\LICENSE" Pack="True" PackagePath="\" />
+	</ItemGroup>
+
 	<!-- Nuspec Initiaization and Configuration -->
 	<Target Name="InitializeStandardNuspecProperties" BeforeTargets="GenerateNuspec" Condition="'$(IsPackable)' == 'true'">
 		<PropertyGroup Condition="'$(NuspecFile)' != '' and '$(NuspecProperties)' == ''">
