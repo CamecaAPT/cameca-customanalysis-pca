@@ -17,6 +17,7 @@ jobs:
   build:
     uses: CamecaAPT/workflows/.github/workflows/build-deploy-gitversion-native.yml@main
     with:
+      platform: x64
       build-configuration: Release
       dotnet-version: ${{ vars.DOTNET_VERSION }}
       azure-artifact-feed: ${{ vars.FEED_EXTENSION_DEVELOPMENT }}
