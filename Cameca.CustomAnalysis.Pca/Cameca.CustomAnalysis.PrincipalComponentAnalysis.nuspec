@@ -18,6 +18,8 @@
 		</dependencies>
 	</metadata>
 	<files>
+		<file src="..\LICENSE" target="LICENSE" />
+		<file src="..\README.md" target="README.md" />
 		<file src="$outDir$*" target="lib\$tfw$" />
 	</files>
 </package>
