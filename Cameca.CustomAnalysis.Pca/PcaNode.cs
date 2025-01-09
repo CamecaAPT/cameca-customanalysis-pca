@@ -131,9 +131,19 @@ internal class PcaNode : AnalysisFilterNodeBase
         // Call the doPCA function
         PcaLib.doPCA(nVoxels, nFeatures, dataBuffer, nIons, nComponents, nevals, scores, loads, evals);
 
+        // Normalization
+        for (int i = 0; i < scores.Length; i++)
+        {
+            scores[i] *= 1000f;
+        }
+        for (int i = 0; i < loads.Length; i++)
+        {
+            loads[i] /= 1000f;
+        }
+
         Data = new PcaResults(scores, nonEmptyVoxels.ToArray(), loads, evals, gridData.NumVoxels, gridData.VoxelSize, gridData.GridDelta);
-        Options.Min = scores.Min() * 1000f;
-        Options.Max = scores.Max() * 1000f;
+        Options.Min = scores.Min();
+        Options.Max = scores.Max();
     }
 
     private bool IsError

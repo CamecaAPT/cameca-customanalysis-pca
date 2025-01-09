@@ -60,7 +60,7 @@ internal class PcaViewModel : AnalysisViewModelBase<PcaNode>
             var loadingData = results.Loads.Skip(i * features).Take(features);
 
             var histogram = resourceFactory.CreateResource(Node.Id).ChartObjects.CreateHistogram(
-                loadingData.Select((x, i) => new Vector2(i, x / 1000f)).ToArray(),
+                loadingData.Select((x, i) => new Vector2(i, x)).ToArray(),
                 color: Colors.Blue);
             var result = new LoadingResult
             {
