@@ -1,4 +1,5 @@
 ﻿using Prism.Mvvm;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
 namespace Cameca.CustomAnalysis.Pca;
@@ -25,5 +26,21 @@ public class PcaOptions : BindableBase
     {
         get => isovalue;
         set => SetProperty(ref isovalue, value);
+    }
+
+    private float? min = null;
+    [ReadOnly(true)]
+    public float? Min
+    {
+        get => min;
+        set => SetProperty(ref min, value);
+    }
+
+    private float? max = null;
+    [ReadOnly(true)]
+    public float? Max
+    {
+        get => max;
+        set => SetProperty(ref max, value);
     }
 }

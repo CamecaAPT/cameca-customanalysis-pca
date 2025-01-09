@@ -132,6 +132,8 @@ internal class PcaNode : AnalysisFilterNodeBase
         PcaLib.doPCA(nVoxels, nFeatures, dataBuffer, nIons, nComponents, nevals, scores, loads, evals);
 
         Data = new PcaResults(scores, nonEmptyVoxels.ToArray(), loads, evals, gridData.NumVoxels, gridData.VoxelSize, gridData.GridDelta);
+        Options.Min = scores.Min() * 1000f;
+        Options.Max = scores.Max() * 1000f;
     }
 
     private bool IsError
@@ -290,6 +292,9 @@ internal class PcaNode : AnalysisFilterNodeBase
     private void PropertiesObjectOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         CanSave = true;
-        DataStateIsValid = false;
+        if (!(e.PropertyName is nameof(PcaOptions.Min) or nameof(PcaOptions.Max)))
+        {
+            DataStateIsValid = false;
+        }
     }
 }
