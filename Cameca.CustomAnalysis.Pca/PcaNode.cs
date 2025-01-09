@@ -61,14 +61,24 @@ internal class PcaNode : AnalysisFilterNodeBase
 
     internal async Task RunPcaFromGrid3D(int nComponents)
     {
+        IsError = false;
         var resources = resourceFactory.CreateResource(InstanceId);
         if (await resources.GetIonData() is not { } ionData)
         {
             throw new InvalidOperationException("No IIonData");
         }
 
-        // Throws InvalidOperationException if not able to resolve a single correct Grid3D node
-        var gridNode = resources.FindGridNode(nodeDataProvider);
+        INodeResource gridNode;
+        try
+        {
+            // Throws InvalidOperationException if not able to resolve a single correct Grid3D node
+            gridNode = resources.FindGridNode(nodeDataProvider);
+        }
+        catch (InvalidOperationException)
+        {
+            IsError = true;
+            return;
+        }
 
         if (await nodeDataProvider.Resolve(gridNode.Id)!.GetData(typeof(IGrid3DData)) is not IGrid3DData gridData)
         {
@@ -124,13 +134,35 @@ internal class PcaNode : AnalysisFilterNodeBase
         Data = new PcaResults(scores, nonEmptyVoxels.ToArray(), loads, evals, gridData.NumVoxels, gridData.VoxelSize, gridData.GridDelta);
     }
 
+    private bool IsError
+    {
+        get => DataState is { } dataState && dataState.IsErrorState;
+        set
+        {
+            if (DataState is { } dataState)
+            {
+                dataState.IsErrorState = value;
+            }
+        }
+    }
+
     protected override async IAsyncEnumerable<ReadOnlyMemory<ulong>> GetIndicesDelegateAsync(IIonData ionData, IProgress<double>? progress, [EnumeratorCancellation] CancellationToken token)
     {
+        IsError = false;
         int nComponents = Options.Components;
         var resources = resourceFactory.CreateResource(InstanceId);
 
-        // Throws InvalidOperationException if not able to resolve a single correct Grid3D node
-        var gridNode = resources.FindGridNode(nodeDataProvider);
+        INodeResource gridNode;
+        try
+        {
+            // Throws InvalidOperationException if not able to resolve a single correct Grid3D node
+            gridNode = resources.FindGridNode(nodeDataProvider);
+        }
+        catch (InvalidOperationException)
+        {
+            IsError = true;
+            yield break;
+        }
 
         if (await nodeDataProvider.Resolve(gridNode.Id)!.GetData(typeof(IGrid3DData)) is not IGrid3DData gridData)
         {
