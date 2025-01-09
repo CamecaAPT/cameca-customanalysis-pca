@@ -1,11 +1,13 @@
 ﻿using Cameca.CustomAnalysis.Interface;
 using Cameca.CustomAnalysis.Utilities;
 using CommunityToolkit.Mvvm.Input;
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
 using System.Windows.Media;
+using System.Windows.Navigation;
 
 namespace Cameca.CustomAnalysis.Pca;
 
@@ -20,6 +22,7 @@ internal class PcaViewModel : AnalysisViewModelBase<PcaNode>
     public AsyncRelayCommand UpdateCommand { get; }
     public ObservableCollection<IRenderData> NoiseEigenValues { get; } = new();
     public ObservableCollection<LoadingResult> LoadingChartData { get; } = new();
+    public ObservableCollection<IRenderData> ScoresHistogramData { get; } = new();
 
     public PcaViewModel(IAnalysisViewModelBaseServices services, ResourceFactory resourceFactory)
         : base(services)
@@ -43,12 +46,13 @@ internal class PcaViewModel : AnalysisViewModelBase<PcaNode>
             return;
         }
 
+        var renderDataFactory = resourceFactory.CreateResource(Node.Id).ChartObjects;
+
         // Noise Eigenvalues
         NoiseEigenValues.Clear();
         var positions = results.Evals.Select((value, index) => new Vector3(index, 0f, value)).ToArray();
-        var chartObjects = resourceFactory.CreateResource(Node.Id).ChartObjects;
-        var line = resourceFactory.CreateResource(Node.Id).ChartObjects.CreateLine(positions, Colors.Blue);
-        var points = resourceFactory.CreateResource(Node.Id).ChartObjects.CreateSpheres(positions, Colors.Blue, radius: 0.1f, resolution: 20);
+        var line = renderDataFactory.CreateLine(positions, Colors.Blue);
+        var points = renderDataFactory.CreateSpheres(positions, Colors.Blue, radius: 0.1f, resolution: 20);
         NoiseEigenValues.Add(line);
         NoiseEigenValues.Add(points);
 
@@ -59,7 +63,7 @@ internal class PcaViewModel : AnalysisViewModelBase<PcaNode>
         {
             var loadingData = results.Loads.Skip(i * features).Take(features);
 
-            var histogram = resourceFactory.CreateResource(Node.Id).ChartObjects.CreateHistogram(
+            var histogram = renderDataFactory.CreateHistogram(
                 loadingData.Select((x, i) => new Vector2(i, x)).ToArray(),
                 color: Colors.Blue);
             var result = new LoadingResult
@@ -69,5 +73,25 @@ internal class PcaViewModel : AnalysisViewModelBase<PcaNode>
             result.ChartData.Add(histogram);
             LoadingChartData.Add(result);
         }
+
+        // Scores Histogram
+        int voxels = numComponents > 0 ? results.Scores.Length / numComponents : 0;
+        ScoresHistogramData.Clear();
+        float binSize = 0.01f;
+        var scores = results.Scores.Skip(selectedIndex * voxels).Take(voxels).ToArray();
+        float min = scores.Min();
+        float max = scores.Max();
+        int binCount = (int)Math.Ceiling((max - min) / binSize);
+        var binnedScores = new int[binCount];
+        for (int i = 0; i < scores.Length; i++)
+        {
+            int index = (int)((scores[i] - min) / binSize);
+            binnedScores[index]++;
+        }
+        var scoreData = binnedScores.Select((y, i) => new Vector2(min + (i * binSize), y)).ToArray();
+        var scoresHistogram = renderDataFactory.CreateHistogram(
+            scoreData,
+            color: Colors.Blue);
+        ScoresHistogramData.Add(scoresHistogram);
     }
 }

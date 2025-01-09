@@ -26,6 +26,7 @@
                                   AxisXLabel="Sorted eigenvalue index"
                                   AxisYLabel="Eigenvalue"/>
             </TabItem>
+            
             <TabItem Header="Loading">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{Binding LoadingChartData}">
@@ -39,6 +40,10 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="Scores">
+                <controls:Chart2D DataSource="{Binding ScoresHistogramData}" />
             </TabItem>
         </TabControl>
     </utils:ButtonOverlayControl>
