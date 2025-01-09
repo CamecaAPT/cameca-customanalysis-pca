@@ -21,7 +21,7 @@ internal class PcaViewModel : AnalysisViewModelBase<PcaNode>
 
     public AsyncRelayCommand UpdateCommand { get; }
     public ObservableCollection<IRenderData> NoiseEigenValues { get; } = new();
-    public ObservableCollection<LoadingResult> LoadingChartData { get; } = new();
+    public ObservableCollection<IRenderData> LoadingsHistogramData { get; } = new();
     public ObservableCollection<IRenderData> ScoresHistogramData { get; } = new();
 
     public PcaViewModel(IAnalysisViewModelBaseServices services, ResourceFactory resourceFactory)
@@ -35,6 +35,7 @@ internal class PcaViewModel : AnalysisViewModelBase<PcaNode>
     private async Task RunPcaFromGrid3D()
     {
         int numComponents = NodeData.Options.Components;
+        int selectedIndex = NodeData.Options.ComponentIndex;
         if (Node.Data is null)
         {
             await Node.RunPcaFromGrid3D(numComponents);
@@ -57,22 +58,14 @@ internal class PcaViewModel : AnalysisViewModelBase<PcaNode>
         NoiseEigenValues.Add(points);
 
         // Loading
-        LoadingChartData.Clear();
+        LoadingsHistogramData.Clear();
         int features = numComponents > 0 ? results.Loads.Length / numComponents : 0;
-        for (int i = 0; i < numComponents; i++)
-        {
-            var loadingData = results.Loads.Skip(i * features).Take(features);
-
-            var histogram = renderDataFactory.CreateHistogram(
-                loadingData.Select((x, i) => new Vector2(i, x)).ToArray(),
-                color: Colors.Blue);
-            var result = new LoadingResult
-            {
-                ChartLabel = $"Loading {i}",
-            };
-            result.ChartData.Add(histogram);
-            LoadingChartData.Add(result);
-        }
+        var selectionLoadsSlice = results.Loads.Skip(selectedIndex * features).Take(features);
+        var loadingData = selectionLoadsSlice.Select((x, i) => new Vector2(i, x)).ToArray();
+        var histogram = renderDataFactory.CreateHistogram(
+            loadingData,
+            color: Colors.Blue);
+        LoadingsHistogramData.Add(histogram);
 
         // Scores Histogram
         int voxels = numComponents > 0 ? results.Scores.Length / numComponents : 0;

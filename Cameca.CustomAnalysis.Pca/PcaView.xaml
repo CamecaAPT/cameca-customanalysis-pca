@@ -26,20 +26,12 @@
                                   AxisXLabel="Sorted eigenvalue index"
                                   AxisYLabel="Eigenvalue"/>
             </TabItem>
-            
+
             <TabItem Header="Loading">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding LoadingChartData}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <controls:Chart2D DataSource="{Binding ChartData}"
-                                                  MinHeight="400"
-                                                  AxisXLabel="m/z"
-                                                  AxisYLabel="{Binding ChartLabel}"/>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
+                <controls:Chart2D DataSource="{Binding LoadingsHistogramData}"
+                                  MinHeight="400"
+                                  AxisXLabel="m/z"
+                                  AxisYLabel="Loadings"/>
             </TabItem>
 
             <TabItem Header="Scores">
