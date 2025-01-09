@@ -8,6 +8,10 @@ using CommunityToolkit.HighPerformance.Buffers;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.ComponentModel;
+using System.IO;
+using System.Text;
+using System.Xml.Serialization;
 
 namespace Cameca.CustomAnalysis.Pca;
 
@@ -32,7 +36,8 @@ internal class PcaNode : AnalysisFilterNodeBase
         }
     }
 
-    public PcaOptions Options { get; private set; } = new();
+    // Properties is always created and not null after on-created: the only time this would be null should be with an attempt to access from the ctor, which should not be attempted
+    public PcaOptions Options => (PcaOptions)Properties!;
 
     public Guid Id => InstanceId;
 
@@ -44,16 +49,6 @@ internal class PcaNode : AnalysisFilterNodeBase
     {
         this.resourceFactory = resourceFactory;
         this.nodeDataProvider = nodeDataProvider;
-    }
-
-    protected override void OnAdded(NodeAddedEventArgs eventArgs)
-    {
-        base.OnAdded(eventArgs);
-        Properties = Options;
-        Options.PropertyChanged += (s, e) =>
-        {
-            DataStateIsValid = false;
-        };
     }
 
     protected override void OnDataIsValidChanged(bool isValid)
@@ -220,5 +215,49 @@ internal class PcaNode : AnalysisFilterNodeBase
             }
             yield return buffer.Slice(0, bufferIndex).Memory;
         }
+    }
+
+    #region Save / Load Options
+    protected override byte[]? GetSaveContent()
+    {
+        var serializer = new XmlSerializer(typeof(PcaOptions));
+        using var stringWriter = new StringWriter();
+        serializer.Serialize(stringWriter, Properties);
+        return Encoding.UTF8.GetBytes(stringWriter.ToString());
+    }
+
+    protected override void OnCreated(NodeCreatedEventArgs eventArgs)
+    {
+        base.OnCreated(eventArgs);
+
+        // If loading existing and data is present, populate properties from serialized data
+        if (eventArgs.Trigger == EventTrigger.Load && eventArgs.Data is { } data)
+        {
+            var xmlData = Encoding.UTF8.GetString(data);
+            var serializer = new XmlSerializer(typeof(PcaOptions));
+            using var stringReader = new StringReader(xmlData);
+            if (serializer.Deserialize(stringReader) is PcaOptions loadedOptions)
+            {
+                Properties = loadedOptions;
+            }
+        }
+        if (Properties is null)
+        {
+            Properties = new PcaOptions();
+        }
+
+        // Wire up change notification events
+        Properties = Properties is PcaOptions typedProperties ? typedProperties : new();
+        if (Properties is INotifyPropertyChanged notifyPropertyChanged)
+        {
+            notifyPropertyChanged.PropertyChanged += PropertiesObjectOnPropertyChanged;
+        }
+    }
+    #endregion
+
+    private void PropertiesObjectOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        CanSave = true;
+        DataStateIsValid = false;
     }
 }
