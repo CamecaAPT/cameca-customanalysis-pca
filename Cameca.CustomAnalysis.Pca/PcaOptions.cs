@@ -1,4 +1,5 @@
 ﻿using Prism.Mvvm;
+using System.ComponentModel.DataAnnotations;
 
 namespace Cameca.CustomAnalysis.Pca;
 
@@ -12,6 +13,7 @@ public class PcaOptions : BindableBase
     }
 
     private int componentIndex = 0;
+    [Display(Name = "Component Index")]
     public int ComponentIndex
     {
         get => componentIndex;
