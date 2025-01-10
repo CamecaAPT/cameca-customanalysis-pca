@@ -1,13 +1,15 @@
 ﻿using Cameca.CustomAnalysis.Interface;
 using Cameca.CustomAnalysis.Utilities;
 using CommunityToolkit.Mvvm.Input;
+using LiveCharts;
+using LiveCharts.Configurations;
+using LiveCharts.Wpf;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
 using System.Windows.Media;
-using System.Windows.Navigation;
 
 namespace Cameca.CustomAnalysis.Pca;
 
@@ -21,7 +23,15 @@ internal class PcaViewModel : AnalysisViewModelBase<PcaNode>
 
     public AsyncRelayCommand UpdateCommand { get; }
     public ObservableCollection<IRenderData> NoiseEigenValues { get; } = new();
-    public ObservableCollection<IRenderData> LoadingsHistogramData { get; } = new();
+
+    private SeriesCollection loadingsSeries = new();
+    public SeriesCollection LoadingsSeries
+    {
+        get => loadingsSeries;
+        set => SetProperty(ref loadingsSeries, value);
+    }
+
+    public ObservableCollection<string> LoadingsLables { get; } = new();
     public ObservableCollection<IRenderData> ScoresHistogramData { get; } = new();
 
     public PcaViewModel(IAnalysisViewModelBaseServices services, ResourceFactory resourceFactory)
@@ -34,6 +44,12 @@ internal class PcaViewModel : AnalysisViewModelBase<PcaNode>
 
     private async Task RunPcaFromGrid3D()
     {
+        var resources = resourceFactory.CreateResource(Node.Id);
+        if (await resources.GetIonData() is not { } ionData)
+        {
+            throw new InvalidOperationException("Could not resolve ion type information");
+        }
+
         int numComponents = NodeData.Options.Components;
         int selectedIndex = NodeData.Options.ComponentIndex;
         if (Node.Data is null)
@@ -46,8 +62,7 @@ internal class PcaViewModel : AnalysisViewModelBase<PcaNode>
         {
             return;
         }
-
-        var renderDataFactory = resourceFactory.CreateResource(Node.Id).ChartObjects;
+        var renderDataFactory = resources.ChartObjects;
 
         // Noise Eigenvalues
         NoiseEigenValues.Clear();
@@ -58,14 +73,35 @@ internal class PcaViewModel : AnalysisViewModelBase<PcaNode>
         NoiseEigenValues.Add(points);
 
         // Loading
-        LoadingsHistogramData.Clear();
+        LoadingsLables.Clear();
         int features = numComponents > 0 ? results.Loads.Length / numComponents : 0;
-        var selectionLoadsSlice = results.Loads.Skip(selectedIndex * features).Take(features);
-        var loadingData = selectionLoadsSlice.Select((x, i) => new Vector2(i, x)).ToArray();
-        var histogram = renderDataFactory.CreateHistogram(
-            loadingData,
-            color: Colors.Blue);
-        LoadingsHistogramData.Add(histogram);
+        var loadingData = results.Loads.Skip(selectedIndex * features).Take(features);
+
+        var ions = ionData.Ions;
+        if (ions.Count() != features)
+        {
+            throw new InvalidOperationException("Count of ion ranges unexpectedly does not match the number of PCA features");
+        }
+
+        var series = new ColumnSeries
+        {
+            Name = "",
+            Title = "",
+            DataLabels = true,
+            LabelPoint = x => x.Y.ToString("F3"),
+            Values = new ChartValues<float>(loadingData),
+        };
+
+        var ionBrushes = ions.Select(ionInfo => new SolidColorBrush(resources.GetIonColor(ionInfo))).ToArray();
+        var mapper = new CartesianMapper<float>()
+            .X((_, i) =>  i)
+            .Y(value => value)
+            .Fill((_, i) => ionBrushes[i]);
+        LoadingsSeries = new SeriesCollection(mapper)
+        {
+            series
+        };
+        LoadingsLables.AddRange(ions.Select(x => x.Name));
 
         // Scores Histogram
         int voxels = numComponents > 0 ? results.Scores.Length / numComponents : 0;
