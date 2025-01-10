@@ -160,7 +160,7 @@ internal partial class PcaNode : AnalysisFilterNodeBase
 
     private void UpdateOptionsBounds()
     {
-        var selectedResult = ComponentsResults?.Components[Options.ComponentIndex];
+        var selectedResult = ComponentsResults?.Components.ElementAtOrDefault(Options.ComponentIndex);
         Options.Min = selectedResult?.Scores.Min();
         Options.Max = selectedResult?.Scores.Max();
     }

@@ -135,7 +135,7 @@ internal class PcaViewModel : AnalysisViewModelBase<PcaNode>
 
         int numComponents = Node.Options.Components;
         int selectedIndex = Node.Options.ComponentIndex;
-        if (Node.ComponentsResults?.Components[selectedIndex] is not { Scores: { } scores, Loads: { } loadingData })
+        if (Node.ComponentsResults?.Components.ElementAtOrDefault(selectedIndex) is not { Scores: { } scores, Loads: { } loadingData })
         {
             return;
         }
