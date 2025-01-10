@@ -14,22 +14,29 @@
     <UserControl.Resources>
         <local:GeneralBooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"
                                                    True="Collapsed"
+                                                   
                                                    False="Visible" />
     </UserControl.Resources>
-    <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateCommand}"
-                                ButtonContent="Update"
-                                OverlayVisibility="{Binding NodeData.DataState.IsValid, Converter={StaticResource BooleanToVisibilityConverter}}">
-        <TabControl>
-            <TabItem Header="Noise Eigenvalues">
+    
+    <TabControl>
+        <TabItem Header="Noise Eigenvalues">
+            <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateCommand}"
+                            ButtonContent="Update"
+                            OverlayVisibility="{Binding EigenvaluesIsValid, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <controls:Chart2D Grid.Column="0"
-                                  DataSource="{Binding NoiseEigenValues}"
-                                  IsLogScaleY="True"
-                                  AxisXLabel="Sorted eigenvalue index"
-                                  AxisYLabel="Eigenvalue"/>
-            </TabItem>
+                                DataSource="{Binding NoiseEigenValues}"
+                                IsLogScaleY="True"
+                                AxisXLabel="Sorted eigenvalue index"
+                                AxisYLabel="Eigenvalue"/>
+            </utils:ButtonOverlayControl>
+        </TabItem>
 
-            <TabItem Header="Loading">
+        <TabItem Header="Loading">
+            <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateCommand}"
+                            ButtonContent="Update"
+                            OverlayVisibility="{Binding ComponentsIsValid, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <lvc:CartesianChart Series="{Binding LoadingsSeries}"
+                                    DisableAnimations="True"
                                     LegendLocation="None">
                     <lvc:CartesianChart.Resources>
                         <Style TargetType="lvc:DefaultTooltip">
@@ -47,11 +54,15 @@
                         <lvc:Axis Title="Loadings" FontSize="18" />
                     </lvc:CartesianChart.AxisY>
                 </lvc:CartesianChart>
-            </TabItem>
+            </utils:ButtonOverlayControl>
+        </TabItem>
 
-            <TabItem Header="Scores">
+        <TabItem Header="Scores">
+            <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateCommand}"
+                            ButtonContent="Update"
+                            OverlayVisibility="{Binding ComponentsIsValid, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <controls:Chart2D DataSource="{Binding ScoresHistogramData}" />
-            </TabItem>
-        </TabControl>
-    </utils:ButtonOverlayControl>
+            </utils:ButtonOverlayControl>
+        </TabItem>
+    </TabControl>
 </UserControl>

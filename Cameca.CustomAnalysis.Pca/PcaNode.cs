@@ -12,11 +12,13 @@ using System.ComponentModel;
 using System.IO;
 using System.Text;
 using System.Xml.Serialization;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cameca.CustomAnalysis.Pca;
 
 [DefaultView(PcaViewModel.UniqueId, typeof(PcaViewModel))]
-internal class PcaNode : AnalysisFilterNodeBase
+[INotifyPropertyChanged]
+internal partial class PcaNode : AnalysisFilterNodeBase
 {
     private readonly ResourceFactory resourceFactory;
     private readonly INodeDataProvider nodeDataProvider;
@@ -25,16 +27,11 @@ internal class PcaNode : AnalysisFilterNodeBase
     
     public static INodeDisplayInfo DisplayInfo { get; } = new NodeDisplayInfo("Principal Component Analysis");
 
-    private PcaResults? data;
-    public PcaResults? Data
-    {
-        get => data;
-        set
-        {
-            data = value;
-            DataStateIsValid = data is not null;
-        }
-    }
+    [ObservableProperty]
+    private EigenvalueResults? eigenvalueResults;
+
+    [ObservableProperty]
+    private ComponentsResults? componentsResults;
 
     // Properties is always created and not null after on-created: the only time this would be null should be with an attempt to access from the ctor, which should not be attempted
     public PcaOptions Options => (PcaOptions)Properties!;
@@ -51,16 +48,19 @@ internal class PcaNode : AnalysisFilterNodeBase
         this.nodeDataProvider = nodeDataProvider;
     }
 
+    private bool invalidateResults = true;
     protected override void OnDataIsValidChanged(bool isValid)
     {
-        if (!isValid)
+        if (!isValid && invalidateResults)
         {
-            Data = null;
+            InvalidateAll();
         }
+        invalidateResults = true;
     }
 
-    internal async Task RunPcaFromGrid3D(int nComponents)
+    internal async Task RunPcaFromGrid3D()
     {
+        int nComponents = Options.Components;
         IsError = false;
         var resources = resourceFactory.CreateResource(InstanceId);
         if (await resources.GetIonData() is not { } ionData)
@@ -141,9 +141,28 @@ internal class PcaNode : AnalysisFilterNodeBase
             loads[i] /= 1000f;
         }
 
-        Data = new PcaResults(scores, nonEmptyVoxels.ToArray(), loads, evals, gridData.NumVoxels, gridData.VoxelSize, gridData.GridDelta);
-        Options.Min = scores.Min();
-        Options.Max = scores.Max();
+        if (EigenvalueResults is null)
+        {
+            EigenvalueResults = new EigenvalueResults(evals);
+        }
+        
+        var components = new List<ComponentResults>(nComponents);
+        for (int i = 0; i < nComponents; i++)
+        {
+            var compScores = scores.Skip(i * nVoxels).Take(nVoxels).ToArray();
+            var compLoads = loads.Skip(i * nFeatures).Take(nFeatures).ToArray();
+            components.Add(new ComponentResults(compScores, compLoads));
+        }
+        ComponentsResults = new ComponentsResults(nonEmptyVoxels.ToArray(), components);
+
+        UpdateOptionsBounds();
+    }
+
+    private void UpdateOptionsBounds()
+    {
+        var selectedResult = ComponentsResults?.Components[Options.ComponentIndex];
+        Options.Min = selectedResult?.Scores.Min();
+        Options.Max = selectedResult?.Scores.Max();
     }
 
     private bool IsError
@@ -173,11 +192,13 @@ internal class PcaNode : AnalysisFilterNodeBase
         catch (InvalidOperationException)
         {
             IsError = true;
+            DataStateIsValid = false;
             yield break;
         }
 
         if (await nodeDataProvider.Resolve(gridNode.Id)!.GetData(typeof(IGrid3DData)) is not IGrid3DData gridData)
         {
+            DataStateIsValid = false;
             throw new InvalidOperationException("No IGrid3DData");
         }
 
@@ -259,6 +280,8 @@ internal class PcaNode : AnalysisFilterNodeBase
             }
             yield return buffer.Slice(0, bufferIndex).Memory;
         }
+
+        DataStateIsValid = true;
     }
 
     #region Save / Load Options
@@ -302,9 +325,37 @@ internal class PcaNode : AnalysisFilterNodeBase
     private void PropertiesObjectOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         CanSave = true;
-        if (!(e.PropertyName is nameof(PcaOptions.Min) or nameof(PcaOptions.Max)))
+        switch (e.PropertyName)
         {
-            DataStateIsValid = false;
+            case nameof(PcaOptions.Components):
+                InvalidateComponents();
+                break;
+            case nameof(PcaOptions.ComponentIndex):
+                UpdateOptionsBounds();
+                MarkInvalidKeepResults();
+                break;
+            case nameof(PcaOptions.Isovalue):
+                MarkInvalidKeepResults();
+                break;
+            default:
+                break;
         }
+    }
+
+    private void MarkInvalidKeepResults()
+    {
+        invalidateResults = false;
+        DataStateIsValid = false;
+    }
+
+    private void InvalidateAll()
+    {
+        EigenvalueResults = null;
+        InvalidateComponents();
+    }
+
+    private void InvalidateComponents()
+    {
+        ComponentsResults = null;
     }
 }

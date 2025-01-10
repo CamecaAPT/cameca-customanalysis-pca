@@ -6,6 +6,7 @@ using LiveCharts.Configurations;
 using LiveCharts.Wpf;
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
@@ -19,9 +20,11 @@ internal class PcaViewModel : AnalysisViewModelBase<PcaNode>
 
     public const string UniqueId = "Cameca.CustomAnalysis.Pca.PcaViewModel";
 
-    public PcaNode NodeData => Node;
+    public bool EigenvaluesIsValid => Node.EigenvalueResults is not null;
+    public bool ComponentsIsValid => Node.ComponentsResults is not null;
 
     public AsyncRelayCommand UpdateCommand { get; }
+
     public ObservableCollection<IRenderData> NoiseEigenValues { get; } = new();
 
     private SeriesCollection loadingsSeries = new();
@@ -39,44 +42,107 @@ internal class PcaViewModel : AnalysisViewModelBase<PcaNode>
     {
         this.resourceFactory = resourceFactory;
 
-        UpdateCommand = new AsyncRelayCommand(RunPcaFromGrid3D);
+        UpdateCommand = new AsyncRelayCommand(UpdateAll);
     }
 
-    private async Task RunPcaFromGrid3D()
+    protected override void OnCreated(ViewModelCreatedEventArgs eventArgs)
     {
+        base.OnCreated(eventArgs);
+        Node.PropertyChanged += Node_PropertyChanged;
+        Node.Options.PropertyChanged += NodeOptions_PropertyChanged;
+    }
+
+    protected override void OnAdded(ViewModelAddedEventArgs eventArgs)
+    {
+        base.OnAdded(eventArgs);
+        UpdateNoiseEigenvalue();
+        UpdateSelectedComponentCharts();
+    }
+
+    protected override void OnClosed(ViewModelDeletedEventArgs eventArgs)
+    {
+        Node.Options.PropertyChanged -= NodeOptions_PropertyChanged;
+        Node.PropertyChanged -= Node_PropertyChanged;
+        base.OnClosed(eventArgs);
+    }
+
+    private void Node_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        switch (e.PropertyName)
+        {
+            case nameof(Node.EigenvalueResults):
+                RaisePropertyChanged(nameof(EigenvaluesIsValid));
+                break;
+            case nameof(Node.ComponentsResults):
+                RaisePropertyChanged(nameof(ComponentsIsValid));
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void NodeOptions_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        switch (e.PropertyName)
+        {
+            case nameof(Node.Options.ComponentIndex):
+                UpdateSelectedComponentCharts();
+                break;
+            default:
+                break;
+        }
+    }
+
+    private async Task UpdateAll()
+    {
+        if (!EigenvaluesIsValid || !ComponentsIsValid)
+        {
+            await Node.RunPcaFromGrid3D();
+            UpdateCommand.NotifyCanExecuteChanged();
+        }
+
+        UpdateNoiseEigenvalue();
+        UpdateSelectedComponentCharts();
+    }
+
+    private void UpdateNoiseEigenvalue()
+    {
+        NoiseEigenValues.Clear();
+        if (Node.EigenvalueResults is { Evals: { } evals })
+        {
+            var resources = resourceFactory.CreateResource(Node.Id);
+            var renderDataFactory = resources.ChartObjects;
+
+            var positions = evals.Select((value, index) => new Vector3(index, 0f, value)).ToArray();
+            var line = renderDataFactory.CreateLine(positions, Colors.Blue);
+            var points = renderDataFactory.CreateSpheres(positions, Colors.Blue, radius: 0.1f, resolution: 20);
+            NoiseEigenValues.Add(line);
+            NoiseEigenValues.Add(points);
+        }
+    }
+
+    private void UpdateSelectedComponentCharts()
+    {
+        LoadingsLables.Clear();
+        ScoresHistogramData.Clear();
+
         var resources = resourceFactory.CreateResource(Node.Id);
-        if (await resources.GetIonData() is not { } ionData)
+        var renderDataFactory = resources.ChartObjects;
+        if (resources.GetValidIonData() is not { } ionData)
         {
             throw new InvalidOperationException("Could not resolve ion type information");
         }
 
-        int numComponents = NodeData.Options.Components;
-        int selectedIndex = NodeData.Options.ComponentIndex;
-        if (Node.Data is null)
-        {
-            await Node.RunPcaFromGrid3D(numComponents);
-            UpdateCommand.NotifyCanExecuteChanged();
-        }
-        // If still null after recalculate, then no data
-        if (Node.Data is not { } results)
+        int numComponents = Node.Options.Components;
+        int selectedIndex = Node.Options.ComponentIndex;
+        if (Node.ComponentsResults?.Components[selectedIndex] is not { Scores: { } scores, Loads: { } loadingData })
         {
             return;
         }
-        var renderDataFactory = resources.ChartObjects;
 
-        // Noise Eigenvalues
-        NoiseEigenValues.Clear();
-        var positions = results.Evals.Select((value, index) => new Vector3(index, 0f, value)).ToArray();
-        var line = renderDataFactory.CreateLine(positions, Colors.Blue);
-        var points = renderDataFactory.CreateSpheres(positions, Colors.Blue, radius: 0.1f, resolution: 20);
-        NoiseEigenValues.Add(line);
-        NoiseEigenValues.Add(points);
 
         // Loading
-        LoadingsLables.Clear();
-        int features = numComponents > 0 ? results.Loads.Length / numComponents : 0;
-        var loadingData = results.Loads.Skip(selectedIndex * features).Take(features);
-
+        int features = loadingData.Length;
         var ions = ionData.Ions;
         if (ions.Count() != features)
         {
@@ -94,7 +160,7 @@ internal class PcaViewModel : AnalysisViewModelBase<PcaNode>
 
         var ionBrushes = ions.Select(ionInfo => new SolidColorBrush(resources.GetIonColor(ionInfo))).ToArray();
         var mapper = new CartesianMapper<float>()
-            .X((_, i) =>  i)
+            .X((_, i) => i)
             .Y(value => value)
             .Fill((_, i) => ionBrushes[i]);
         LoadingsSeries = new SeriesCollection(mapper)
@@ -104,10 +170,8 @@ internal class PcaViewModel : AnalysisViewModelBase<PcaNode>
         LoadingsLables.AddRange(ions.Select(x => x.Name));
 
         // Scores Histogram
-        int voxels = numComponents > 0 ? results.Scores.Length / numComponents : 0;
-        ScoresHistogramData.Clear();
+        int voxels = scores.Length;
         float binSize = 0.01f;
-        var scores = results.Scores.Skip(selectedIndex * voxels).Take(voxels).ToArray();
         float min = scores.Min();
         float max = scores.Max();
         int binCount = (int)Math.Ceiling((max - min) / binSize);
