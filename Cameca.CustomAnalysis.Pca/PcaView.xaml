@@ -61,7 +61,9 @@
             <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateCommand}"
                             ButtonContent="Update"
                             OverlayVisibility="{Binding ComponentsIsValid, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <controls:Chart2D DataSource="{Binding ScoresHistogramData}" />
+                <controls:Chart2D DataSource="{Binding ScoresHistogramData}"
+                                  AxisXLabel="Score"
+                                  AxisYLabel="Voxels"/>
             </utils:ButtonOverlayControl>
         </TabItem>
     </TabControl>
