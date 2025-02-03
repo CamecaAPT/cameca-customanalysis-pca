@@ -51,7 +51,7 @@
                         </lvc:Axis>
                     </lvc:CartesianChart.AxisX>
                     <lvc:CartesianChart.AxisY>
-                        <lvc:Axis Title="Loadings" FontSize="18" />
+                        <lvc:Axis Title="Loadings" FontSize="18" LabelFormatter="{Binding AxisYLabelFormatter, Mode=OneTime}" />
                     </lvc:CartesianChart.AxisY>
                 </lvc:CartesianChart>
             </utils:ButtonOverlayControl>

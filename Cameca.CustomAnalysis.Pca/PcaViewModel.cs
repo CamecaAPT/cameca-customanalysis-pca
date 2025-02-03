@@ -37,6 +37,8 @@ internal class PcaViewModel : AnalysisViewModelBase<PcaNode>
     public ObservableCollection<string> LoadingsLables { get; } = new();
     public ObservableCollection<IRenderData> ScoresHistogramData { get; } = new();
 
+    public Func<double, string> AxisYLabelFormatter { get; } = (double value) => value.ToString("F3");
+
     public PcaViewModel(IAnalysisViewModelBaseServices services, ResourceFactory resourceFactory)
         : base(services)
     {
