@@ -43,4 +43,11 @@ public class PcaOptions : BindableBase
         get => max;
         set => SetProperty(ref max, value);
     }
+
+    private bool invert = false;
+    public bool Invert
+    {
+        get => invert;
+        set => SetProperty(ref invert, value);
+    }
 }

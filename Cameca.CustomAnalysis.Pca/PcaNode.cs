@@ -337,6 +337,10 @@ internal partial class PcaNode : AnalysisFilterNodeBase
             case nameof(PcaOptions.Isovalue):
                 MarkInvalidKeepResults();
                 break;
+            case nameof(PcaOptions.Invert):
+                FilterIsInverted = Options.Invert;
+                MarkInvalidKeepResults();
+                break;
             default:
                 break;
         }
