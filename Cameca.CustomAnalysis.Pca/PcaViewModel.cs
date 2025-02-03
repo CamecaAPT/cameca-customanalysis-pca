@@ -116,10 +116,12 @@ internal class PcaViewModel : AnalysisViewModelBase<PcaNode>
             var renderDataFactory = resources.ChartObjects;
 
             var positions = evals.Select((value, index) => new Vector3(index, 0f, value)).ToArray();
-            var line = renderDataFactory.CreateLine(positions, Colors.Blue);
-            var points = renderDataFactory.CreateSpheres(positions, Colors.Blue, radius: 0.1f, resolution: 20);
-            NoiseEigenValues.Add(line);
-            NoiseEigenValues.Add(points);
+            var series = renderDataFactory.CreateSeries();
+            series.Positions = positions;
+            series.Color = Colors.Blue;
+            series.MarkerShape = MarkerShape.Circle;
+            series.MarkerColor = Colors.Blue;
+            NoiseEigenValues.Add(series);
         }
     }
 
