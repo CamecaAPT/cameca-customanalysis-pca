@@ -31,6 +31,15 @@
             </utils:ButtonOverlayControl>
         </TabItem>
 
+        <TabItem Header="Components">
+            <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateCommand}"
+                            ButtonContent="Update"
+                            OverlayVisibility="{Binding ComponentsIsValid, Converter={StaticResource BooleanToVisibilityConverter}}">
+
+                <local:ComponentsTileView ItemsSource="{Binding ComponentRenderData}" />
+            </utils:ButtonOverlayControl>
+        </TabItem>
+
         <TabItem Header="Loading">
             <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateCommand}"
                             ButtonContent="Update"

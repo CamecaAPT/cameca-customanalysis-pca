@@ -5,12 +5,16 @@ using LiveCharts;
 using LiveCharts.Configurations;
 using LiveCharts.Wpf;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Numerics;
+using System.Resources;
 using System.Threading.Tasks;
+using System.Windows.Markup.Localizer;
 using System.Windows.Media;
+using System.Xml;
 
 namespace Cameca.CustomAnalysis.Pca;
 
@@ -26,6 +30,13 @@ internal class PcaViewModel : AnalysisViewModelBase<PcaNode>
     public AsyncRelayCommand UpdateCommand { get; }
 
     public ObservableCollection<IRenderData> NoiseEigenValues { get; } = new();
+
+    private ICollection<IRenderData> componentRenderData = Array.Empty<IRenderData>();
+    public ICollection<IRenderData> ComponentRenderData
+    {
+        get => componentRenderData;
+        set => SetProperty(ref componentRenderData, value);
+    }
 
     private SeriesCollection loadingsSeries = new();
     public SeriesCollection LoadingsSeries
@@ -104,6 +115,7 @@ internal class PcaViewModel : AnalysisViewModelBase<PcaNode>
         }
 
         UpdateNoiseEigenvalue();
+        UpdateComponentsView();
         UpdateSelectedComponentCharts();
     }
 
@@ -123,6 +135,107 @@ internal class PcaViewModel : AnalysisViewModelBase<PcaNode>
             series.MarkerColor = Colors.Blue;
             NoiseEigenValues.Add(series);
         }
+    }
+
+    private void UpdateComponentsView()
+    {
+        var resources = resourceFactory.CreateResource(Node.Id);
+        var renderDataFactory = resources.ChartObjects;
+        if (resources.GetValidIonData() is not { } ionData)
+        {
+            throw new InvalidOperationException("Could not resolve ion type information");
+        }
+
+        int numComponents = Node.Options.Components;
+        int selectedIndex = Node.Options.ComponentIndex;
+        if (Node.ComponentsResults is not { Grid3DData: { } gridData, Components: { } components, VoxelIndices: { } voxelIndices })
+        {
+            return;
+        }
+
+        var newComponentsData = new IRenderData[numComponents];
+        for (int compIndex = 0; compIndex < numComponents; compIndex++)
+        {
+            var scores = components[compIndex].Scores;
+            var positionsWithValues = GetScoredPositions(gridData, voxelIndices, scores);
+
+            var valuePoints = renderDataFactory.CreateValuePoints();
+            valuePoints.Name = $"Component {compIndex}";
+            valuePoints.PositionsWithValues = positionsWithValues;
+            valuePoints.ColorMap = GetColorMap(resources);
+
+            newComponentsData[compIndex] = valuePoints;
+        }
+        ComponentRenderData = newComponentsData;
+    }
+
+    private IColorMap GetColorMap(IResources resources)
+    {
+        return resources.ColorMap.GetPresetColorMap(ColorMapPreset.Plasma);
+        //var colorMap = resources.ColorMap.CreateColorMap();
+        //colorMap.Top = Color.FromScRgb(.5f, 1, 1, 0);
+        //colorMap.OutOfRangeTop = Colors.Yellow;
+        //colorMap.Bottom = Colors.Teal;
+        //colorMap.OutOfRangeBottom = Colors.Teal;
+        //colorMap.ColorStops.Add(new ColorStop
+        //{
+        //    TopColor = Color.FromArgb(0, 255, 140, 0),
+        //    RelativePosition = 0.5f,
+        //    BottomColor = Color.FromArgb(0, 0, 0, 255),
+        //});
+    }
+
+    private static Vector4[] GetScoredPositions(IGrid3DData gridData, int[] voxelIndices, float[] scores)
+    {
+
+
+        int xVoxels = gridData.NumVoxels[0];
+        double xSize = gridData.VoxelSize[0];
+        double xStart = gridData.GridRange[0, 0] + (xSize / 2d);
+
+        int yVoxels = gridData.NumVoxels[1];
+        double ySize = gridData.VoxelSize[1];
+        double yStart = gridData.GridRange[1, 0] + (ySize / 2d);
+
+        int zVoxels = gridData.NumVoxels[2];
+        double zSize = gridData.VoxelSize[2];
+        double zStart = gridData.GridRange[2, 0] + (zSize / 2d);
+
+        int indexer = 0;
+        var positionsWithValues = new Vector4[voxelIndices.Length];
+        for (int z = 0; z < zVoxels; z++)
+        {
+            for (int y = 0; y < yVoxels; y++)
+            {
+                for (int x = 0; x < xVoxels; x++)
+                {
+                    int voxelIndex = (z * yVoxels * xVoxels) + (y * xVoxels) + x;
+                    if (voxelIndices[indexer] == voxelIndex)
+                    {
+                        positionsWithValues[indexer] = new Vector4(
+                            (float)(xStart + (xSize * x)),
+                            (float)(yStart + (ySize * y)),
+                            (float)(zStart + (zSize * z)),
+                            scores[indexer]);
+                        indexer++;
+                        if (indexer >= voxelIndices.Length)
+                        {
+                            break;
+                        }
+                    }
+                }
+                if (indexer >= voxelIndices.Length)
+                {
+                    break;
+                }
+            }
+            if (indexer >= voxelIndices.Length)
+            {
+                break;
+            }
+        }
+
+        return positionsWithValues;
     }
 
     private void UpdateSelectedComponentCharts()

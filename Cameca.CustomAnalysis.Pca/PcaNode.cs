@@ -153,7 +153,7 @@ internal partial class PcaNode : AnalysisFilterNodeBase
             var compLoads = loads.Skip(i * nFeatures).Take(nFeatures).ToArray();
             components.Add(new ComponentResults(compScores, compLoads));
         }
-        ComponentsResults = new ComponentsResults(nonEmptyVoxels.ToArray(), components);
+        ComponentsResults = new ComponentsResults(gridData, nonEmptyVoxels.ToArray(), components);
 
         UpdateOptionsBounds();
     }
