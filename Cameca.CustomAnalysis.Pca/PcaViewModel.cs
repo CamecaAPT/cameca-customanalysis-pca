@@ -69,6 +69,7 @@ internal class PcaViewModel : AnalysisViewModelBase<PcaNode>
     {
         base.OnAdded(eventArgs);
         UpdateNoiseEigenvalue();
+        UpdateComponentsView();
         UpdateSelectedComponentCharts();
     }
 
