@@ -1,10 +1,12 @@
 ﻿using Prism.Mvvm;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Xml.Serialization;
 
 namespace Cameca.CustomAnalysis.Pca;
 
-public class PcaOptions : BindableBase
+[XmlRoot("PcaOptions")]
+public class PcaProperties : BindableBase
 {
     private int components = 0;
     public int Components

@@ -11,7 +11,7 @@ internal class PcaNodeMenuFactory : AnalysisMenuFactoryBase
     {
     }
 
-    protected override INodeDisplayInfo DisplayInfo => PcaNode.DisplayInfo;
-    protected override string NodeUniqueId => PcaNode.UniqueId;
+    protected override INodeDisplayInfo DisplayInfo => PrincipalComponentAnalysis.DisplayInfo;
+    protected override string NodeUniqueId => PrincipalComponentAnalysis.UniqueId;
     public override AnalysisMenuLocation Location { get; } = AnalysisMenuLocation.Analysis;
 }

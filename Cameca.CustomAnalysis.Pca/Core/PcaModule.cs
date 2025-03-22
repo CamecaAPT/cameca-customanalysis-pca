@@ -13,10 +13,9 @@ public class PcaModule : IModule
     public void RegisterTypes(IContainerRegistry containerRegistry)
     {
         containerRegistry.AddCustomAnalysisUtilities(options => options.UseStandardBaseClasses = true);
-        containerRegistry.RegisterBasicAnalysis();
 
-        containerRegistry.Register<object, PcaNode>(PcaNode.UniqueId);
-        containerRegistry.RegisterInstance(PcaNode.DisplayInfo, PcaNode.UniqueId);
+        containerRegistry.Register<object, PrincipalComponentAnalysis>(PrincipalComponentAnalysis.UniqueId);
+        containerRegistry.RegisterInstance(PrincipalComponentAnalysis.DisplayInfo, PrincipalComponentAnalysis.UniqueId);
         containerRegistry.Register<IAnalysisMenuFactory, PcaNodeMenuFactory>(nameof(PcaNodeMenuFactory));
         containerRegistry.Register<object, PcaViewModel>(PcaViewModel.UniqueId);
     }
