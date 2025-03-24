@@ -2,8 +2,8 @@
   "profiles": {
     "Launch AP Suite": {
       "commandName": "Executable",
-      "executablePath": "C:\\workspace\\cameca\\Shell\\Shell.Main\\bin\\Debug\\net6.0-windows\\Cameca.Shell.Main.exe",
-      "workingDirectory": "C:\\workspace\\cameca\\Shell\\Shell.Main\\bin\\Debug\\net6.0-windows\\",
+      "executablePath": "%LOCALAPPDATA%\\Programs\\CAMECA Instruments\\AP Suite\\Cameca.Shell.Main.exe",
+      "workingDirectory": "%LOCALAPPDATA%\\Programs\\CAMECA Instruments\\AP Suite\\",
       "nativeDebugging": true
     },
     "Pca": {
