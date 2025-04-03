@@ -34,6 +34,9 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     private ICollection<IRenderData> componentRenderData = Array.Empty<IRenderData>();
 
     [ObservableProperty]
+    private IColorMap? colorMap = null;
+
+    [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(UpdateCommand))]
     private EigenvalueResults? eigenvalueResults;
 
@@ -231,9 +234,11 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     partial void OnComponentsResultsChanged(ComponentsResults? value)
     {
         ComponentRenderData = Array.Empty<IRenderData>();
+        InitColorMap();
 
         if (ComponentsResults is not { Grid3DData: { } gridData, Components: { } components, VoxelIndices: { } voxelIndices }
-         || Resources.GetValidIonData() is not { } ionData)
+         || Resources.GetValidIonData() is not { } ionData
+         || ColorMap is null)
         {
             return;
         }
@@ -250,11 +255,16 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             var valuePoints = Resources.ChartObjects.CreateValuePoints();
             valuePoints.Name = $"Component {compIndex}";
             valuePoints.PositionsWithValues = positionsWithValues;
-            valuePoints.ColorMap = Resources.ColorMap.GetPresetColorMap(ColorMapPreset.Plasma);
+            valuePoints.ColorMap = ColorMap;
 
             newComponentsData[compIndex] = valuePoints;
         }
         ComponentRenderData = newComponentsData;
+    }
+
+    private void InitColorMap()
+    {
+        ColorMap ??= Resources.ColorMap.GetPresetColorMap(ColorMapPreset.Plasma);
     }
 
     // Updates readonly Min/Max properties so the bounds are displayed in the Properties panel 
