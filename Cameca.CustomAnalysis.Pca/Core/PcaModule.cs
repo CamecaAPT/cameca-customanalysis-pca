@@ -25,5 +25,7 @@ public class PcaModule : IModule
         var extensionRegistry = containerProvider.Resolve<IExtensionRegistry>();
 
         extensionRegistry.RegisterAnalysisView<PcaView, PcaViewModel>(AnalysisViewLocation.Default);
+
+        extensionRegistry.RegisterOptions<PcaGlobalOptions>("Principal Component Analysis");
     }
 }

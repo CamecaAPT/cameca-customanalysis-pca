@@ -22,7 +22,7 @@ namespace Cameca.CustomAnalysis.Pca;
 internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaProperties>
 {
     private readonly INodeDataProvider nodeDataProvider;
-
+    private readonly IOptionsAccessor optionsAccessor;
     public const string UniqueId = "Cameca.CustomAnalysis.Pca.PcaNode";
 
     public static INodeDisplayInfo DisplayInfo { get; } = new NodeDisplayInfo("Principal Component Analysis");
@@ -72,10 +72,36 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     public PrincipalComponentAnalysis(
         IStandardAnalysisFilterNodeBaseServices services,
         ResourceFactory resourceFactory,
-        INodeDataProvider nodeDataProvider)
+        INodeDataProvider nodeDataProvider,
+        IOptionsAccessor optionsAccessor)
         : base(services, resourceFactory)
     {
         this.nodeDataProvider = nodeDataProvider;
+        this.optionsAccessor = optionsAccessor;
+    }
+
+    protected override byte[]? GetSaveContent()
+    {
+        if (ColorMap is not null)
+        {
+            Properties.ColorMap = new SerializableColorMap
+            {
+                OutOfRangeTop = ColorMap.OutOfRangeTop,
+                Top = ColorMap.Top,
+                NanColor = ColorMap.NanColor,
+                Bottom = ColorMap.Bottom,
+                OutOfRangeBottom = ColorMap.OutOfRangeBottom,
+                ColorStops = ColorMap.ColorStops.Select(x => new SerializableColorStop
+                {
+                    TopColor = x.TopColor,
+                    RelativePosition = x.RelativePosition,
+                    BottomColor = x.BottomColor,
+                }).ToList(),
+                BottomValue = ColorMap.BottomValue,
+                TopValue = ColorMap.TopValue,
+            };
+        }
+        return base.GetSaveContent();
     }
 
     protected override void OnDataIsValidChanged(bool isValid)
@@ -246,11 +272,13 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         int numComponents = Properties.Components;
         int selectedIndex = Properties.ComponentIndex;
 
+        var jitterStdDev = optionsAccessor.GetOptions<PcaGlobalOptions>().JitterStdDev;
+
         var newComponentsData = new IRenderData[numComponents];
         for (int compIndex = 0; compIndex < numComponents; compIndex++)
         {
             var scores = components[compIndex].Scores;
-            var positionsWithValues = PositionScores.GetScoredPositions(gridData, voxelIndices, scores);
+            var positionsWithValues = PositionScores.GetScoredPositions(gridData, voxelIndices, scores, jitterStdDev: jitterStdDev);
 
             var valuePoints = Resources.ChartObjects.CreateValuePoints();
             valuePoints.Name = $"Component {compIndex}";
@@ -259,12 +287,57 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
             newComponentsData[compIndex] = valuePoints;
         }
+
+        var range = GetRange(components.Select(x => x.Scores));
+        ColorMap.BottomValue = range.Low;
+        ColorMap.TopValue = range.High;
+
         ComponentRenderData = newComponentsData;
+    }
+
+    private static (float Low, float High) GetRange(IEnumerable<float[]> scores)
+    {
+        // Flatten scores to single array
+        var size = scores.Sum(x => x.Length);
+        float[] allScores = new float[size];
+        int offset = 0;
+        foreach (var componentScores in scores)
+        {
+            int srcSize = componentScores.Length;
+            Array.Copy(componentScores, 0, allScores, offset, srcSize);
+            offset += srcSize;
+        }
+
+        // Get range
+        float mean = allScores.Average();
+        float stdDev = MathF.Sqrt(allScores.Average(v => MathF.Pow(v - mean, 2)));
+
+        return new (mean - 2 * stdDev, mean + 2 * stdDev);
     }
 
     private void InitColorMap()
     {
-        ColorMap ??= Resources.ColorMap.GetPresetColorMap(ColorMapPreset.Plasma);
+        if (ColorMap is null)
+        {
+            if (Properties.ColorMap is not null)
+            {
+                ColorMap = Resources.ColorMap.CreateColorMap(
+                    Properties.ColorMap.Bottom,
+                    Properties.ColorMap.NanColor,
+                    Properties.ColorMap.OutOfRangeBottom,
+                    Properties.ColorMap.OutOfRangeTop,
+                    Properties.ColorMap.Top,
+                    Properties.ColorMap.ColorStops.Select(x =>
+                        Resources.ColorMap.CreateColorStop(x.RelativePosition, x.TopColor, x.BottomColor)));
+                ColorMap.BottomValue = Properties.ColorMap.BottomValue;
+                ColorMap.TopValue = Properties.ColorMap.TopValue;
+            }
+            else
+            {
+                var preset = optionsAccessor.GetOptions<PcaGlobalOptions>().ColorMapPreset;
+                ColorMap = Resources.ColorMap.GetPresetColorMap(preset);
+            }
+        }
     }
 
     // Updates readonly Min/Max properties so the bounds are displayed in the Properties panel 
