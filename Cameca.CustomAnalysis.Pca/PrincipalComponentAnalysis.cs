@@ -84,22 +84,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     {
         if (ColorMap is not null)
         {
-            Properties.ColorMap = new SerializableColorMap
-            {
-                OutOfRangeTop = ColorMap.OutOfRangeTop,
-                Top = ColorMap.Top,
-                NanColor = ColorMap.NanColor,
-                Bottom = ColorMap.Bottom,
-                OutOfRangeBottom = ColorMap.OutOfRangeBottom,
-                ColorStops = ColorMap.ColorStops.Select(x => new SerializableColorStop
-                {
-                    TopColor = x.TopColor,
-                    RelativePosition = x.RelativePosition,
-                    BottomColor = x.BottomColor,
-                }).ToList(),
-                BottomValue = ColorMap.BottomValue,
-                TopValue = ColorMap.TopValue,
-            };
+            Properties.ColorMap = SerializeColorMap(ColorMap);
         }
         return base.GetSaveContent();
     }
@@ -260,11 +245,9 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     partial void OnComponentsResultsChanged(ComponentsResults? value)
     {
         ComponentRenderData = Array.Empty<IRenderData>();
-        InitColorMap();
 
         if (ComponentsResults is not { Grid3DData: { } gridData, Components: { } components, VoxelIndices: { } voxelIndices }
-         || Resources.GetValidIonData() is not { } ionData
-         || ColorMap is null)
+         || Resources.GetValidIonData() is not { } ionData)
         {
             return;
         }
@@ -275,6 +258,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         var jitterStdDev = optionsAccessor.GetOptions<PcaGlobalOptions>().JitterStdDev;
 
         var newComponentsData = new IRenderData[numComponents];
+        IValuePointsRenderData? rootValuePoints = null;
         for (int compIndex = 0; compIndex < numComponents; compIndex++)
         {
             var scores = components[compIndex].Scores;
@@ -283,14 +267,26 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             var valuePoints = Resources.ChartObjects.CreateValuePoints();
             valuePoints.Name = $"Component {compIndex}";
             valuePoints.PositionsWithValues = positionsWithValues;
-            valuePoints.ColorMap = ColorMap;
+            if (rootValuePoints is null)
+            {
+                rootValuePoints = valuePoints;
+                rootValuePoints.ColorMap = DeserializeColorMap(Properties.ColorMap);
+            }
+            else
+            {
+                valuePoints.ColorMap = rootValuePoints.ColorMap;
+            }
 
             newComponentsData[compIndex] = valuePoints;
         }
 
-        var range = GetRange(components.Select(x => x.Scores));
-        ColorMap.BottomValue = range.Low;
-        ColorMap.TopValue = range.High;
+        if (rootValuePoints?.ColorMap is not null)
+        {
+            ColorMap = rootValuePoints.ColorMap;
+            var range = GetRange(components.Select(x => x.Scores));
+            ColorMap.BottomValue = range.Low;
+            ColorMap.TopValue = range.High;
+        }
 
         ComponentRenderData = newComponentsData;
     }
@@ -315,29 +311,55 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         return new (mean - 2 * stdDev, mean + 2 * stdDev);
     }
 
-    private void InitColorMap()
+    private IColorMap GetColorMap(IValuePointsRenderData? rootValuePoints)
     {
-        if (ColorMap is null)
+        if (rootValuePoints?.ColorMap is not null)
         {
-            if (Properties.ColorMap is not null)
-            {
-                ColorMap = Resources.ColorMap.CreateColorMap(
-                    Properties.ColorMap.Bottom,
-                    Properties.ColorMap.NanColor,
-                    Properties.ColorMap.OutOfRangeBottom,
-                    Properties.ColorMap.OutOfRangeTop,
-                    Properties.ColorMap.Top,
-                    Properties.ColorMap.ColorStops.Select(x =>
-                        Resources.ColorMap.CreateColorStop(x.RelativePosition, x.TopColor, x.BottomColor)));
-                ColorMap.BottomValue = Properties.ColorMap.BottomValue;
-                ColorMap.TopValue = Properties.ColorMap.TopValue;
-            }
-            else
-            {
-                var preset = optionsAccessor.GetOptions<PcaGlobalOptions>().ColorMapPreset;
-                ColorMap = Resources.ColorMap.GetPresetColorMap(preset);
-            }
+            return rootValuePoints.ColorMap;
         }
+        return Resources.ColorMap.CreateColorMap();
+    }
+
+    private IColorMap DeserializeColorMap(SerializableColorMap? serializedColorMap)
+    {
+        if (serializedColorMap is not null)
+        {
+            var colorMap = Resources.ColorMap.CreateColorMap(
+                serializedColorMap.Bottom,
+                serializedColorMap.NanColor,
+                serializedColorMap.OutOfRangeBottom,
+                serializedColorMap.OutOfRangeTop,
+                serializedColorMap.Top,
+                serializedColorMap.ColorStops.Select(x =>
+                    Resources.ColorMap.CreateColorStop(x.RelativePosition, x.TopColor, x.BottomColor)));
+            colorMap.BottomValue = serializedColorMap.BottomValue;
+            colorMap.TopValue = serializedColorMap.TopValue;
+            return colorMap;
+        }
+        else
+        {
+            var preset = optionsAccessor.GetOptions<PcaGlobalOptions>().ColorMapPreset;
+            return Resources.ColorMap.GetPresetColorMap(preset);
+        }
+    }
+    private SerializableColorMap SerializeColorMap(IColorMap colorMap)
+    {
+        return new SerializableColorMap
+        {
+            OutOfRangeTop = colorMap.OutOfRangeTop,
+            Top = colorMap.Top,
+            NanColor = colorMap.NanColor,
+            Bottom = colorMap.Bottom,
+            OutOfRangeBottom = colorMap.OutOfRangeBottom,
+            ColorStops = colorMap.ColorStops.Select(x => new SerializableColorStop
+            {
+                TopColor = x.TopColor,
+                RelativePosition = x.RelativePosition,
+                BottomColor = x.BottomColor,
+            }).ToList(),
+            BottomValue = colorMap.BottomValue,
+            TopValue = colorMap.TopValue,
+        };
     }
 
     // Updates readonly Min/Max properties so the bounds are displayed in the Properties panel 
@@ -440,6 +462,11 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
     private void InvalidateComponents()
     {
+        if (ColorMap is not null)
+        {
+            Properties.ColorMap = SerializeColorMap(ColorMap);
+            ColorMap = null;
+        }
         ComponentsResults = null;
         InvalidateSelectedComponent();
     }
