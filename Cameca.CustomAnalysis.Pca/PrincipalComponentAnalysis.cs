@@ -238,7 +238,27 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         series.Color = Colors.Blue;
         series.MarkerShape = MarkerShape.Circle;
         series.MarkerColor = Colors.Blue;
-        NoiseEigenValues = new IRenderData[] { series };
+
+        var newRenderData = new List<IRenderData> { series };
+
+        if (EigenvalueResults is { Rank: int rank, NoiseEvals: float[] noiseEvals })
+        {
+            if (Properties.Components == 0)
+            {
+                Properties.Components = rank;
+            }
+            var noisePositions = Enumerable.Range(rank, noiseEvals.Length)
+                .Select(index => new Vector3(index, 0f, noiseEvals[index - rank]))
+                .ToArray();
+            var noiseSeries = Resources.ChartObjects.CreateSeries();
+            noiseSeries.Positions = noisePositions;
+            noiseSeries.Color = Colors.Red;
+            noiseSeries.MarkerShape = MarkerShape.None;
+
+            newRenderData.Add(noiseSeries);
+        }
+
+        NoiseEigenValues = newRenderData;
     }
 
     // Updates the components 3D plots when the component data (derived from selected number of components) changes

@@ -55,8 +55,12 @@ internal static class PcaCalculator
         float[] evals = new float[nevals];
 
         PcaLib.doEigen(nVoxels, nFeatures, dataBuffer, nevals, evals);
+        int rank = PcaLib.EstimateRankF(evals, nevals, nFeatures, refine: true);
 
-        return new EigenvalueResults(evals);
+        float[] noiseEvals = new float[nFeatures - rank];
+        PcaLib.NoiseEvals(rank, nevals, nFeatures, noiseEvals);
+
+        return new EigenvalueResults(evals, rank, noiseEvals);
     }
 
     public static ComponentsResults GetComponents(IIonData ionData, IGrid3DData gridData, int nComponents)
