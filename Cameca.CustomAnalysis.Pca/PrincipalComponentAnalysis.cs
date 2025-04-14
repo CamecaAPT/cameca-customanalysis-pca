@@ -15,6 +15,7 @@ using CommunityToolkit.Mvvm.Input;
 using LiveCharts;
 using LiveCharts.Configurations;
 using LiveCharts.Wpf;
+using System.Collections.ObjectModel;
 
 namespace Cameca.CustomAnalysis.Pca;
 
@@ -27,8 +28,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
     public static INodeDisplayInfo DisplayInfo { get; } = new NodeDisplayInfo("Principal Component Analysis");
 
-    [ObservableProperty]
-    public ICollection<IRenderData> noiseEigenValues = Array.Empty<IRenderData>();
+    public ObservableCollection<IRenderData> EigenvalueRenderData { get; } = new();
 
     [ObservableProperty]
     private ICollection<IRenderData> componentRenderData = Array.Empty<IRenderData>();
@@ -39,6 +39,11 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(UpdateCommand))]
     private EigenvalueResults? eigenvalueResults;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UpdateRankEstimationCanExecute))]
+    [NotifyCanExecuteChangedFor(nameof(UpdateRankEstimationCommand))]
+    private NoiseEigenvalueResults? noiseEigenvalueResults;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(UpdateComponentsCanExecute))]
@@ -63,6 +68,8 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     public ICollection<IRenderData> scoresHistogramData = Array.Empty<IRenderData>();
 
     public bool UpdateComponentsCanExecute => ComponentsResults is null;
+
+    public bool UpdateRankEstimationCanExecute => NoiseEigenvalueResults is null;
 
     public bool UpdateSelectedCopmponentCanExecute =>
         !LoadingsSeries.Any() || !LoadingsLables.Any() || !ScoresHistogramData.Any();
@@ -102,19 +109,49 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     // There is not benefit of prematurely calculating all the other data until the number of components is manually set after looking at the scree plot
     protected override async Task<bool> Update(CancellationToken cancellationToken)
     {
+        if (await GetEigenvalueResults(cancellationToken) is { } results)
+        {
+            EigenvalueResults = results;
+            NoiseEigenvalueResults = PcaCalculator.GetNoiseEigenvalues(
+                results.Evals,
+                Properties.Gaps,
+                (int)Properties.Significance,
+                Properties.Refine);
+            return true;
+        }
+        return false;
+    }
+
+    private async Task<EigenvalueResults?> GetEigenvalueResults(CancellationToken cancellationToken)
+    {
         if (await Resources.GetIonData(cancellationToken: cancellationToken) is not { } ionData)
         {
-            return false;
+            return null;
         }
 
         var gridNode = Resources.GetGrid();
         if (gridNode is null || await gridNode.GetDataAsync<IGrid3DData>(cancellationToken: cancellationToken) is not { } gridData)
         {
-            return false;
+            return null;
         }
 
-        EigenvalueResults = PcaCalculator.GetEignevalues(ionData, gridData);
-        return true;
+        return PcaCalculator.GetEignevalues(
+            ionData,
+            gridData);
+    }
+
+    [RelayCommand(CanExecute = nameof(UpdateRankEstimationCanExecute))]
+    public async Task UpdateRankEstimation(CancellationToken cancellationToken)
+    {
+        var eigenvalueResults = EigenvalueResults ??= await GetEigenvalueResults(cancellationToken);
+        if (eigenvalueResults is not null)
+        {
+            NoiseEigenvalueResults = PcaCalculator.GetNoiseEigenvalues(
+                eigenvalueResults.Evals,
+                Properties.Gaps,
+                (int)Properties.Significance,
+                Properties.Refine);
+        }
     }
 
     // After setting the number of components, the components data can be computed. We can follow up with the current
@@ -227,38 +264,45 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     // Updates the noise eigenvalues tab plot when the computed eigenvalue data changes
     partial void OnEigenvalueResultsChanged(EigenvalueResults? value)
     {
-        NoiseEigenValues = Array.Empty<IRenderData>();
+        EigenvalueRenderData.Clear();
         if (EigenvalueResults is not { Evals: { } evals })
         {
             return;
         }
         var positions = evals.Select((value, index) => new Vector3(index, 0f, value)).ToArray();
         var series = Resources.ChartObjects.CreateSeries();
+        series.Name = "Eigenvalues";
         series.Positions = positions;
         series.Color = Colors.Blue;
         series.MarkerShape = MarkerShape.Circle;
         series.MarkerColor = Colors.Blue;
 
-        var newRenderData = new List<IRenderData> { series };
+        EigenvalueRenderData.Add(series);
+    }
 
-        if (EigenvalueResults is { Rank: int rank, NoiseEvals: float[] noiseEvals })
+    partial void OnNoiseEigenvalueResultsChanged(NoiseEigenvalueResults? value)
+    {
+        if (NoiseEigenvalueResults is { Rank: int rank, NoiseEvals: float[] noiseEvals })
         {
             if (Properties.Components == 0)
             {
                 Properties.Components = rank;
             }
+            if (EigenvalueRenderData.FirstOrDefault(x => x.Name == "Noise Eigenvalues") is { } noiseEigenvalues)
+            {
+                EigenvalueRenderData.Remove(noiseEigenvalues);
+            }
             var noisePositions = Enumerable.Range(rank, noiseEvals.Length)
                 .Select(index => new Vector3(index, 0f, noiseEvals[index - rank]))
                 .ToArray();
             var noiseSeries = Resources.ChartObjects.CreateSeries();
+            noiseSeries.Name = "Noise Eigenvalues";
             noiseSeries.Positions = noisePositions;
             noiseSeries.Color = Colors.Red;
             noiseSeries.MarkerShape = MarkerShape.None;
 
-            newRenderData.Add(noiseSeries);
+            EigenvalueRenderData.Add(noiseSeries);
         }
-
-        NoiseEigenValues = newRenderData;
     }
 
     // Updates the components 3D plots when the component data (derived from selected number of components) changes
@@ -451,6 +495,10 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         switch (e.PropertyName)
         {
             case nameof(PcaProperties.Components):
+                if (Properties.Components == 0)
+                {
+                    NoiseEigenvalueResults = null;
+                }
                 InvalidateComponents();
                 break;
             case nameof(PcaProperties.ComponentIndex):

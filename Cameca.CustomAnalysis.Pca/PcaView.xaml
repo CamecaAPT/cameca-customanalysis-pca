@@ -22,10 +22,16 @@
 
         <TabControl>
             <TabItem Header="Noise Eigenvalues">
-                <controls:Chart2D DataSource="{Binding NoiseEigenValues}"
-                                  IsLogScaleY="True"
-                                  AxisXLabel="Sorted eigenvalue index"
-                                  AxisYLabel="Eigenvalue"/>
+                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateRankEstimationCommand}"
+                                            ButtonContent="Update"
+                                            OverlayVisibility="{Binding UpdateRankEstimationCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid>
+                        <controls:Chart2D DataSource="{Binding EigenvalueRenderData}"
+                                          IsLogScaleY="True"
+                                          AxisXLabel="Sorted eigenvalue index"
+                                          AxisYLabel="Eigenvalue"/>
+                    </Grid>
+                </utils:ButtonOverlayControl>
             </TabItem>
 
             <TabItem Header="Components">
