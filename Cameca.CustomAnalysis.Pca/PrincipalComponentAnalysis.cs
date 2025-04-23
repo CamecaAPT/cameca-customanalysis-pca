@@ -84,8 +84,8 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
     public bool UpdateRankEstimationCanExecute => NoiseEigenvalueResults is null;
 
-    public bool UpdateSelectedCopmponentCanExecute =>
-        !LoadingsSeries.Any() || !LoadingsLables.Any() || !ScoresHistogramData.Any();
+    public bool UpdateSelectedComponentCanExecute =>
+        !LoadingsSeries.Any() || !LoadingsLabels.Any() || !ScoresHistogramData.Any();
 
     public Func<double, string> AxisYLabelFormatter { get; } = (double value) => value.ToString("F3");
 
@@ -187,12 +187,6 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
 
         var compResults = PcaCalculator.GetComponents(ionData, gridData, Properties.Components);
-
-        var phaseIDResults = PcaCalculator.GetPhases(ionData, compResults);
-
-        compResults.PhaseIDResults = phaseIDResults;
-
-        ComponentsResults = compResults;
 
         var phaseIDResults = PcaCalculator.GetPhases(ionData, compResults);
 
@@ -313,11 +307,11 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         for (int i = 0; i < numIndices; ++i)
         {
             int voxelIndex = voxelIndices[i];
-            scores[i] = phaseIdResults.PhaseForVoxel(voxelIndex) == compIndex ? 1.0f : 0.0f ;
+            scores[i] = phaseIdResults.PhaseForVoxelIntValue(voxelIndex) == compIndex ? 1.0f : 0.0f ;
         }
         return scores;
     }
-    
+
     partial void OnNoiseEigenvalueResultsChanged(NoiseEigenvalueResults? value)
     {
         if (NoiseEigenvalueResults is { Rank: int rank, NoiseEvals: float[] noiseEvals })
@@ -341,19 +335,6 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
             EigenvalueRenderData.Add(noiseSeries);
         }
-    }
-
-    // Updates the components 3D plots when the component data (derived from selected number of components) changes
-    float[] GetPhaseIdScoresForVoxelIndices(PhaseIdResults phaseIdResults, int compIndex, int[] voxelIndices)
-    {
-        int numIndices = voxelIndices.Length;
-        float[] scores = new float[numIndices];
-        for (int i = 0; i < numIndices; ++i)
-        {
-            int voxelIndex = voxelIndices[i];
-            scores[i] = phaseIdResults.PhaseForVoxelIntValue(voxelIndex) == compIndex ? 1.0f : 0.0f ;
-        }
-        return scores;
     }
 
     // Updates the components 3D plots when the component data (derived from selected number of components) changes
