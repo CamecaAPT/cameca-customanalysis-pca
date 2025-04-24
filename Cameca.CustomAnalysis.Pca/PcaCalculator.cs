@@ -106,7 +106,7 @@ internal static class PcaCalculator
         PcaScoresGridProducer producer = new PcaScoresGridProducer(compResults);
 
         PcaScoresGrid scoresGrid = producer.ScoresGrid();
-        return scoresGrid.GetPhasesStrategyC();
+        return scoresGrid.GetPhasesStrategyE();
     }
 
     public static NoiseEigenvalueResults GetNoiseEigenvalues(float[] evals, int gaps, int significance, bool refine)
