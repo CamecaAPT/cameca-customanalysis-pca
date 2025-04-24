@@ -1,8 +1,48 @@
 ﻿using Cameca.CustomAnalysis.Interface;
+using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace Cameca.CustomAnalysis.Pca;
+
+public delegate float[] GetScoresDelegate(int voxelIndex);
+
+public class PcaScoresGridProducer: IScoresProvider {
+
+    ComponentsResults compResults;
+    int nComponents;
+
+    public PcaScoresGridProducer(ComponentsResults results)
+    {
+        compResults = results;
+        nComponents = compResults.Components.Count;
+    }
+
+    public (VoxelID, float[]) GetIDAndScores(int voxelIndex)
+    {
+        float[] scores = new float[nComponents];
+        for (int i = 0; i < nComponents; i++)
+        {
+            scores[i] = compResults.Components[i].Scores[voxelIndex];
+        }
+        VoxelID voxelId = new VoxelID(compResults.VoxelIndices[voxelIndex]);
+        return (voxelId, scores);
+    }
+
+    public PcaScoresGrid ScoresGrid()
+    {
+        int nComponents = compResults.Components.Count;
+
+        int x = compResults.Grid3DData.NumVoxels[0];
+        int y = compResults.Grid3DData.NumVoxels[1];
+        int z = compResults.Grid3DData.NumVoxels[2];
+
+        ThreeDGridDimensions gridDimensions = new ThreeDGridDimensions(x, y, z);
+        return new PcaScoresGrid(this, compResults.VoxelIndices.Count(), nComponents, gridDimensions);
+    }
+}
 
 internal static class PcaCalculator
 {
@@ -57,6 +97,16 @@ internal static class PcaCalculator
         PcaLib.doEigen(nVoxels, nFeatures, dataBuffer, nevals, evals);
 
         return new EigenvalueResults(evals);
+    }
+
+    // manipulate the results of PCA to identify phases per voxel
+    public static PhaseIdResults GetPhases(IIonData ionData, ComponentsResults compResults)
+    {
+        // make a PcaGrid, then call grid.GetPhases
+        PcaScoresGridProducer producer = new PcaScoresGridProducer(compResults);
+
+        PcaScoresGrid scoresGrid = producer.ScoresGrid();
+        return scoresGrid.GetPhasesStrategyE();
     }
 
     public static NoiseEigenvalueResults GetNoiseEigenvalues(float[] evals, int gaps, int significance, bool refine)

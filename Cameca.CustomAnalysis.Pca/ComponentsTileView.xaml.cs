@@ -39,6 +39,18 @@ public partial class ComponentsTileView : UserControl
         }
     }
 
+    public static readonly DependencyProperty IsPcaPhasesProperty = DependencyProperty.Register(
+        nameof(IsPcaPhases), typeof(bool), typeof(ComponentsTileView), new PropertyMetadata(default(bool)));
+
+
+    public bool? IsPcaPhases
+    {
+        get
+        {  return (bool)GetValue(IsPcaPhasesProperty); }
+        set
+        {  SetValue(IsPcaPhasesProperty, value); }
+    }
+
     public static readonly DependencyProperty RowsProperty = DependencyProperty.Register(
         nameof(Rows), typeof(int), typeof(ComponentsTileView), new PropertyMetadata(default(int)));
 
