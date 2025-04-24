@@ -39,6 +39,9 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     private ICollection<IRenderData> componentRenderData = Array.Empty<IRenderData>();
 
     [ObservableProperty]
+    private ICollection<IRenderData> pcaPhasesRenderData = Array.Empty<IRenderData>();
+
+    [ObservableProperty]
     private IColorMap? colorMap = null;
 
     [ObservableProperty]
@@ -341,6 +344,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     partial void OnComponentsResultsChanged(ComponentsResults? value)
     {
         ComponentRenderData = Array.Empty<IRenderData>();
+        PcaPhasesRenderData = Array.Empty<IRenderData>();
         SelectedGridRenderData = Array.Empty<IRenderData>();
 
         if (ComponentsResults is not { Grid3DData: { } gridData,
@@ -352,8 +356,8 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             return;
         }
 
-        int numComponents = 6; // was hardwired to numComponents  Properties.Components;
-        // int selectedIndex = Properties.ComponentIndex;
+        int numComponents = Properties.Components;
+        int selectedIndex = Properties.ComponentIndex;
 
         var jitterStdDev = optionsAccessor.GetOptions<PcaGlobalOptions>().JitterStdDev;
 
@@ -361,12 +365,8 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         IValuePointsRenderData? rootValuePoints = null;
         for (int compIndex = 0; compIndex < numComponents; compIndex++)
         {
-
-            var phaseIdScores = GetPhaseIdScoresForVoxelIndices(phaseIdResults, compIndex, voxelIndices);
-
-            // data fed into GetScoredPositions is an array of voxelIndices for which a dot should be generated,
-            // and an array of scores -- scores[n] is the score for the voxel at voxelIndex[n]
-            var positionsWithValues = PositionScores.GetScoredPositions(gridData, voxelIndices, phaseIdScores);
+            var scores = components[compIndex].Scores;
+            var positionsWithValues = PositionScores.GetScoredPositions(gridData, voxelIndices, scores, jitterStdDev: jitterStdDev);
 
             var valuePoints = Resources.ChartObjects.CreateValuePoints();
             valuePoints.Name = $"Component {compIndex}";
@@ -393,6 +393,58 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
 
         ComponentRenderData = newComponentsData;
+
+        //Almost the same as ComponentRenderData, but PcaRenderData
+        int numPhases = 7; // need to figure out how to not hard code
+        // int selectedIndex = Properties.ComponentIndex;
+
+        var newPhasesData = new IRenderData[numPhases];
+        IValuePointsRenderData? rootValuePoints2 = null;
+        for (int compIndex = 0; compIndex < numPhases; compIndex++)
+        {
+
+            var phaseIdScores = GetPhaseIdScoresForVoxelIndices(phaseIdResults, compIndex, voxelIndices);
+
+            // data fed into GetScoredPositions is an array of voxelIndices for which a dot should be generated,
+            // and an array of scores -- scores[n] is the score for the voxel at voxelIndex[n]
+            var positionsWithValues = PositionScores.GetScoredPositions(gridData, voxelIndices, phaseIdScores);
+
+            var valuePoints = Resources.ChartObjects.CreateValuePoints();
+            if (compIndex == 0)
+            {
+                valuePoints.Name = $"Unassigned Voxels";
+            }
+            else if (compIndex == (numPhases - 1)) 
+            {
+                valuePoints.Name = $"Interface Voxels";
+            }
+            else
+            {
+                valuePoints.Name = $"Pca Phase {compIndex}";
+            }
+                
+            valuePoints.PositionsWithValues = positionsWithValues;
+            if (rootValuePoints2 is null)
+            {
+                rootValuePoints2 = valuePoints;
+                rootValuePoints2.ColorMap = DeserializeColorMap(Properties.ColorMap);
+            }
+            else
+            {
+                valuePoints.ColorMap = rootValuePoints2.ColorMap;
+            }
+
+            newPhasesData[compIndex] = valuePoints;
+        }
+
+        if (rootValuePoints?.ColorMap is not null)
+        {
+            ColorMap = rootValuePoints.ColorMap;
+            ColorMap.BottomValue = 0.0f;
+            ColorMap.TopValue = 1.0f;
+        }
+
+        PcaPhasesRenderData = newPhasesData;
 
         var peakProjections = phaseIdResults.TwoDPeakProjections();
         int gridCount = peakProjections.Count;
@@ -502,7 +554,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
         ReadOnlyMemory2D<float> rom = new ReadOnlyMemory2D<float>(dat, span, span);
         Vector2 binsize = new Vector2(0.5f, 0.5f); // Vector2(dp.binsize, dp.binsize);
-        Vector2 origin = new Vector2(minCoord.x * dp.binsize, minCoord.y * dp.binsize);
+        Vector2 origin = new Vector2(minCoord.y * dp.binsize, minCoord.x * dp.binsize);
         renderData.Update(rom, binsize, origin);
     }
     // Updates readonly Min/Max properties so the bounds are displayed in the Properties panel 
