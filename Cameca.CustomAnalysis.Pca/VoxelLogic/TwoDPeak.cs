@@ -133,7 +133,6 @@ public class TwoDPeak
     // add adjacent pixels to list
     public void SuggestionAccepted(PixelSuggestion suggestion)
     {
-        Debug.WriteLine("SuggestionAccepted in peak " + this.peakId.DebugStr() + " : " + suggestion.DebugStr());
         removeFromCandidates(suggestion);
         bool isBorder = false;
         
@@ -153,7 +152,6 @@ public class TwoDPeak
                     // neighbor has higher score -- shouldn't add to current peak
                     // the currently 'accepted suggestion' is actually a pixel between peaks.
                     isBorder = true;
-                    Debug.WriteLine("Found increase at pixel " + availableId.DebugStr() + " neighborScore: " + neighborScore + " suggestionScore: " + suggestion.score);
                     foundIncreaseIds.Add(availableId);
                 }
                 else

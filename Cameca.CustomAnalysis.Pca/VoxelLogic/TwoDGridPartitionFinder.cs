@@ -229,7 +229,6 @@ public class TwoDGridPartitionFinder
                     }
                 case ReturnCode.foundIncrease:
                     {
-                        Debug.Write("returnCode found increase");
                             // need to remove the 'found increase' buckets from the peaks;
                             // also, collect these so that we can remember to look for new peaks
                         foreach (PeakID peakId in peaks.Keys.ToList())
