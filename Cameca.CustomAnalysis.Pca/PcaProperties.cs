@@ -56,6 +56,18 @@ public partial class PcaProperties : ObservableObject
     [ObservableProperty]
     private bool invert = false;
 
+    [ObservableProperty]
+    [field: Display(Name = "Noise Floor")]
+    private float noiseFloorFraction = 0.1f;
+
+    [ObservableProperty]
+    [field: Display(Name = "Peak Summit Allowance")]
+    private float peakSummitAllowance = 0.8f;
+
+    [ObservableProperty]
+    [field: Display(Name = "PCA Phase Id Dimensions")]
+    private int numDimsForPCAPhaseId = 3;
+
     [Display(AutoGenerateField = false)]
     public SerializableColorMap? ColorMap { get; set; }
 }

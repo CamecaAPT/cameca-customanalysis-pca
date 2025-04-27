@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using System;
 using PcaExtensionMethods;
+using Cameca.CustomAnalysis.Pca;
 
 
 public class TwoDGridPartitionFinder
@@ -12,6 +13,7 @@ public class TwoDGridPartitionFinder
     List<PixelID> rejectedPixelIds;
     List<PixelID> foundIncreasePixelIds; // when a peak finds an increase, remember it here
     Dictionary<PeakID, TwoDPeak> peaks;
+    PcaPhaseIdentificationProperties properties;
 
     // These are the return codes returned by IterateIdentifyingPeaks()
     // Depending on this result, the Logic in FindPartitions will either
@@ -24,13 +26,18 @@ public class TwoDGridPartitionFinder
         exhaustedSuggestions
     }
 
-    public TwoDGridPartitionFinder(DensityPlane twoDGrid)
+    public float PeakSummitAllowance()
+    {
+        return properties.peakSummitAllowance;
+    }
+    public TwoDGridPartitionFinder(DensityPlane twoDGrid, PcaPhaseIdentificationProperties props)
     {
         this.grid = twoDGrid;
         this.peaks = new Dictionary<PeakID, TwoDPeak> ();
         this.rejectedPixelIds = new List<PixelID>();
         this.foundIncreasePixelIds = new List<PixelID>();
         this.unplacedPixelIds = twoDGrid.GridPointIds();
+        this.properties = props;
     }
 
     // for each iteration step,

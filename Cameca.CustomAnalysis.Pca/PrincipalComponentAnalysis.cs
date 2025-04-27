@@ -191,7 +191,8 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
         var compResults = PcaCalculator.GetComponents(ionData, gridData, Properties.Components);
 
-        var phaseIDResults = PcaCalculator.GetPhases(ionData, compResults);
+        var pcaPhaseIdProperties = new PcaPhaseIdentificationProperties(Properties.NoiseFloorFraction, Properties.PeakSummitAllowance, Properties.NumDimsForPCAPhaseId);
+        var phaseIDResults = PcaCalculator.GetPhases(ionData, compResults, pcaPhaseIdProperties);
 
         compResults.PhaseIDResults = phaseIDResults;
 
