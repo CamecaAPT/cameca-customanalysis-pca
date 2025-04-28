@@ -21,6 +21,7 @@ using CommunityToolkit.HighPerformance;
 using System.Windows.Markup;
 using System.Runtime.Intrinsics.Arm;
 using Cameca.Extensions.Controls;
+using Cameca.CustomAnalysis.Pca;
 
 namespace Cameca.CustomAnalysis.Pca;
 
@@ -42,7 +43,10 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     private ICollection<IRenderData> pcaPhasesRenderData = Array.Empty<IRenderData>();
 
     [ObservableProperty]
-    private IColorMap? colorMap = null;
+    private IColorMap? pcaColorMap = null;
+
+    [ObservableProperty]
+    private IColorMap? componentsColorMap = null;
 
     [ObservableProperty]
     private ICollection<IRenderData> selectedGridRenderData = Array.Empty<IRenderData>();
@@ -62,15 +66,14 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     private ComponentsResults? componentsResults;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(UpdateComponentsCanExecute))]
-    [NotifyCanExecuteChangedFor(nameof(UpdateComponentsCommand))]
-    private TwoDPeakProjections? twoDPeakProjections;
+    [NotifyPropertyChangedFor(nameof(UpdatePCAPhasesCanExecute))]
+    [NotifyCanExecuteChangedFor(nameof(UpdatePCAPhasesCommand))]
+    private PhaseIdResults? pcaPhaseIDResults;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(UpdateSelectedComponentCanExecute))]
     [NotifyCanExecuteChangedFor(nameof(UpdateSelectedComponentCommand))]
     private SeriesCollection loadingsSeries = new();
-
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(UpdateSelectedComponentCanExecute))]
@@ -84,6 +87,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     public ICollection<IRenderData> scoresHistogramData = Array.Empty<IRenderData>();
 
     public bool UpdateComponentsCanExecute => ComponentsResults is null;
+    public bool UpdatePCAPhasesCanExecute => PcaPhaseIDResults is null;
 
     public bool UpdateRankEstimationCanExecute => NoiseEigenvalueResults is null;
 
@@ -105,9 +109,13 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
     protected override byte[]? GetSaveContent()
     {
-        if (ColorMap is not null)
+        if (PcaColorMap is not null)
         {
-            Properties.ColorMap = SerializeColorMap(ColorMap);
+            Properties.PcaColorMap = SerializeColorMap(PcaColorMap);
+        }
+        if (ComponentsColorMap is not null)
+        {
+            Properties.ComponentsColorMap = SerializeColorMap(ComponentsColorMap);
         }
         return base.GetSaveContent();
     }
@@ -191,14 +199,46 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
         var compResults = PcaCalculator.GetComponents(ionData, gridData, Properties.Components);
 
-        var pcaPhaseIdProperties = new PcaPhaseIdentificationProperties(Properties.NoiseFloorFraction, Properties.PeakSummitAllowance, Properties.NumDimsForPCAPhaseId);
-        var phaseIDResults = PcaCalculator.GetPhases(ionData, compResults, pcaPhaseIdProperties);
-
-        compResults.PhaseIDResults = phaseIDResults;
-
         ComponentsResults = compResults;
-        
+
         UpdateOptionsBounds();
+
+        // Ensure that the selected component falls in the valid range of number of components
+        if (Properties.PcaPhaseIndex < 0)
+        {
+            Properties.ComponentIndex = 0;
+        }
+        else if (Properties.ComponentIndex > Properties.Components)
+        {
+            Properties.ComponentIndex = Properties.Components;
+        }
+
+        await UpdateSelectedComponent(cancellationToken);
+    }
+
+    // PCA Phases can be updated independently of the Components if the number of grids to use changes
+    // or if any of the properties to use in the calculation change
+    [RelayCommand(CanExecute = nameof(UpdatePCAPhasesCanExecute))]
+    public async Task UpdatePCAPhases(CancellationToken cancellationToken)
+    {
+        DataStateIsError = false;
+        if (await Resources.GetIonData(cancellationToken: cancellationToken) is not { } ionData)
+        {
+            DataStateIsError = true;
+            return;
+        }
+
+        var gridNode = Resources.GetGrid();
+        if (gridNode is null || await gridNode.GetDataAsync<IGrid3DData>(cancellationToken: cancellationToken) is not { } gridData)
+        {
+            DataStateIsError = true;
+            return;
+        }
+
+        var compResults = ComponentsResults;
+
+        var pcaPhaseIdProperties = new PcaPhaseIdentificationProperties(Properties.NoiseFloorFraction, Properties.PeakSummitAllowance, Properties.NumDimsForPCAPhaseId);
+        PcaPhaseIDResults = PcaCalculator.GetPhases(ionData, compResults, pcaPhaseIdProperties);
 
         // Ensure that the selected component falls in the valid range of number of components
         if (Properties.ComponentIndex < 0)
@@ -342,15 +382,76 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     }
 
     // Updates the components 3D plots when the component data (derived from selected number of components) changes
+    partial void OnPcaPhaseIDResultsChanged(PhaseIdResults? value)
+    {
+        if (PcaPhaseIDResults is { IdentifiedPhase: Dictionary<VoxelID, int> identifiedPhase,
+            TwoDPeakProjections: Dictionary<string, TwoDPeakProjection> twoDPeakProjections,
+            PhaseIndexMap: Dictionary<string, int> phaseIndexMap } )
+     
+         {   
+             PcaPhasesRenderData = Array.Empty<IRenderData>();
+
+             Dictionary<int, string> phaseNamesMap = PcaPhaseIDResults.PhaseNamesMap();
+             int numPhases = phaseNamesMap.Count; // need to figure out how to not hard code
+             // int selectedIndex = Properties.ComponentIndex;
+
+            var newPhasesData = new IRenderData[numPhases];
+            IValuePointsRenderData? rootValuePoints2 = null;
+            for (int compIndex = 0; compIndex < numPhases; compIndex++)
+            {
+                var phaseIdScores = GetPhaseIdScoresForVoxelIndices(PcaPhaseIDResults, compIndex, ComponentsResults.VoxelIndices);
+
+                // data fed into GetScoredPositions is an array of voxelIndices for which a dot should be generated,
+                // and an array of scores -- scores[n] is the score for the voxel at voxelIndex[n]
+                var positionsWithValues = PositionScores.GetScoredPositions(ComponentsResults.Grid3DData, ComponentsResults.VoxelIndices, phaseIdScores);
+
+                var valuePoints = Resources.ChartObjects.CreateValuePoints();
+        
+                valuePoints.Name = phaseNamesMap[compIndex];
+                valuePoints.PositionsWithValues = positionsWithValues;
+                if (rootValuePoints2 is null)
+                {
+                    rootValuePoints2 = valuePoints;
+                    rootValuePoints2.ColorMap = DeserializeColorMap(Properties.PcaColorMap);
+                }
+                else
+                {
+                    valuePoints.ColorMap = rootValuePoints2.ColorMap;
+                }
+
+                newPhasesData[compIndex] = valuePoints;
+            }
+
+            if (rootValuePoints2?.ColorMap is not null)
+            {
+                PcaColorMap = rootValuePoints2.ColorMap;
+                PcaColorMap.BottomValue = 0.0f;
+                PcaColorMap.TopValue = 1.0f;
+            }
+
+            PcaPhasesRenderData = newPhasesData;
+            int gridCount = twoDPeakProjections.Count;
+            var newGridProjectionsData = new List<IRenderData>();
+            foreach (KeyValuePair<string, TwoDPeakProjection> kvp in twoDPeakProjections)
+            {
+                var histogram = Resources.ChartObjects.CreateHistogram2D();
+                histogram.Name = kvp.Key;
+                histogram.ColorMap = Resources.ColorMap.GetPresetColorMap(ColorMapPreset.GreyScale);
+                FillRenderDataWithGridData(histogram, kvp.Value);
+                newGridProjectionsData.Add(histogram);
+            }
+            SelectedGridRenderData = newGridProjectionsData;
+        }
+    }
+
+    // Updates the components 3D plots when the component data (derived from selected number of components) changes
     partial void OnComponentsResultsChanged(ComponentsResults? value)
     {
         ComponentRenderData = Array.Empty<IRenderData>();
-        PcaPhasesRenderData = Array.Empty<IRenderData>();
         SelectedGridRenderData = Array.Empty<IRenderData>();
 
         if (ComponentsResults is not { Grid3DData: { } gridData,
             Components: { } components,
-            PhaseIDResults: { } phaseIdResults,
             VoxelIndices: { } voxelIndices }
          || Resources.GetValidIonData() is not { } ionData)
         {
@@ -375,7 +476,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             if (rootValuePoints is null)
             {
                 rootValuePoints = valuePoints;
-                rootValuePoints.ColorMap = DeserializeColorMap(Properties.ColorMap);
+                rootValuePoints.ColorMap = DeserializeColorMap(Properties.ComponentsColorMap);
             }
             else
             {
@@ -387,78 +488,13 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
         if (rootValuePoints?.ColorMap is not null)
         {
-            ColorMap = rootValuePoints.ColorMap;
+            ComponentsColorMap = rootValuePoints.ColorMap;
             var range = GetRange(components.Select(x => x.Scores));
-            ColorMap.BottomValue = range.Low;
-            ColorMap.TopValue = range.High;
+            ComponentsColorMap.BottomValue = range.Low;
+            ComponentsColorMap.TopValue = range.High;
         }
 
         ComponentRenderData = newComponentsData;
-
-        //Almost the same as ComponentRenderData, but PcaRenderData
-        int numPhases = 7; // need to figure out how to not hard code
-        // int selectedIndex = Properties.ComponentIndex;
-
-        var newPhasesData = new IRenderData[numPhases];
-        IValuePointsRenderData? rootValuePoints2 = null;
-        for (int compIndex = 0; compIndex < numPhases; compIndex++)
-        {
-
-            var phaseIdScores = GetPhaseIdScoresForVoxelIndices(phaseIdResults, compIndex, voxelIndices);
-
-            // data fed into GetScoredPositions is an array of voxelIndices for which a dot should be generated,
-            // and an array of scores -- scores[n] is the score for the voxel at voxelIndex[n]
-            var positionsWithValues = PositionScores.GetScoredPositions(gridData, voxelIndices, phaseIdScores);
-
-            var valuePoints = Resources.ChartObjects.CreateValuePoints();
-            if (compIndex == 0)
-            {
-                valuePoints.Name = $"Unassigned Voxels";
-            }
-            else if (compIndex == (numPhases - 1)) 
-            {
-                valuePoints.Name = $"Interface Voxels";
-            }
-            else
-            {
-                valuePoints.Name = $"Pca Phase {compIndex}";
-            }
-                
-            valuePoints.PositionsWithValues = positionsWithValues;
-            if (rootValuePoints2 is null)
-            {
-                rootValuePoints2 = valuePoints;
-                rootValuePoints2.ColorMap = DeserializeColorMap(Properties.ColorMap);
-            }
-            else
-            {
-                valuePoints.ColorMap = rootValuePoints2.ColorMap;
-            }
-
-            newPhasesData[compIndex] = valuePoints;
-        }
-
-        if (rootValuePoints?.ColorMap is not null)
-        {
-            ColorMap = rootValuePoints.ColorMap;
-            ColorMap.BottomValue = 0.0f;
-            ColorMap.TopValue = 1.0f;
-        }
-
-        PcaPhasesRenderData = newPhasesData;
-
-        var peakProjections = phaseIdResults.TwoDPeakProjections();
-        int gridCount = peakProjections.Count;
-        var newGridProjectionsData = new List<IRenderData>();
-        foreach (KeyValuePair<string, TwoDPeakProjection> kvp in peakProjections)
-        {
-            var histogram = Resources.ChartObjects.CreateHistogram2D();
-            histogram.Name = kvp.Key;
-            histogram.ColorMap = Resources.ColorMap.GetPresetColorMap(ColorMapPreset.GreyScale);
-            FillRenderDataWithGridData(histogram, kvp.Value);
-            newGridProjectionsData.Add(histogram);
-        }
-        SelectedGridRenderData = newGridProjectionsData;
     }
 
     private static (float Low, float High) GetRange(IEnumerable<float[]> scores)
@@ -571,62 +607,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
   
     protected override async IAsyncEnumerable<ReadOnlyMemory<ulong>> GetIndicesDelegateAsync(IIonData ionData, IProgress<double>? progress, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        DataStateIsError = false;
-        if (ComponentsResults is null)
-        {
-            await UpdateComponents(cancellationToken);
-        }
 
-        // Extract necessary data out of ComponentsResults using some pattern matching for null checks and variable assignment
-        if (ComponentsResults is not { Grid3DData: { } gridData, VoxelIndices: { } nonEmptyVoxels }
-            || ComponentsResults.Components[Properties.ComponentIndex] is not { Scores: { } scores })
-        {
-            DataStateIsError = true;
-            yield break;
-        }
-        var phaseIds = ComponentsResults.PhaseIDResults;
-        int componentOfInterest = Properties.ComponentIndex;
-        var minVector = gridData.GetMinVector();
-        var voxelSize = gridData.GetVoxelSizeDimensions();
-        int xBinStride = gridData.NumVoxels[0];
-        int yBinStride = gridData.NumVoxels[1];
-        var binner = new PositionToVoxels(minVector, voxelSize, xBinStride, yBinStride);
-
-        // Create a map of voxel index to the associated score
-        var scoredVoxels = nonEmptyVoxels
-            .Zip(scores)
-            .ToDictionary(x => x.First, x => x.Second);
-
-        // Build buffers of filtered indices to return
-        // Iterating through each point (to determine inclusion) is a bit of a complex chunked iterator code to support >Int32.MaxValue number of ions in a data set
-        ulong index = 0ul;
-        float threshold = Properties.Isovalue;
-        foreach (var chunk in ionData.CreateSectionDataEnumerable(IonDataSectionName.Position))
-        {
-            int bufferIndex = 0;
-            using var buffer = MemoryOwner<ulong>.Allocate(chunk.Length);
-            var positions = chunk.ReadSectionData<Vector3>(IonDataSectionName.Position);
-            for (int chunkIndex = 0; chunkIndex < chunk.Length; chunkIndex++)
-            {
-                int bin = binner.ToVoxel(positions.Span[chunkIndex]);
-
-                // Properties.ComponentIndex is the selectedComponent
-                if (phaseIds.PhaseForVoxelIntValue(bin) == componentOfInterest) 
-                // if (scoredVoxels.TryGetValue(bin, out float score) && score >= threshold)
-                {
-                    buffer.Span[bufferIndex++] = index;
-                }
-                index += 1ul;
-            }
-            yield return buffer.Slice(0, bufferIndex).Memory;
-        }
-
-        DataStateIsValid = true;
-    }
-
-    /*
-    protected override async IAsyncEnumerable<ReadOnlyMemory<ulong>> GetIndicesDelegateAsync(IIonData ionData, IProgress<double>? progress, [EnumeratorCancellation] CancellationToken cancellationToken)
-    {
         DataStateIsError = false;
         if (ComponentsResults is null)
         {
@@ -645,37 +626,68 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         var voxelSize = gridData.GetVoxelSizeDimensions();
         int xBinStride = gridData.NumVoxels[0];
         int yBinStride = gridData.NumVoxels[1];
+
         var binner = new PositionToVoxels(minVector, voxelSize, xBinStride, yBinStride);
 
-        // Create a map of voxel index to the associated score
-        var scoredVoxels = nonEmptyVoxels
-            .Zip(scores)
-            .ToDictionary(x => x.First, x => x.Second);
-
-        // Build buffers of filtered indices to return
-        // Iterating through each point (to determine inclusion) is a bit of a complex chunked iterator code to support >Int32.MaxValue number of ions in a data set
-        ulong index = 0ul;
-        float threshold = Properties.Isovalue;
-        foreach (var chunk in ionData.CreateSectionDataEnumerable(IonDataSectionName.Position))
+        if (Properties.UsePCAPhaseForDetatchedROI)
         {
-            int bufferIndex = 0;
-            using var buffer = MemoryOwner<ulong>.Allocate(chunk.Length);
-            var positions = chunk.ReadSectionData<Vector3>(IonDataSectionName.Position);
-            for (int chunkIndex = 0; chunkIndex < chunk.Length; chunkIndex++)
+            var phaseIds = PcaPhaseIDResults;
+            int pcaPhaseOfInterest = Properties.PcaPhaseIndex;
+
+            // Build buffers of filtered indices to return
+            // Iterating through each point (to determine inclusion) is a bit of a complex chunked iterator code to support >Int32.MaxValue number of ions in a data set
+            ulong index = 0ul;
+            foreach (var chunk in ionData.CreateSectionDataEnumerable(IonDataSectionName.Position))
             {
-                var bin = binner.ToVoxel(positions.Span[chunkIndex]);
-                if (scoredVoxels.TryGetValue(bin, out float score) && score >= threshold)
+                int bufferIndex = 0;
+                using var buffer = MemoryOwner<ulong>.Allocate(chunk.Length);
+                var positions = chunk.ReadSectionData<Vector3>(IonDataSectionName.Position);
+                for (int chunkIndex = 0; chunkIndex < chunk.Length; chunkIndex++)
                 {
-                    buffer.Span[bufferIndex++] = index;
+                    int bin = binner.ToVoxel(positions.Span[chunkIndex]);
+
+                    // Properties.ComponentIndex is the selectedComponent
+                    if (phaseIds.PhaseForVoxelIntValue(bin) == pcaPhaseOfInterest)
+                    {
+                        buffer.Span[bufferIndex++] = index;
+                    }
+                    index += 1ul;
                 }
-                index += 1ul;
+                yield return buffer.Slice(0, bufferIndex).Memory;
             }
-            yield return buffer.Slice(0, bufferIndex).Memory;
+        }
+        else 
+        {
+
+            // Create a map of voxel index to the associated score
+            var scoredVoxels = nonEmptyVoxels
+                .Zip(scores)
+                .ToDictionary(x => x.First, x => x.Second);
+
+            // Build buffers of filtered indices to return
+            // Iterating through each point (to determine inclusion) is a bit of a complex chunked iterator code to support >Int32.MaxValue number of ions in a data set
+            ulong index = 0ul;
+            float threshold = Properties.Isovalue;
+            foreach (var chunk in ionData.CreateSectionDataEnumerable(IonDataSectionName.Position))
+            {
+                int bufferIndex = 0;
+                using var buffer = MemoryOwner<ulong>.Allocate(chunk.Length);
+                var positions = chunk.ReadSectionData<Vector3>(IonDataSectionName.Position);
+                for (int chunkIndex = 0; chunkIndex < chunk.Length; chunkIndex++)
+                {
+                    var bin = binner.ToVoxel(positions.Span[chunkIndex]);
+                    if (scoredVoxels.TryGetValue(bin, out float score) && score >= threshold)
+                    {
+                        buffer.Span[bufferIndex++] = index;
+                    }
+                    index += 1ul;
+                }
+                yield return buffer.Slice(0, bufferIndex).Memory;
+            }
         }
 
         DataStateIsValid = true;
     }
-    */
 
     // On Properties panel changes, some data must be invalidated to be recomputed with new values. Invalidations depend on the properties changed
     protected override void OnPropertiesChanged(PropertyChangedEventArgs e)
@@ -685,6 +697,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         CanSave = true;
         switch (e.PropertyName)
         {
+        // Olof add cases
             case nameof(PcaProperties.Components):
                 if (Properties.Components == 0)
                 {
@@ -699,6 +712,9 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             case nameof(PcaProperties.Invert):
                 FilterIsInverted = Properties.Invert;
                 InvalidateSelectedComponent();
+                break;
+            case nameof(PcaProperties.NumDimsForPCAPhaseId):
+                InvalidatePcaPhases();
                 break;
             default:
                 break;
@@ -717,17 +733,28 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     {
         EigenvalueResults = null;
         InvalidateComponents();
+        InvalidatePcaPhases();
     }
 
     private void InvalidateComponents()
     {
-        if (ColorMap is not null)
+        if (ComponentsColorMap is not null)
         {
-            Properties.ColorMap = SerializeColorMap(ColorMap);
-            ColorMap = null;
+            Properties.ComponentsColorMap = SerializeColorMap(ComponentsColorMap);
+            ComponentsColorMap = null;
         }
         ComponentsResults = null;
         InvalidateSelectedComponent();
+    }
+
+    private void InvalidatePcaPhases()
+    {
+        if (PcaColorMap is not null)
+        {
+            Properties.PcaColorMap = SerializeColorMap(PcaColorMap);
+            PcaColorMap = null;
+        }
+        PcaPhaseIDResults = null;
     }
 
     // Should actually be implemented in the base class CoreNodeBase along with existing DataStateIsValid.

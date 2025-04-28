@@ -76,7 +76,7 @@
 
                         <controls:ColorMapEditor Grid.Column="1"
                                                  Grid.Row="1"
-                                                 ColorMap="{Binding ColorMap}"
+                                                 ColorMap="{Binding ComponentsColorMap}"
                                                  ValueLabel="Score" />
 
                         <Grid Grid.Column="1"
@@ -103,9 +103,9 @@
             </TabItem>
 
             <TabItem Header="PCA Phases">
-                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateComponentsCommand}"
+                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdatePCAPhasesCommand}"
                                 ButtonContent="Update"
-                                OverlayVisibility="{Binding UpdateComponentsCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                OverlayVisibility="{Binding UpdatePCAPhasesCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -128,37 +128,11 @@
             </TabItem>
 
             <TabItem Header="Grids">
-                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateComponentsCommand}"
+                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdatePCAPhasesCommand}"
                                ButtonContent="Update"
-                               OverlayVisibility="{Binding UpdateComponentsCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
+                               OverlayVisibility="{Binding UpdatePCAPhasesCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <local:ProjectionGridsView GridsSource="{Binding SelectedGridRenderData}" />
 
-                </utils:ButtonOverlayControl>
-            </TabItem>
-
-            <TabItem Header="Loading">
-                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateSelectedComponentCommand}"
-                                ButtonContent="Update"
-                                OverlayVisibility="{Binding UpdateSelectedComponentCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <lvc:CartesianChart Series="{Binding LoadingsSeries}"
-                                        DisableAnimations="True"
-                                        LegendLocation="None">
-                        <lvc:CartesianChart.Resources>
-                            <Style TargetType="lvc:DefaultTooltip">
-                                <Setter Property="ShowSeries" Value="False" />
-                            </Style>
-                        </lvc:CartesianChart.Resources>
-                        <lvc:CartesianChart.AxisX>
-                            <lvc:Axis Labels="{Binding LoadingsLabels}" FontSize="18">
-                                <lvc:Axis.Separator>
-                                    <lvc:Separator Step="1" />
-                                </lvc:Axis.Separator>
-                            </lvc:Axis>
-                        </lvc:CartesianChart.AxisX>
-                        <lvc:CartesianChart.AxisY>
-                            <lvc:Axis Title="Loadings" FontSize="18" LabelFormatter="{Binding AxisYLabelFormatter, Mode=OneTime}" />
-                        </lvc:CartesianChart.AxisY>
-                    </lvc:CartesianChart>
                 </utils:ButtonOverlayControl>
             </TabItem>
 

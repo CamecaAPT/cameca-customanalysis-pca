@@ -492,7 +492,7 @@ public class PcaScoresGrid
         // for case 2) add the voxels to the core regions
         // for case 3) designate the voxel as an interface voxel
 
-        int voxelAssignmentIterationCount = 3;
+        int voxelAssignmentIterationCount = 10;
         for (int voxelAssignmentIteration = 0; voxelAssignmentIteration < voxelAssignmentIterationCount; voxelAssignmentIteration += 1)
         {
             pcaStream.WriteTimestamp("start voxel assignment loop # " + voxelAssignmentIteration);
@@ -591,12 +591,14 @@ public class PcaScoresGrid
         // make a pcaCode to phaseIndex map:
         // 
         Dictionary<string, int> phaseIndexMap = new Dictionary<string, int>();
+        phaseIndexMap["Unassigned Voxels"] = 0;
         int phaseIndex = 1;
         foreach (string pcaCode in  pcaCodesByPopulation)
         {
             phaseIndexMap[pcaCode] = phaseIndex;
             phaseIndex += 1;
         }
+        phaseIndexMap["Interface Voxels"] = phaseIndex;
 
         // and, call IdentifyVoxelAs for each voxel
         // phaseResults initializes phase ID to zero for each voxel
@@ -605,31 +607,30 @@ public class PcaScoresGrid
         {
             phaseIdResults.IdentifyVoxelAs(voxelId, 0);
         }
-            foreach (KeyValuePair<string, HashSet<VoxelID>> kvp in pcaCodeVoxelSets)
-            {
+        foreach (KeyValuePair<string, HashSet<VoxelID>> kvp in pcaCodeVoxelSets)
+        {
             string nthPcaCode = kvp.Key;
-            
+
             if (phaseIndexMap.ContainsKey(nthPcaCode))
             {
                 int voxelphase = phaseIndexMap[nthPcaCode];
-                if (voxelphase > 4)
-                {
-                    voxelphase = 6;
-                }
-                foreach(VoxelID voxelId in kvp.Value)
+
+                foreach (VoxelID voxelId in kvp.Value)
                 {
                     phaseIdResults.IdentifyVoxelAs(voxelId, voxelphase);
                 }
-            }   
+            }
         }
+        phaseIdResults.SetPhaseIndexMap(phaseIndexMap);
 
         // for exery interface voxel, set it to type 5:
         //  Dictionary<string, HashSet<VoxelID>> interfaceVoxelSets = new Dictionary<string, HashSet<VoxelID>>();
         foreach (KeyValuePair<string, HashSet<VoxelID>> kvp in interfaceVoxelSets)
         {
+            int interfaceVoxelBucket = phaseIndexMap["Interface Voxels"];
             foreach (VoxelID voxelId in kvp.Value)
             {
-                phaseIdResults.IdentifyVoxelAs(voxelId, 5);
+                phaseIdResults.IdentifyVoxelAs(voxelId, interfaceVoxelBucket);
             }
         }
 

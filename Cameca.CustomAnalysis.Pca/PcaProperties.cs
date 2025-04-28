@@ -68,8 +68,19 @@ public partial class PcaProperties : ObservableObject
     [field: Display(Name = "PCA Phase Id Dimensions")]
     private int numDimsForPCAPhaseId = 3;
 
+    [ObservableProperty]
+    [field: Display(Name = "PCA Phase Index")]
+    private int pcaPhaseIndex = 0;
+
+    [ObservableProperty]
+    [field: Display(Name = "Use PCA Phase for Detatched ROI")]
+    private bool usePCAPhaseForDetatchedROI = true;
+
     [Display(AutoGenerateField = false)]
-    public SerializableColorMap? ColorMap { get; set; }
+    public SerializableColorMap? PcaColorMap { get; set; }
+
+    [Display(AutoGenerateField = false)]
+    public SerializableColorMap? ComponentsColorMap { get; set; }
 }
 
 public class SerializableColorMap
