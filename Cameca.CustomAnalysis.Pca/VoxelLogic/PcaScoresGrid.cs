@@ -368,8 +368,8 @@ public class PcaScoresGrid
 
         // PcaStream writes a file with text data about the progression of the algorithm
         // uncomment it here and uncomment the calls to DumpVoxelSetStats below
-        PcaStream pcaStream = new PcaStream("GetPhasesStrategyE");
-        pcaStream.WriteTimestamp("start GetPhasesStrategyE");
+       //  PcaStream pcaStream = new PcaStream("GetPhasesStrategyE");
+        // pcaStream.WriteTimestamp("start GetPhasesStrategyE");
         PhaseIdResults phaseIdResults = new PhaseIdResults(voxelIds);
 
         float binSeparation = 0.5f;
@@ -450,7 +450,7 @@ public class PcaScoresGrid
             }
         }
 
-        pcaStream.WriteTimestamp("finished making grids");
+        // pcaStream.WriteTimestamp("finished making grids");
         // now examine the groups of voxels to identify contiguous regions
         // in this case, 'unassigned' means voxels not yet associated with a list of voxels in a pcaPhase
         Dictionary<string, HashSet<VoxelID>> unassignedVoxelBuckets = VoxelBuckets(pcaCodes);
@@ -495,7 +495,7 @@ public class PcaScoresGrid
         int voxelAssignmentIterationCount = 10;
         for (int voxelAssignmentIteration = 0; voxelAssignmentIteration < voxelAssignmentIterationCount; voxelAssignmentIteration += 1)
         {
-            pcaStream.WriteTimestamp("start voxel assignment loop # " + voxelAssignmentIteration);
+            // pcaStream.WriteTimestamp("start voxel assignment loop # " + voxelAssignmentIteration);
             Dictionary<string, HashSet<VoxelID>> unassignedSubtractions = new Dictionary<string, HashSet<VoxelID>>();
             Dictionary<string, HashSet<VoxelID>> voxelSetAdditions = new Dictionary<string, HashSet<VoxelID>>();
             Dictionary<string, HashSet<VoxelID>> interfaceVoxelSetAdditions = new Dictionary<string, HashSet<VoxelID>>();
@@ -564,21 +564,21 @@ public class PcaScoresGrid
             // calls to DumpVoxelSetStats are used to follow the progression of the algorithm is assigning voxels
             // these can be enabled if the pcaStream object is created above
 
-            pcaStream.WriteTimestamp("finished voxel partitioning" );
-            pcaStream.DumpVoxelSetStats("start pcaCodeVoxelSets", pcaCodeVoxelSets); 
-            pcaStream.DumpVoxelSetStats("start pcaCodeVoxelSets", pcaCodeVoxelSets);
-            pcaStream.DumpVoxelSetStats("startUnassigned", unassignedVoxelBuckets);
-            pcaStream.DumpVoxelSetStats("voxelSetAdditions", voxelSetAdditions);
-            pcaStream.DumpVoxelSetStats("interfaceVoxelSetAdditions", interfaceVoxelSetAdditions);
+           // pcaStream.WriteTimestamp("finished voxel partitioning" );
+           // pcaStream.DumpVoxelSetStats("start pcaCodeVoxelSets", pcaCodeVoxelSets); 
+           // pcaStream.DumpVoxelSetStats("start pcaCodeVoxelSets", pcaCodeVoxelSets);
+           // pcaStream.DumpVoxelSetStats("startUnassigned", unassignedVoxelBuckets);
+           // pcaStream.DumpVoxelSetStats("voxelSetAdditions", voxelSetAdditions);
+           // pcaStream.DumpVoxelSetStats("interfaceVoxelSetAdditions", interfaceVoxelSetAdditions);
 
             addVoxelsToHashSetDictionary(interfaceVoxelSetAdditions, interfaceVoxelSets);
             addVoxelsToHashSetDictionary(voxelSetAdditions, pcaCodeVoxelSets);
             subtractVoxelsFromHashSetDictionary(unassignedSubtractions, unassignedVoxelBuckets);
 
-            pcaStream.DumpVoxelSetStats("assignments sources", unassignedSubtractions);
-            pcaStream.DumpVoxelSetStats("new pcaCodeVoxelSets", pcaCodeVoxelSets);
-            pcaStream.DumpVoxelSetStats("stillUnassigned", unassignedVoxelBuckets);
-            pcaStream.WriteTimestamp("finished voxel loop");
+           // pcaStream.DumpVoxelSetStats("assignments sources", unassignedSubtractions);
+           //  pcaStream.DumpVoxelSetStats("new pcaCodeVoxelSets", pcaCodeVoxelSets);
+           //  pcaStream.DumpVoxelSetStats("stillUnassigned", unassignedVoxelBuckets);
+           //  pcaStream.WriteTimestamp("finished voxel loop");
         }
 
         // now, pcaCodeVoxelSets is ready to be used for define a per-voxel component mapping
@@ -634,7 +634,7 @@ public class PcaScoresGrid
             }
         }
 
-        pcaStream.Close();
+        // pcaStream.Close();
         return phaseIdResults;
     }
 
