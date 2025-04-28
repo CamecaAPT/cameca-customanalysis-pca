@@ -33,7 +33,7 @@
                     </Grid>
                 </utils:ButtonOverlayControl>
             </TabItem>
-
+            
             <TabItem Header="Components">
                 <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateComponentsCommand}"
                                 ButtonContent="Update"
@@ -52,6 +52,7 @@
                         <local:ComponentsTileView Grid.Column="0"
                                                   Grid.Row="0"
                                                   Grid.RowSpan="3"
+                                                  IsPcaPhases="false"
                                                   ItemsSource="{Binding ComponentRenderData}" />
                         <Grid Grid.Column="1"
                               Grid.Row="0">
@@ -72,12 +73,12 @@
                                 </TextBox.Text>
                             </TextBox>
                         </Grid>
-                        
+
                         <controls:ColorMapEditor Grid.Column="1"
                                                  Grid.Row="1"
-                                                 ColorMap="{Binding ColorMap}"
+                                                 ColorMap="{Binding ComponentsColorMap}"
                                                  ValueLabel="Score" />
-                        
+
                         <Grid Grid.Column="1"
                               Grid.Row="2">
                             <Grid.ColumnDefinitions>
@@ -101,15 +102,40 @@
                 </utils:ButtonOverlayControl>
             </TabItem>
 
+            <TabItem Header="PCA Phases">
+                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdatePCAPhasesCommand}"
+                                ButtonContent="Update"
+                                OverlayVisibility="{Binding UpdatePCAPhasesCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <local:ComponentsTileView Grid.Column="0"
+                                                  Grid.Row="0"
+                                                  Grid.RowSpan="3"
+                                                  IsPcaPhases="true" 
+                                                  ItemsSource="{Binding PcaPhasesRenderData}" />
+
+                    </Grid>
+                </utils:ButtonOverlayControl>
+            </TabItem>
+
             <TabItem Header="Grids">
-                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateComponentsCommand}"
+                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdatePCAPhasesCommand}"
                                ButtonContent="Update"
-                               OverlayVisibility="{Binding UpdateComponentsCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
+                               OverlayVisibility="{Binding UpdatePCAPhasesCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <local:ProjectionGridsView GridsSource="{Binding SelectedGridRenderData}" />
 
                 </utils:ButtonOverlayControl>
             </TabItem>
-            
+
             <TabItem Header="Loading">
                 <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateSelectedComponentCommand}"
                                 ButtonContent="Update"
@@ -135,7 +161,7 @@
                     </lvc:CartesianChart>
                 </utils:ButtonOverlayControl>
             </TabItem>
-
+            
             <TabItem Header="Scores">
                 <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateSelectedComponentCommand}"
                             ButtonContent="Update"

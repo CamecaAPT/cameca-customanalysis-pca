@@ -13,12 +13,3 @@ public sealed class TwoDPeakProjection
     }
 }
 
-public sealed class TwoDPeakProjections
-{
-    public List<TwoDPeakProjection> projections;
-
-    public TwoDPeakProjections(List<TwoDPeakProjection> twoDPeakProjections)
-    {
-        this.projections = twoDPeakProjections;
-    }
-}

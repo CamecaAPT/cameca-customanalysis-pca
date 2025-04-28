@@ -11,8 +11,6 @@ public sealed class ComponentsResults
 
     public int[] VoxelIndices { get; }
 
-    public PhaseIdResults PhaseIDResults { get; set; }
-
     public List<ComponentResults> Components { get; }
 
     public ComponentsResults(IGrid3DData grid3DData, int[] voxelIndices, List<ComponentResults> components)
@@ -22,7 +20,6 @@ public sealed class ComponentsResults
         Components = components;
 
         List<VoxelID> emptyList = new List<VoxelID>();
-        PhaseIDResults = new PhaseIdResults(emptyList);
     }
 
 }

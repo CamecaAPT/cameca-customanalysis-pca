@@ -10,45 +10,58 @@ using Cameca.CustomAnalysis.Pca;
 // or 0 if no phase is identified
 public class PhaseIdResults
 {
-    Dictionary<VoxelID, int> identifiedPhase;
-    Dictionary<string, TwoDPeakProjection> twoDPeakProjections;
+    public Dictionary<VoxelID, int> IdentifiedPhase;
+    public Dictionary<string, TwoDPeakProjection> TwoDPeakProjections;
+    public Dictionary<string, int> PhaseIndexMap; // the values in identifiedPhase dictionary should correspond to the PCA codes in this list
+                                           // there should be an entry "0" with the key "Unassigned Voxels"
+                                           // there should be an entry N with the key "Interface Voxels" -- the index with the greatest value
+                                           // So, the number of PCA Phases should be phaseIndexMap.Count - 2
 
     public PhaseIdResults(List<VoxelID> voxelIds)
     {
-        identifiedPhase = new Dictionary<VoxelID, int>();
+        this.IdentifiedPhase = new Dictionary<VoxelID, int>();
         // not-yet-identified voxels are identified as 0
         for (int i = 0; i < voxelIds.Count; ++i)
         {
-            identifiedPhase[voxelIds[i]] = 0;
+            this.IdentifiedPhase[voxelIds[i]] = 0;
         }
-        twoDPeakProjections = new Dictionary<string, TwoDPeakProjection>();
+        this.TwoDPeakProjections = new Dictionary<string, TwoDPeakProjection>();
+        this.PhaseIndexMap = new Dictionary<string, int>();
+    }
+
+    public Dictionary<int, string> PhaseNamesMap() 
+    {
+        Dictionary<int, string> namesMap = new Dictionary<int, string>();
+        // just reverse Keys and Values of phaseIndexMap
+        foreach (KeyValuePair<string, int> kvp in PhaseIndexMap)
+        {
+            namesMap[kvp.Value] = kvp.Key;
+        }
+
+        return namesMap;
     }
 
     public void SetTwoDPeakProjectionFor(string key, TwoDPeakProjection projection)
     {
-        twoDPeakProjections[key] = projection;
-    }
-    public Dictionary<string, TwoDPeakProjection> TwoDPeakProjections()
-    {
-        return twoDPeakProjections;
+        TwoDPeakProjections[key] = projection;
     }
 
     public void IdentifyVoxelAs(VoxelID voxelId, int phase)
     {
-        identifiedPhase[voxelId] = phase;
+        IdentifiedPhase[voxelId] = phase;
     }
     public void IdentifyVoxelsAs(List<VoxelID> voxelIds, int phase)
     {
         foreach (VoxelID voxelId in voxelIds) {
-            identifiedPhase[voxelId] = phase;
+            IdentifiedPhase[voxelId] = phase;
         }
     }
 
     public int? PhaseForVoxel(VoxelID voxelId)
     {
-        if (identifiedPhase.ContainsKey(voxelId))
+        if (IdentifiedPhase.ContainsKey(voxelId))
         {
-            return identifiedPhase[voxelId];
+            return IdentifiedPhase[voxelId];
         }
         return null;
     }
@@ -56,9 +69,9 @@ public class PhaseIdResults
     public int? PhaseForVoxelIntValue(int voxelIndex)
     {
         VoxelID voxelId = new VoxelID(voxelIndex);
-        if (identifiedPhase.ContainsKey(voxelId))
+        if (IdentifiedPhase.ContainsKey(voxelId))
         {
-            return identifiedPhase[voxelId];
+            return IdentifiedPhase[voxelId];
         }
         return null;
     }
@@ -66,13 +79,18 @@ public class PhaseIdResults
     public List<VoxelID> UnidentifiedVoxels()
     {
         var unidentifiedIndices = new List<VoxelID>();
-        foreach ( KeyValuePair<VoxelID, int> voxel in identifiedPhase )
+        foreach ( KeyValuePair<VoxelID, int> voxel in IdentifiedPhase )
         {
             if (voxel.Value == 0) {
                 unidentifiedIndices.Add(voxel.Key);
             }
         }
         return unidentifiedIndices;
+    }
+
+    public void SetPhaseIndexMap(Dictionary<string, int> indexMap)
+    {
+        PhaseIndexMap = indexMap;
     }
 }
     
