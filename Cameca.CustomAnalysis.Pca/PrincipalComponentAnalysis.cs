@@ -697,7 +697,6 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         CanSave = true;
         switch (e.PropertyName)
         {
-        // Olof add cases
             case nameof(PcaProperties.Components):
                 if (Properties.Components == 0)
                 {

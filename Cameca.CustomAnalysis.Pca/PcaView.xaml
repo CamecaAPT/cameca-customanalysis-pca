@@ -136,6 +136,32 @@
                 </utils:ButtonOverlayControl>
             </TabItem>
 
+            <TabItem Header="Loading">
+                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateSelectedComponentCommand}"
+                                ButtonContent="Update"
+                                OverlayVisibility="{Binding UpdateSelectedComponentCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <lvc:CartesianChart Series="{Binding LoadingsSeries}"
+                                        DisableAnimations="True"
+                                        LegendLocation="None">
+                        <lvc:CartesianChart.Resources>
+                            <Style TargetType="lvc:DefaultTooltip">
+                                <Setter Property="ShowSeries" Value="False" />
+                            </Style>
+                        </lvc:CartesianChart.Resources>
+                        <lvc:CartesianChart.AxisX>
+                            <lvc:Axis Labels="{Binding LoadingsLabels}" FontSize="18">
+                                <lvc:Axis.Separator>
+                                    <lvc:Separator Step="1" />
+                                </lvc:Axis.Separator>
+                            </lvc:Axis>
+                        </lvc:CartesianChart.AxisX>
+                        <lvc:CartesianChart.AxisY>
+                            <lvc:Axis Title="Loadings" FontSize="18" LabelFormatter="{Binding AxisYLabelFormatter, Mode=OneTime}" />
+                        </lvc:CartesianChart.AxisY>
+                    </lvc:CartesianChart>
+                </utils:ButtonOverlayControl>
+            </TabItem>
+            
             <TabItem Header="Scores">
                 <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateSelectedComponentCommand}"
                             ButtonContent="Update"
