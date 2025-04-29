@@ -386,13 +386,13 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     {
         if (PcaPhaseIDResults is { IdentifiedPhase: Dictionary<VoxelID, int> identifiedPhase,
             TwoDPeakProjections: Dictionary<string, TwoDPeakProjection> twoDPeakProjections,
-            PhaseIndexMap: Dictionary<string, int> phaseIndexMap } )
+            PhaseIndexMap: Dictionary<PcaPhaseName, int> phaseIndexMap } )
      
          {   
              PcaPhasesRenderData = Array.Empty<IRenderData>();
 
-             Dictionary<int, string> phaseNamesMap = PcaPhaseIDResults.PhaseNamesMap();
-             int numPhases = phaseNamesMap.Count; // need to figure out how to not hard code
+             Dictionary<int, PcaPhaseName> phaseNamesMap = PcaPhaseIDResults.PhaseNamesMap();
+             int numPhases = phaseNamesMap.Count; 
              // int selectedIndex = Properties.ComponentIndex;
 
             var newPhasesData = new IRenderData[numPhases];
@@ -407,7 +407,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
                 var valuePoints = Resources.ChartObjects.CreateValuePoints();
         
-                valuePoints.Name = phaseNamesMap[compIndex];
+                valuePoints.Name = phaseNamesMap[compIndex].UserDisplayableName();
                 valuePoints.PositionsWithValues = positionsWithValues;
                 if (rootValuePoints2 is null)
                 {
