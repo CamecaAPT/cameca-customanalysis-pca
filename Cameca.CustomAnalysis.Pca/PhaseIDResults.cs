@@ -12,7 +12,7 @@ public class PhaseIdResults
 {
     public Dictionary<VoxelID, int> IdentifiedPhase;
     public Dictionary<string, TwoDPeakProjection> TwoDPeakProjections;
-    public Dictionary<string, int> PhaseIndexMap; // the values in identifiedPhase dictionary should correspond to the PCA codes in this list
+    public Dictionary<PcaPhaseName, int> PhaseIndexMap; // the values in identifiedPhase dictionary should correspond to the PCA codes in this list
                                            // there should be an entry "0" with the key "Unassigned Voxels"
                                            // there should be an entry N with the key "Interface Voxels" -- the index with the greatest value
                                            // So, the number of PCA Phases should be phaseIndexMap.Count - 2
@@ -26,14 +26,14 @@ public class PhaseIdResults
             this.IdentifiedPhase[voxelIds[i]] = 0;
         }
         this.TwoDPeakProjections = new Dictionary<string, TwoDPeakProjection>();
-        this.PhaseIndexMap = new Dictionary<string, int>();
+        this.PhaseIndexMap = new Dictionary<PcaPhaseName, int>();
     }
 
-    public Dictionary<int, string> PhaseNamesMap() 
+    public Dictionary<int, PcaPhaseName> PhaseNamesMap() 
     {
-        Dictionary<int, string> namesMap = new Dictionary<int, string>();
+        Dictionary<int, PcaPhaseName> namesMap = new Dictionary<int, PcaPhaseName>();
         // just reverse Keys and Values of phaseIndexMap
-        foreach (KeyValuePair<string, int> kvp in PhaseIndexMap)
+        foreach (KeyValuePair<PcaPhaseName, int> kvp in PhaseIndexMap)
         {
             namesMap[kvp.Value] = kvp.Key;
         }
@@ -88,7 +88,7 @@ public class PhaseIdResults
         return unidentifiedIndices;
     }
 
-    public void SetPhaseIndexMap(Dictionary<string, int> indexMap)
+    public void SetPhaseIndexMap(Dictionary<PcaPhaseName, int> indexMap)
     {
         PhaseIndexMap = indexMap;
     }

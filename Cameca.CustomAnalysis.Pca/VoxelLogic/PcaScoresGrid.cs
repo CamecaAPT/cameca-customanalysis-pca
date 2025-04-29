@@ -140,10 +140,10 @@ public class PcaScoresGrid
     // VoxelBuckets essentially inverts the dictionary passed in
     // returns a dictionary where the key is the pcaCode string,
     // and the value is a HashSet of VoxelIDs with that pcaCode
-    internal Dictionary<string, HashSet<VoxelID>> VoxelBuckets(Dictionary<VoxelID, string> pcaCodes)
+    internal Dictionary<PcaPhaseName, HashSet<VoxelID>> VoxelBuckets(Dictionary<VoxelID, PcaPhaseName> pcaCodes)
     {
-        Dictionary<string, HashSet<VoxelID>> buckets = new Dictionary<string, HashSet<VoxelID>>();
-        foreach (KeyValuePair<VoxelID, string> kvp in pcaCodes)
+        Dictionary<PcaPhaseName, HashSet<VoxelID>> buckets = new Dictionary<PcaPhaseName, HashSet<VoxelID>>();
+        foreach (KeyValuePair<VoxelID, PcaPhaseName> kvp in pcaCodes)
         {
             if (buckets.ContainsKey(kvp.Value))
             {
@@ -158,10 +158,10 @@ public class PcaScoresGrid
         }
         return buckets;
     }
-    internal Dictionary<string, int> PcaCodeCounts(Dictionary<string, HashSet<VoxelID>> voxelBuckets)
+    internal Dictionary<PcaPhaseName, int> PcaCodeCounts(Dictionary<PcaPhaseName, HashSet<VoxelID>> voxelBuckets)
     {
-        Dictionary<string, int> pcaCodeCounts = new Dictionary<string, int>();
-        foreach (KeyValuePair<string, HashSet<VoxelID>> kvp in voxelBuckets)
+        Dictionary<PcaPhaseName, int> pcaCodeCounts = new Dictionary<PcaPhaseName, int>();
+        foreach (KeyValuePair<PcaPhaseName, HashSet<VoxelID>> kvp in voxelBuckets)
         {
             pcaCodeCounts[kvp.Key] = kvp.Value.Count;
         }
@@ -246,17 +246,17 @@ public class PcaScoresGrid
     // The reason we use a . to separate the letter from the number in PCA codes is to 
     // make it easy to identify a zero -- i.e. the algorithm here also
     // works if there are 10 peaks, because "A.10" doesn't contain ".0"
-    internal HashSet<string> filterForMatchableCode(List<string> nonZeroPcaCodes, string pcaCode)
+    internal HashSet<PcaPhaseName> filterForMatchableCode(List<PcaPhaseName> nonZeroPcaCodes, PcaPhaseName pcaCode)
     {
         // if pcaCode contains zero 0s or more than one 0, return empty List
-        HashSet<string> matches = new HashSet<string>();
+        HashSet<PcaPhaseName> matches = new HashSet<PcaPhaseName>();
 
         // tokens here means 'substrings' -- parts of the PCA code that should be matched
         string[] tokens = pcaCode.Split(".0");
         int numTokens = tokens.Count();
         if (numTokens > 1)
         {
-            foreach (string candidate in nonZeroPcaCodes)
+            foreach (PcaPhaseName candidate in nonZeroPcaCodes)
             {
                 bool matchesAll = true;
                 int lastTokenIndex = numTokens - 1;
@@ -285,22 +285,9 @@ public class PcaScoresGrid
         return matches;
     }
 
-    string interfaceIdForCodes(List<string> pcaCodes)
+    void addVoxelsToHashSetDictionary(Dictionary<PcaPhaseName, HashSet<VoxelID>> additions, Dictionary<PcaPhaseName, HashSet<VoxelID>> sets)
     {
-        List<string> codesList = new List<string>(pcaCodes);
-        codesList.Sort();
-        string interfaceId = codesList[0];
-        int numCodes = codesList.Count();
-        for (int i = 1; i < numCodes; ++i)
-        {
-            interfaceId += "," + codesList[i];
-        }
-        return interfaceId;
-    }
-
-    void addVoxelsToHashSetDictionary(Dictionary<string, HashSet<VoxelID>> additions, Dictionary<string, HashSet<VoxelID>> sets)
-    {
-        foreach (KeyValuePair<string, HashSet<VoxelID>> kvp in additions)
+        foreach (KeyValuePair<PcaPhaseName, HashSet<VoxelID>> kvp in additions)
         {
             HashSet<VoxelID> hashSet;
             if (sets.ContainsKey(kvp.Key))
@@ -319,10 +306,29 @@ public class PcaScoresGrid
         }
     }
 
-    
-    void subtractVoxelsFromHashSetDictionary(Dictionary<string, HashSet<VoxelID>> subtractions, Dictionary<string, HashSet<VoxelID>> sets)
+    void addVoxelsToPcaPhaseNameListSet(Dictionary<PcaPhaseNameList, HashSet<VoxelID>> additions, Dictionary<PcaPhaseNameList, HashSet<VoxelID>> sets)
     {
-        foreach (KeyValuePair<string, HashSet<VoxelID>> kvp in subtractions)
+        foreach (KeyValuePair<PcaPhaseNameList, HashSet<VoxelID>> kvp in additions)
+        {
+            HashSet<VoxelID> hashSet;
+            if (sets.ContainsKey(kvp.Key))
+            {
+                hashSet = sets[kvp.Key];
+            }
+            else
+            {
+                hashSet = new HashSet<VoxelID>();
+            }
+            foreach (VoxelID voxelId in kvp.Value)
+            {
+                hashSet.Add(voxelId);
+            }
+            sets[kvp.Key] = hashSet;
+        }
+    }
+    void subtractVoxelsFromHashSetDictionary(Dictionary<PcaPhaseName, HashSet<VoxelID>> subtractions, Dictionary<PcaPhaseName, HashSet<VoxelID>> sets)
+    {
+        foreach (KeyValuePair<PcaPhaseName, HashSet<VoxelID>> kvp in subtractions)
         {
             HashSet<VoxelID> hashSet;
             if (sets.ContainsKey(kvp.Key))
@@ -378,10 +384,10 @@ public class PcaScoresGrid
         Dictionary<string, List<List<PixelID>>> partitions = new Dictionary<string, List<List<PixelID>>>();
 
         // make a dictionary for the pcaCodes and fill with enpty Strings
-        Dictionary<VoxelID, string> pcaCodes = new Dictionary<VoxelID, string>();
+        Dictionary<VoxelID, PcaPhaseName> pcaCodes = new Dictionary<VoxelID, PcaPhaseName>();
         foreach (VoxelID voxelId in voxelIds)
         {
-            pcaCodes[voxelId] = "";
+            pcaCodes[voxelId] = new PcaPhaseName();
         }
 
         int AAsciiValue = ASCIIValueForChar('A');
@@ -421,7 +427,7 @@ public class PcaScoresGrid
                         List<VoxelID> voxelIdsForThisPixel = voxelLists[pixelID];
                         foreach (VoxelID voxelId in voxelIdsForThisPixel)
                         {
-                            pcaCodes[voxelId] = pcaCodes[voxelId] + pcaCode;
+                            pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(pcaCode);
                         }
                         // remove that entry from voxelLists
                         voxelLists.Remove(pixelID);
@@ -439,7 +445,7 @@ public class PcaScoresGrid
                     List<VoxelID> voxelIdsForThisPixel = voxelLists[pixelID];
                     foreach (VoxelID voxelId in voxelIdsForThisPixel)
                     {
-                        pcaCodes[voxelId] = pcaCodes[voxelId] + unassignedPcaCode;
+                        pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(unassignedPcaCode);
                     }
                 }
 
@@ -453,11 +459,11 @@ public class PcaScoresGrid
         // pcaStream.WriteTimestamp("finished making grids");
         // now examine the groups of voxels to identify contiguous regions
         // in this case, 'unassigned' means voxels not yet associated with a list of voxels in a pcaPhase
-        Dictionary<string, HashSet<VoxelID>> unassignedVoxelBuckets = VoxelBuckets(pcaCodes);
+        Dictionary<PcaPhaseName, HashSet<VoxelID>> unassignedVoxelBuckets = VoxelBuckets(pcaCodes);
 
         // first, lets dump some info about populations of all the different 
         // pca Codes:
-        Dictionary<string, int> pcaCodeCounts = PcaCodeCounts(unassignedVoxelBuckets);
+        Dictionary<PcaPhaseName, int> pcaCodeCounts = PcaCodeCounts(unassignedVoxelBuckets);
 
         // Enable this line to get a text file with counts of the different buckets
         //DumpPcaCodeCounts(pcaCodeCounts);
@@ -466,12 +472,12 @@ public class PcaScoresGrid
         // At first, assume that all PCA codes that have no zero value in them identify a particular phase
         // So, generate a list of voxels for each of these phases 
 
-        List<string> nonZeroPcaCodes = unassignedVoxelBuckets.Keys.Where(code => !code.Contains(".0")).ToList();
-        Dictionary<string, HashSet<VoxelID>> pcaCodeVoxelSets = new Dictionary<string, HashSet<VoxelID>>();
-        Dictionary<string, HashSet<VoxelID>> interfaceVoxelSets = new Dictionary<string, HashSet<VoxelID>>();
+        List<PcaPhaseName> nonZeroPcaCodes = unassignedVoxelBuckets.Keys.Where(code => !code.Contains(".0")).ToList();
+        Dictionary<PcaPhaseName, HashSet<VoxelID>> pcaCodeVoxelSets = new Dictionary<PcaPhaseName, HashSet<VoxelID>>();
+        Dictionary<PcaPhaseNameList, HashSet<VoxelID>> interfaceVoxelSets = new Dictionary<PcaPhaseNameList, HashSet<VoxelID>>();
 
         // pcaCodes is a Dictionary<VoxelID, string>
-        foreach (string pcaCode in nonZeroPcaCodes)
+        foreach (PcaPhaseName pcaCode in nonZeroPcaCodes)
         {
             // just copy over the voxel List to be the base list for  that phase
             pcaCodeVoxelSets[pcaCode] = unassignedVoxelBuckets[pcaCode];
@@ -496,33 +502,33 @@ public class PcaScoresGrid
         for (int voxelAssignmentIteration = 0; voxelAssignmentIteration < voxelAssignmentIterationCount; voxelAssignmentIteration += 1)
         {
             // pcaStream.WriteTimestamp("start voxel assignment loop # " + voxelAssignmentIteration);
-            Dictionary<string, HashSet<VoxelID>> unassignedSubtractions = new Dictionary<string, HashSet<VoxelID>>();
-            Dictionary<string, HashSet<VoxelID>> voxelSetAdditions = new Dictionary<string, HashSet<VoxelID>>();
-            Dictionary<string, HashSet<VoxelID>> interfaceVoxelSetAdditions = new Dictionary<string, HashSet<VoxelID>>();
+            Dictionary<PcaPhaseName, HashSet<VoxelID>> unassignedSubtractions = new Dictionary<PcaPhaseName, HashSet<VoxelID>>();
+            Dictionary<PcaPhaseName, HashSet<VoxelID>> voxelSetAdditions = new Dictionary<PcaPhaseName, HashSet<VoxelID>>();
+            Dictionary<PcaPhaseNameList, HashSet<VoxelID>> interfaceVoxelSetAdditions = new Dictionary<PcaPhaseNameList, HashSet<VoxelID>>();
 
             // this loop initializes the lists of voxels to add for each PCA code
             int numNonZeroPcaCodes = nonZeroPcaCodes.Count();
             for (int nOuter = 0; nOuter < numNonZeroPcaCodes; ++nOuter)
             {
-                string nonZeroPcaCode = nonZeroPcaCodes[nOuter];
+                PcaPhaseName nonZeroPcaCode = nonZeroPcaCodes[nOuter];
                 voxelSetAdditions[nonZeroPcaCode] = new HashSet<VoxelID>();
             }
 
-            List<string> unassignedPcaCodes = unassignedVoxelBuckets.Keys.ToList();
-            foreach (string pcaCode in unassignedPcaCodes)
+            List<PcaPhaseName> unassignedPhaseNames = unassignedVoxelBuckets.Keys.ToList();
+            foreach (PcaPhaseName phaseName in unassignedPhaseNames)
             {
-                HashSet<string> matchableCodes = filterForMatchableCode(nonZeroPcaCodes, pcaCode);
+                HashSet<PcaPhaseName> matchableCodes = filterForMatchableCode(nonZeroPcaCodes, phaseName);
                 // matchableCodes are the nonZeroPcaCodes that are "one away" from the pcaCode under consideration
 
-                HashSet<VoxelID> potentialAdditions = unassignedVoxelBuckets[pcaCode];
+                HashSet<VoxelID> potentialAdditions = unassignedVoxelBuckets[phaseName];
                 HashSet<VoxelID> subtractions = new HashSet<VoxelID>();
-                List<string> matches = new List<string>();
+                List<PcaPhaseName> matches = new List<PcaPhaseName>();
                 foreach (VoxelID voxelId in potentialAdditions)
                 {
                     List<VoxelID> neighbors = voxelId.NeighborVoxels(gridDims);
                     matches.Clear();
 
-                    foreach (string matchingCode in matchableCodes)
+                    foreach (PcaPhaseName matchingCode in matchableCodes)
                     {
                         if (pcaCodeVoxelSets[matchingCode].ContainsAny(neighbors))
                         {
@@ -540,7 +546,7 @@ public class PcaScoresGrid
                         }
                         else
                         {
-                            string interfaceId = interfaceIdForCodes(matches);
+                            PcaPhaseNameList interfaceId = new PcaPhaseNameList(matches);
                             if (interfaceVoxelSetAdditions.ContainsKey(interfaceId))
                             {
                                 interfaceVoxelSetAdditions[interfaceId].Add(voxelId);
@@ -555,7 +561,7 @@ public class PcaScoresGrid
                         }
                     }
                 }
-                unassignedSubtractions[pcaCode] = subtractions;
+                unassignedSubtractions[phaseName] = subtractions;
             }
             // now, any voxel that is part of interfaceVoxelSetAdditions
             // or voxelSetAdditions should get taken out of unassignedVoxelBuckets
@@ -564,14 +570,14 @@ public class PcaScoresGrid
             // calls to DumpVoxelSetStats are used to follow the progression of the algorithm is assigning voxels
             // these can be enabled if the pcaStream object is created above
 
-           // pcaStream.WriteTimestamp("finished voxel partitioning" );
-           // pcaStream.DumpVoxelSetStats("start pcaCodeVoxelSets", pcaCodeVoxelSets); 
-           // pcaStream.DumpVoxelSetStats("start pcaCodeVoxelSets", pcaCodeVoxelSets);
-           // pcaStream.DumpVoxelSetStats("startUnassigned", unassignedVoxelBuckets);
-           // pcaStream.DumpVoxelSetStats("voxelSetAdditions", voxelSetAdditions);
-           // pcaStream.DumpVoxelSetStats("interfaceVoxelSetAdditions", interfaceVoxelSetAdditions);
+            // pcaStream.WriteTimestamp("finished voxel partitioning" );
+            // pcaStream.DumpVoxelSetStats("start pcaCodeVoxelSets", pcaCodeVoxelSets); 
+            // pcaStream.DumpVoxelSetStats("start pcaCodeVoxelSets", pcaCodeVoxelSets);
+            // pcaStream.DumpVoxelSetStats("startUnassigned", unassignedVoxelBuckets);
+            // pcaStream.DumpVoxelSetStats("voxelSetAdditions", voxelSetAdditions);
+            // pcaStream.DumpVoxelSetStats("interfaceVoxelSetAdditions", interfaceVoxelSetAdditions);
 
-            addVoxelsToHashSetDictionary(interfaceVoxelSetAdditions, interfaceVoxelSets);
+            addVoxelsToPcaPhaseNameListSet(interfaceVoxelSetAdditions, interfaceVoxelSets);
             addVoxelsToHashSetDictionary(voxelSetAdditions, pcaCodeVoxelSets);
             subtractVoxelsFromHashSetDictionary(unassignedSubtractions, unassignedVoxelBuckets);
 
@@ -583,22 +589,24 @@ public class PcaScoresGrid
 
         // now, pcaCodeVoxelSets is ready to be used for define a per-voxel component mapping
         // lets order the pcaCodeVoxelSets by population
-        List<string> pcaCodesByPopulation = pcaCodeVoxelSets.Keys.ToList();
-        PopulationSorter<string, VoxelID> comparator = new PopulationSorter<string, VoxelID>(pcaCodeVoxelSets);
+        List<PcaPhaseName> pcaCodesByPopulation = pcaCodeVoxelSets.Keys.ToList();
+        PopulationSorter<PcaPhaseName, VoxelID> comparator = new PopulationSorter<PcaPhaseName, VoxelID>(pcaCodeVoxelSets);
         pcaCodesByPopulation.Sort(comparator);
 
         // now pcaCodesByPopulation is sorted?
         // make a pcaCode to phaseIndex map:
         // 
-        Dictionary<string, int> phaseIndexMap = new Dictionary<string, int>();
-        phaseIndexMap["Unassigned Voxels"] = 0;
+        Dictionary<PcaPhaseName, int> phaseIndexMap = new Dictionary<PcaPhaseName, int>();
+        PcaPhaseName unassignedVoxelsPhaseName = PcaPhaseName.UnassignedVoxelsPhaseName();
+        PcaPhaseName interfaceVoxelsPhaseName = PcaPhaseName.InterfaceVoxelsPhaseName();
+        phaseIndexMap[unassignedVoxelsPhaseName] = 0;
         int phaseIndex = 1;
-        foreach (string pcaCode in  pcaCodesByPopulation)
+        foreach (PcaPhaseName pcaCode in  pcaCodesByPopulation)
         {
             phaseIndexMap[pcaCode] = phaseIndex;
             phaseIndex += 1;
         }
-        phaseIndexMap["Interface Voxels"] = phaseIndex;
+        phaseIndexMap[interfaceVoxelsPhaseName] = phaseIndex;
 
         // and, call IdentifyVoxelAs for each voxel
         // phaseResults initializes phase ID to zero for each voxel
@@ -607,9 +615,9 @@ public class PcaScoresGrid
         {
             phaseIdResults.IdentifyVoxelAs(voxelId, 0);
         }
-        foreach (KeyValuePair<string, HashSet<VoxelID>> kvp in pcaCodeVoxelSets)
+        foreach (KeyValuePair<PcaPhaseName, HashSet<VoxelID>> kvp in pcaCodeVoxelSets)
         {
-            string nthPcaCode = kvp.Key;
+            PcaPhaseName nthPcaCode = kvp.Key;
 
             if (phaseIndexMap.ContainsKey(nthPcaCode))
             {
@@ -625,9 +633,9 @@ public class PcaScoresGrid
 
         // for exery interface voxel, set it to type 5:
         //  Dictionary<string, HashSet<VoxelID>> interfaceVoxelSets = new Dictionary<string, HashSet<VoxelID>>();
-        foreach (KeyValuePair<string, HashSet<VoxelID>> kvp in interfaceVoxelSets)
+        foreach (KeyValuePair<PcaPhaseNameList, HashSet<VoxelID>> kvp in interfaceVoxelSets)
         {
-            int interfaceVoxelBucket = phaseIndexMap["Interface Voxels"];
+            int interfaceVoxelBucket = phaseIndexMap[interfaceVoxelsPhaseName];
             foreach (VoxelID voxelId in kvp.Value)
             {
                 phaseIdResults.IdentifyVoxelAs(voxelId, interfaceVoxelBucket);
