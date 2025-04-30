@@ -42,7 +42,6 @@ public partial class ProjectionGridsView : UserControl
         if (d is not ProjectionGridsView projectionGridsView) { return; }
         ICollection<IRenderData> renderData = projectionGridsView.GridsSource;
         int rdc = renderData.Count;
-        Debug.WriteLine("GridsSourcePropertyChanged called -- render data count is " + rdc);
     }
 
     private void GridsSourceCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -71,16 +70,27 @@ public partial class ProjectionGridsView : UserControl
         return "PCA Component " + component;
     }
 
+    private string gridLetterFromIndex(int whichGrid)
+    {
+        int AAsciiValue = (int)'A';
+        char cha = (char)(AAsciiValue + whichGrid);
+        return cha.ToString();
+    }
     private void RefreshGridData()
     { 
         ICollection<IRenderData> renderDataCollection = this.GridsSource;
         int rdc = renderDataCollection.Count;
+ 
         if (rdc > 0)
         {
             List<IRenderData> renderList = renderDataCollection.ToList();
             if (whichGrid >= rdc)
             {
                 whichGrid = 0;
+            }
+            if (whichGrid < 0)
+            {
+                whichGrid = rdc - 1;
             }
 
             var renderData = renderList[whichGrid];
@@ -89,6 +99,10 @@ public partial class ProjectionGridsView : UserControl
             histogram.AxisXLabel = AxisXLabelForGridID(renderData.Name);
             histogram.AxisYLabel = AxisYLabelForGridID(renderData.Name);
             histogram.DataSource = singleList;
+            histogram.IsLegendVisible = true;
+            Label gridLabel = GridLabel;
+            String gridLetter = gridLetterFromIndex(whichGrid);
+            gridLabel.Content = "Grid Index " + whichGrid + " -- " + gridLetter;
         }
     }
 
@@ -128,6 +142,11 @@ public partial class ProjectionGridsView : UserControl
     private void AdvanceGridButton_Click(object sender, RoutedEventArgs e)
     {
         whichGrid += 1;
+        RefreshGridData();
+    }
+    private void PreviousGridButton_Click(object sender, RoutedEventArgs e)
+    {
+        whichGrid -= 1;
         RefreshGridData();
     }
 

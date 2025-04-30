@@ -19,8 +19,17 @@
         </Grid.RowDefinitions>
         
         <StackPanel Grid.Row="0" Orientation="Horizontal">
+            <Button x:Name="PreviousGridButton" Content="Go to Previous Grid" Height="32" Width="140"
+    Click="PreviousGridButton_Click">
+            </Button>
+            <Label x:Name="GridLabel" Content="Grid Title" Height="32" Width="140" 
+                 FontSize="16" FontFamily="Calibri"  
+                 FontWeight="Bold"   
+                 Background="White"   
+                 Foreground="Black">
+            </Label>
             <Button x:Name="AdvanceGridButton" Content="Advance To Next Grid" Height="32" Width="140"
-                Click="AdvanceGridButton_Click">
+    Click="AdvanceGridButton_Click">
             </Button>
         </StackPanel>
 
