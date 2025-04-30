@@ -388,10 +388,12 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             TwoDPeakProjections: Dictionary<string, TwoDPeakProjection> twoDPeakProjections,
             PhaseIndexMap: Dictionary<PcaPhaseName, int> phaseIndexMap } )
      
-         {   
-             PcaPhasesRenderData = Array.Empty<IRenderData>();
+        {   
+            PcaPhasesRenderData = Array.Empty<IRenderData>();
 
-             Dictionary<int, PcaPhaseName> phaseNamesMap = PcaPhaseIDResults.PhaseNamesMap();
+            var jitterStdDev = optionsAccessor.GetOptions<PcaGlobalOptions>().JitterStdDev;
+
+            Dictionary<int, PcaPhaseName> phaseNamesMap = PcaPhaseIDResults.PhaseNamesMap();
              int numPhases = phaseNamesMap.Count; 
              // int selectedIndex = Properties.ComponentIndex;
 
@@ -403,7 +405,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
                 // data fed into GetScoredPositions is an array of voxelIndices for which a dot should be generated,
                 // and an array of scores -- scores[n] is the score for the voxel at voxelIndex[n]
-                var positionsWithValues = PositionScores.GetScoredPositions(ComponentsResults.Grid3DData, ComponentsResults.VoxelIndices, phaseIdScores);
+                var positionsWithValues = PositionScores.GetScoredPositions(ComponentsResults.Grid3DData, ComponentsResults.VoxelIndices, phaseIdScores, jitterStdDev: jitterStdDev);
 
                 var valuePoints = Resources.ChartObjects.CreateValuePoints();
         
