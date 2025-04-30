@@ -8,8 +8,6 @@ internal static class PositionScores
 {
     public static Vector4[] GetScoredPositions(IGrid3DData gridData, int[] voxelIndices, float[] scores, float jitterStdDev = 0f)
     {
-
-
         int xVoxels = gridData.NumVoxels[0];
         double xSize = gridData.VoxelSize[0];
         double xStart = gridData.GridRange[0, 0] + (xSize / 2d);
