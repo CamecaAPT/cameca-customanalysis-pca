@@ -106,33 +106,6 @@ public partial class ProjectionGridsView : UserControl
         }
     }
 
-    public void FillRenderDataWithGridData(IHistogram2DRenderData renderData, TwoDPeakProjection projection)
-    {
-       // renderData.ColorMap = Resources.ColorMap.GetPresetColorMap(ColorMapPreset.GreyScale);
-        DensityPlane dp = projection.densityPlane;
-        (TwoDGridCoord minCoord, TwoDGridCoord maxCoord) = dp.MinMaxGridCoords();
-        int spanX = 1 + maxCoord.x - minCoord.x;
-        int spanY = 1 + maxCoord.y - minCoord.y;
-        int span = Math.Max(spanX, spanY);
-        int numCoords = span * span;
-        float[] dat = new float[numCoords * 4];
-        for (int q = 0; q < spanY; q += 1)
-        {
-            int qOffset = q * span;
-            int gridq = q + minCoord.y;
-            for (int p = 0; p < spanX; p += 1)
-            {
-                int arrayIndex = qOffset + p;
-                int gridp = p + minCoord.x;
-                dat[arrayIndex] = dp.valueAtGridCoords(gridp, gridq);
-            }
-        }
-        ReadOnlyMemory2D<float> rom = new ReadOnlyMemory2D<float>(dat, span, span);
-        Vector2 binsize = new Vector2(0.5f, 0.5f); // Vector2(dp.binsize, dp.binsize);
-        Vector2 origin = new Vector2(minCoord.x * dp.binsize, minCoord.y * dp.binsize);
-        renderData.Update(rom, binsize, origin);
-    }
-
     public ICollection<IRenderData> GridsSource
     {
         get { return (ICollection<IRenderData>)GetValue(GridsSourceProperty); }

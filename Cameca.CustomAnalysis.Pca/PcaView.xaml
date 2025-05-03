@@ -102,6 +102,15 @@
                 </utils:ButtonOverlayControl>
             </TabItem>
 
+            <TabItem Header="Grids">
+                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdatePCAPhasesCommand}"
+                               ButtonContent="Update"
+                               OverlayVisibility="{Binding UpdatePCAPhasesCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <local:ProjectionGridsView GridsSource="{Binding SelectedGridRenderData}" />
+
+                </utils:ButtonOverlayControl>
+            </TabItem>
+            
             <TabItem Header="PCA Phases">
                 <utils:ButtonOverlayControl ButtonCommand="{Binding UpdatePCAPhasesCommand}"
                                 ButtonContent="Update"
@@ -124,15 +133,6 @@
                                                   ItemsSource="{Binding PcaPhasesRenderData}" />
 
                     </Grid>
-                </utils:ButtonOverlayControl>
-            </TabItem>
-
-            <TabItem Header="Grids">
-                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdatePCAPhasesCommand}"
-                               ButtonContent="Update"
-                               OverlayVisibility="{Binding UpdatePCAPhasesCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <local:ProjectionGridsView GridsSource="{Binding SelectedGridRenderData}" />
-
                 </utils:ButtonOverlayControl>
             </TabItem>
 
