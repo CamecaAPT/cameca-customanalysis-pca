@@ -11,12 +11,20 @@ public delegate float[] GetScoresDelegate(int voxelIndex);
 
 public struct PcaPhaseIdentificationProperties
 {
+    public float gridProjectionBinSize;
+    public float gridProjectionDelocalization;
     public float noiseFloorFraction;
     public float peakSummitAllowance;
     public int numDimsForPCAPhaseId;
 
-    public PcaPhaseIdentificationProperties(float noiseFloor, float peakSummitAllowance, int numDimsForPCAPhaseId)
+    public PcaPhaseIdentificationProperties(float gridProjectionBinSize,
+          float gridProjectionDelocalization,
+          float noiseFloor, 
+          float peakSummitAllowance, 
+          int numDimsForPCAPhaseId)
     {
+        this.gridProjectionBinSize = gridProjectionBinSize;
+        this.gridProjectionDelocalization = gridProjectionDelocalization;
         this.noiseFloorFraction = noiseFloor;
         this.peakSummitAllowance = peakSummitAllowance;
         this.numDimsForPCAPhaseId = numDimsForPCAPhaseId;

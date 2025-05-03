@@ -237,7 +237,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
         var compResults = ComponentsResults;
 
-        var pcaPhaseIdProperties = new PcaPhaseIdentificationProperties(Properties.NoiseFloorFraction, Properties.PeakSummitAllowance, Properties.NumDimsForPCAPhaseId);
+        var pcaPhaseIdProperties = new PcaPhaseIdentificationProperties(Properties.GridProjectionBinSize, Properties.GridProjectionDelocalization, Properties.NoiseFloorFraction, Properties.PeakSummitAllowance, Properties.NumDimsForPCAPhaseId);
         PcaPhaseIDResults = PcaCalculator.GetPhases(ionData, compResults, pcaPhaseIdProperties);
 
         // Ensure that the selected component falls in the valid range of number of components
@@ -390,6 +390,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
      
         {   
             PcaPhasesRenderData = Array.Empty<IRenderData>();
+            SelectedGridRenderData = Array.Empty<IRenderData>();
 
             var jitterStdDev = optionsAccessor.GetOptions<PcaGlobalOptions>().JitterStdDev;
 

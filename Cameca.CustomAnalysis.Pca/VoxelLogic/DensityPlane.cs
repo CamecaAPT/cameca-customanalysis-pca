@@ -9,20 +9,27 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics.Arm;
 using System.Windows.Controls;
 using System.Text.RegularExpressions;
+using System.Security.Cryptography.X509Certificates;
 
 public struct PixelID : IComparable<PixelID>
 {
     public int pixelId;
+    static int maxgrid = 510;
 
     public PixelID(int pixelId)
     {
         this.pixelId = pixelId;
     }
 
-    public PixelID(int x, int y)
+    public static PixelID? PixelIDFor(int x, int y)
     {
-        pixelId = y * 1024 + x;
+        if ((x > maxgrid) || (x < -maxgrid) || (y > maxgrid) || (y < -maxgrid))
+        {
+            return null;
+        }
+        return new PixelID(y * 1024 + x);
     }
+
     public (int, int) xyCoords()
     {
         int y = (512 + pixelId) >> 10;
@@ -34,6 +41,7 @@ public struct PixelID : IComparable<PixelID>
     {
         return other.pixelId > pixelId ? -1 : other.pixelId < pixelId ? 1 : 0;
     }
+
     public string DebugStr()
     {
         int x;
@@ -105,18 +113,71 @@ public class DensityPlane
         data = new Dictionary<PixelID, float>();
         maxval = 1022.0f * binSep;
     }
-    
+
+    public delegate void ForEachPixelCallback(PixelID pixelId, float value);
+
+    public void ForEachPixel(ForEachPixelCallback callback)
+    {
+        foreach (KeyValuePair<PixelID, float> kvp in data)
+        {
+            callback(kvp.Key, kvp.Value);
+        }
+    }
+
+    public DensityPlane Convolve(List<float> normalizedCoefficients)
+    {
+        DensityPlane newDP = new DensityPlane(this.binsize);
+        if (normalizedCoefficients.Count > 0)
+        {
+            int maxx = normalizedCoefficients.Count - 1;
+            int minx = -maxx;
+            int maxy = maxx;
+            int miny = minx;
+            void convolutionFunction(PixelID pixelId, float value)
+            {
+                (int p, int q) = pixelId.xyCoords();
+                for (int x = minx; x <= maxx; x+=1)
+                {
+                    int xCoefficientIndex = (int)Math.Abs(x);
+                    float xCoeff = normalizedCoefficients[xCoefficientIndex];
+                    for (int y = miny; y <= maxy; y += 1)
+                    {
+                        int yCoefficientIndex = (int)Math.Abs(y);
+                        float yCoeff = normalizedCoefficients[yCoefficientIndex];
+                        PixelID? nthPixelID = PixelID.PixelIDFor(p + x, q + y);
+                        if (nthPixelID != null)
+                        {  
+                            newDP.AddValueAtPixel(nthPixelID.Value, value * xCoeff * yCoeff);
+                        }
+                    }
+                }
+            }
+            ForEachPixel(convolutionFunction);
+        }
+        return newDP;
+    }
+
+    public void AddValueAtPixel(PixelID pixelId, float value)
+    {
+        data[pixelId] = valueAtPixel(pixelId) + value;
+    }
+
     public List<PixelID> GridPointIds()
     {
         return data.Keys.ToList();
     }
 
-    internal void AddIfPossible(int x, int y, List<PixelID> list)
+    internal void AddIfNonZero(int x, int y, List<PixelID> list)
     {
-        PixelID possibleBin = new PixelID(x, y);
-        if (data.ContainsKey(possibleBin))
+        PixelID? possibleBin = PixelID.PixelIDFor(x, y);
+        if (possibleBin != null)
         {
-            list.Add(possibleBin);
+            PixelID pixelId = possibleBin.Value;
+            if (data.ContainsKey(pixelId))
+            {
+                list.Add(pixelId);
+            }
+              
         }
     }
 
@@ -127,14 +188,14 @@ public class DensityPlane
         //int y;
         (int x, int y) = pixelId.xyCoords();
         List<PixelID> neighbors = new List<PixelID>();
-        AddIfPossible(x - 1, y - 1, neighbors);
-        AddIfPossible(x - 1, y, neighbors);
-        AddIfPossible(x - 1, y + 1, neighbors);
-        AddIfPossible(x, y-1, neighbors);
-        AddIfPossible(x, y+1, neighbors);
-        AddIfPossible(x + 1, y-1, neighbors);
-        AddIfPossible(x + 1, y, neighbors);
-        AddIfPossible(x + 1, y + 1, neighbors);
+        AddIfNonZero(x - 1, y - 1, neighbors);
+        AddIfNonZero(x - 1, y, neighbors);
+        AddIfNonZero(x - 1, y + 1, neighbors);
+        AddIfNonZero(x, y-1, neighbors);
+        AddIfNonZero(x, y+1, neighbors);
+        AddIfNonZero(x + 1, y-1, neighbors);
+        AddIfNonZero(x + 1, y, neighbors);
+        AddIfNonZero(x + 1, y + 1, neighbors);
 
 		return neighbors;
 	}
@@ -229,16 +290,21 @@ public class DensityPlane
 			string l = "{";
 			for (int x = min.x; x <= max.x; ++x)
 			{
-				PixelID xthKey = new PixelID(x, y);
-				float xthValue = 0;
-				if (data.ContainsKey(xthKey))
-				{
-					xthValue = data[xthKey];
-				}
-				l = l + xthValue;
-				if (x != max.x) {
-					l = l + ",";
-				}  
+				PixelID? xthKey = PixelID.PixelIDFor(x, y);
+                if (xthKey != null)
+                {
+                    PixelID xthPixelId = xthKey.Value;
+                    float xthValue = 0;
+                    if (data.ContainsKey(xthPixelId))
+                    {
+                        xthValue = data[xthPixelId];
+                    }
+                    l = l + xthValue;
+                    if (x != max.x)
+                    {
+                        l = l + ",";
+                    }
+                }
 			}
 			l = l + "}";
 			stream.Write(l);
@@ -323,12 +389,12 @@ public class DensityPlane
         return (xBinIndex, yBinIndex);
     }
 
-    public PixelID PixelIDFor(float x, float y)
+    public PixelID? PixelIDFor(float x, float y)
     {
         int binx;
         int biny;
         (binx, biny) = PixelIndicesFor(x, y);
-        return new PixelID(binx, biny);
+        return PixelID.PixelIDFor(binx, biny);
     }
 
     public void AddPointAt(float x, float y)
@@ -353,6 +419,15 @@ public class DensityPlane
             return (.5f * MathF.Pow(x + 0.5f, 2));
         }
 
+        void addValueAtCoords(int x, int y, float val)
+        {
+            PixelID? pixelId = PixelID.PixelIDFor(x, y);
+            if (pixelId != null)
+            {
+                AddValueAtPixel(pixelId.Value, val);
+            }
+        }
+
         int xBinIndex;
         int yBinIndex;
         (xBinIndex, yBinIndex) = PixelIndicesFor(x, y);
@@ -367,26 +442,15 @@ public class DensityPlane
         float yp1 = (float)Pos1Func(yRem);    // these are the spline transfer functions
         float y0 = (float)ZeroFunc(yRem);
 
-        PixelID bin = new PixelID(xBinIndex - 1, yBinIndex - 1);
-        data[bin] = valueAtPixel(bin) + xm1 * ym1;
-        bin = new PixelID(xBinIndex, yBinIndex - 1);
-        data[bin] = valueAtPixel(bin) + x0 * ym1;
-        bin = new PixelID(xBinIndex + 1, yBinIndex - 1);
-        data[bin] = valueAtPixel(bin) + xp1 * ym1;
-
-        bin = new PixelID(xBinIndex - 1, yBinIndex);
-        data[bin] = valueAtPixel(bin) + xm1 * y0;
-        bin = new PixelID(xBinIndex, yBinIndex);
-        data[bin] = valueAtPixel(bin) + x0 * y0;
-        bin = new PixelID(xBinIndex + 1, yBinIndex);
-        data[bin] = valueAtPixel(bin) + xp1 * y0;
-
-        bin = new PixelID(xBinIndex - 1, yBinIndex + 1);
-        data[bin] = valueAtPixel(bin) + xm1 * yp1;
-        bin = new PixelID(xBinIndex, yBinIndex + 1);
-        data[bin] = valueAtPixel(bin) + x0 * yp1;
-        bin = new PixelID(xBinIndex + 1, yBinIndex + 1);
-        data[bin] = valueAtPixel(bin) + xp1 * yp1;
+        addValueAtCoords(xBinIndex - 1, yBinIndex - 1, xm1 * ym1);
+        addValueAtCoords(xBinIndex, yBinIndex - 1, x0 * ym1);
+        addValueAtCoords(xBinIndex + 1, yBinIndex - 1, xp1 * ym1);
+        addValueAtCoords(xBinIndex - 1, yBinIndex, xm1 * y0);
+        addValueAtCoords(xBinIndex, yBinIndex, x0 * y0);
+        addValueAtCoords(xBinIndex + 1, yBinIndex, xp1 * y0);
+        addValueAtCoords(xBinIndex - 1, yBinIndex + 1, xm1 * yp1);
+        addValueAtCoords(xBinIndex, yBinIndex + 1, x0 * yp1);
+        addValueAtCoords(xBinIndex + 1, yBinIndex + 1, xp1 * yp1);
 
     }
 
