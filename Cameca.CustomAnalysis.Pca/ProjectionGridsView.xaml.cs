@@ -70,12 +70,7 @@ public partial class ProjectionGridsView : UserControl
         return "PCA Component " + component;
     }
 
-    private string gridLetterFromIndex(int whichGrid)
-    {
-        int AAsciiValue = (int)'A';
-        char cha = (char)(AAsciiValue + whichGrid);
-        return cha.ToString();
-    }
+
     private void RefreshGridData()
     { 
         ICollection<IRenderData> renderDataCollection = this.GridsSource;
@@ -101,8 +96,9 @@ public partial class ProjectionGridsView : UserControl
             histogram.DataSource = singleList;
             histogram.IsLegendVisible = true;
             Label gridLabel = GridLabel;
-            String gridLetter = gridLetterFromIndex(whichGrid);
-            gridLabel.Content = "Grid Index " + whichGrid + " -- " + gridLetter;
+            gridLabel.Content = "Grid Index " + whichGrid;
+            // need to hook up to "grid label provider"
+            // so that we can associate the nth grid with a grid label
         }
     }
 

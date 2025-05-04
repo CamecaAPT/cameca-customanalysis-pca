@@ -16,6 +16,7 @@ using System.Runtime.Intrinsics.Arm;
 using System.Net.Http;
 using System.Data.SqlTypes;
 using System.Reflection;
+using System.Windows;
 
 
 // PcaScoresGrid represents a three dimensional grid containing the PCA scores for a collection of voxels
@@ -35,6 +36,11 @@ public class PcaScoresGrid
     Dictionary<VoxelID, PcaVoxel> pcaVoxels; // the key is the 'id' for the voxel, from which you can
                                              // calculate the x,y,z position of the voxel on the grid if
                                              // the grid dimensions are known
+
+    Dictionary<TwoDGridID, List<List<PixelID>>> partitions; // key is grid ID
+          // value is lists of associations of voxelID with different peaks
+
+    Dictionary<TwoDGridID, DensityPlane> twoDGrids;  // key is grid ID
 
     int scoreDims;
     ThreeDGridDimensions gridDims;
@@ -92,6 +98,8 @@ public class PcaScoresGrid
         pcaVoxels = pcaVoxelsInit(scoresProvider, nIndices);
 
         gridDims = gridDimensions;
+        partitions = new Dictionary<TwoDGridID, List<List<PixelID>>>();
+        twoDGrids = new Dictionary<TwoDGridID, DensityPlane>();
     }
 
     static Dictionary<VoxelID, PcaVoxel> pcaVoxelsInit(IScoresProvider scoresProvider, int nIndices)
@@ -354,6 +362,7 @@ public class PcaScoresGrid
         }
     }
 
+
     // GetPhasesStrategyE is produces PhaseIdResults based on the first three 
     // PCA dimensions only  
     //
@@ -375,38 +384,25 @@ public class PcaScoresGrid
     // D) add voxels that abut any of the contiguous regions to those regions iff
     //    the code they have matches all code snippet for which they have a non-zero number
     //    i.e. A0B1C1  is a match for contiguous regions A1B1C1 and A2B1C1
-    public PhaseIdResults GetPhasesStrategyE(PcaPhaseIdentificationProperties properties)
+    public TwoDGridsResults CalculateTwoDGrids(PcaPhaseIdentificationProperties properties)
     {
-        List<VoxelID> voxelIds = pcaVoxels.Keys.ToList();
+        TwoDGridsResults gridsResults = new TwoDGridsResults();
+        twoDGrids.Clear();
+        partitions.Clear();
 
-        // PcaStream writes a file with text data about the progression of the algorithm
-        // uncomment it here and uncomment the calls to DumpVoxelSetStats below
-        //  PcaStream pcaStream = new PcaStream("GetPhasesStrategyE");
-        // pcaStream.WriteTimestamp("start GetPhasesStrategyE");
-        PhaseIdResults phaseIdResults = new PhaseIdResults(voxelIds);
+        List<VoxelID> voxelIds = pcaVoxels.Keys.ToList();
 
         float binSeparation = properties.gridProjectionBinSize;
         float delocalization = properties.gridProjectionDelocalization;
-        int numDimsToInclude = Math.Min(properties.numDimsForPCAPhaseId, this.scoreDims);
-        Dictionary<string, DensityPlane> twoDGrids = new Dictionary<string, DensityPlane>();
-        Dictionary<string, List<List<PixelID>>> partitions = new Dictionary<string, List<List<PixelID>>>();
-
-        // make a dictionary for the pcaCodes and fill with empty Strings
-        Dictionary<VoxelID, PcaPhaseName> pcaCodes = new Dictionary<VoxelID, PcaPhaseName>();
-        foreach (VoxelID voxelId in voxelIds)
-        {
-            pcaCodes[voxelId] = new PcaPhaseName();
-        }
-
+        int numDimsToInclude = this.scoreDims;
+ 
         int AAsciiValue = ASCIIValueForChar('A');
-        int gridIndex = 0;
         // now, make twoD grids using all pairs of dimensions
         for (int i = 0; i < (numDimsToInclude - 1); ++i)
         {
             for (int j = i + 1; j < numDimsToInclude; ++j)
             {
-                string gridLetter = CharValueForASCII(AAsciiValue + gridIndex).ToString();
-                string gridId = gridLetter + i.ToString() + "-" + j.ToString();
+                TwoDGridID gridId = new TwoDGridID(i, j);
 
                 // this makes the 2D grid  --  step A) above
                 var twoDGrid = CalculateTwoDDensity(voxelIds, i, j, binSeparation, delocalization);
@@ -416,53 +412,85 @@ public class PcaScoresGrid
                 List<List<PixelID>> partitionedIndices = IdentifyPartitions(twoDGrid, i, j, properties);
                 partitions[gridId] = partitionedIndices;
 
+                var projection = new TwoDPeakProjection(twoDGrid);
+                gridsResults.SetTwoDPeakProjectionFor(gridId, projection);
+                partitions[gridId] = partitionedIndices;
+
                 // Enable this to get a text file with partition data
-                // DumpPartitions(partitionedIndices, gridId);
+                // DumpPartitions(partitionedIndices, gridId);     
+            }
+        }
+        return gridsResults;
+    }
+    public PhaseIdResults GetPhasesStrategyE(PcaPhaseIdentificationProperties properties)
+    {
+        List<VoxelID> voxelIds = pcaVoxels.Keys.ToList();
+        int numDimsToInclude = Math.Min(properties.numDimsForPCAPhaseId, this.scoreDims);
 
-                // now label each voxel with a PCA code based on its peak association
-                // for each grid, group the voxels into lists per pixel, then, knowing
-                // which peaks contain which pixels, add the voxels PCA code for that grid to its entry in 
-                // the PCA code dictionary
-                int peakIndex = 1;
-                Dictionary<PixelID, List<VoxelID>> voxelLists = aggregateVoxelsIntoListsPerPixel(voxelIds, twoDGrid, pcaVoxels, i, j);
-                foreach (List<PixelID> pixelIdList in partitionedIndices)
-                {
-                    string pcaCode = gridLetter + "." + peakIndex.ToString();
-                    // the pixelIdList contains a list of pixelIds identified as being part of the Nth partition
-                    foreach (PixelID pixelID in pixelIdList)
-                    {
-                        // Lookup for all the voxels bucketed under this pixelId
-                        List<VoxelID> voxelIdsForThisPixel = voxelLists[pixelID];
-                        foreach (VoxelID voxelId in voxelIdsForThisPixel)
-                        {
-                            pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(pcaCode);
-                        }
-                        // remove that entry from voxelLists
-                        voxelLists.Remove(pixelID);
-                    }
-                    peakIndex += 1;
-                }
+        // make a dictionary for the pcaCodes and fill with empty Strings
+        Dictionary<VoxelID, PcaPhaseName> pcaCodes = new Dictionary<VoxelID, PcaPhaseName>();
+        foreach (VoxelID voxelId in voxelIds)
+        {
+            pcaCodes[voxelId] = new PcaPhaseName();
+        }
+        // starting here, loop through the grids and if we have selected 
+        // the grid to be used in PCA phase Identification,
+        // get the grid ID and assign pca codes to all the voxels based on 
+        // which peak it is part of in the grid
 
-                // now, all the remaining entries in voxelLists are unassigned :  
-                // assign these to component 0
-                string unassignedPcaCode = gridLetter + ".0";
-                List<PixelID> unassignedPixels = voxelLists.Keys.ToList();
-                foreach (PixelID pixelID in unassignedPixels)
+        // TODO start loop
+        foreach (KeyValuePair<TwoDGridID, List<List<PixelID>>> kvp in partitions)
+        {
+            // now label each voxel with a PCA code based on its peak association
+            // for each grid, group the voxels into lists per pixel, then, knowing
+            // which peaks contain which pixels, add the voxels PCA code for that grid to its entry in 
+            // the PCA code dictionary
+            TwoDGridID gridID = kvp.Key;
+            DensityPlane twoDGrid = twoDGrids[gridID];
+            List<List<PixelID>> partitionedIndices = kvp.Value;
+            (int firstDim, int secondDim) = gridID.AsIndexPair();
+
+            Dictionary<PixelID, List<VoxelID>> voxelLists = aggregateVoxelsIntoListsPerPixel(voxelIds, twoDGrid, pcaVoxels, firstDim, secondDim);
+            int peakIndex = 1;
+
+            foreach (List<PixelID> pixelIdList in partitionedIndices)
+            {
+                string pcaCode = gridID + "." + peakIndex.ToString();
+                // the pixelIdList contains a list of pixelIds identified as being part of the Nth partition
+                foreach (PixelID pixelID in pixelIdList)
                 {
                     // Lookup for all the voxels bucketed under this pixelId
                     List<VoxelID> voxelIdsForThisPixel = voxelLists[pixelID];
                     foreach (VoxelID voxelId in voxelIdsForThisPixel)
                     {
-                        pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(unassignedPcaCode);
+                        pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(pcaCode);
                     }
+                    // remove that entry from voxelLists
+                    voxelLists.Remove(pixelID);
                 }
+                peakIndex += 1;
+            }
 
-                var projection = new TwoDPeakProjection(twoDGrid);
-                phaseIdResults.SetTwoDPeakProjectionFor(gridId, projection);
-
-                gridIndex += 1;
+            // now, all the remaining entries in voxelLists are unassigned :  
+            // assign these to component 0
+            string unassignedPcaCode = gridID + ".0";
+            List<PixelID> unassignedPixels = voxelLists.Keys.ToList();
+            foreach (PixelID pixelID in unassignedPixels)
+            {
+                // Lookup for all the voxels bucketed under this pixelId
+                List<VoxelID> voxelIdsForThisPixel = voxelLists[pixelID];
+                foreach (VoxelID voxelId in voxelIdsForThisPixel)
+                {
+                    pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(unassignedPcaCode);
+                }
             }
         }
+
+        // PcaStream writes a file with text data about the progression of the algorithm
+        // uncomment it here and uncomment the calls to DumpVoxelSetStats below
+        //  PcaStream pcaStream = new PcaStream("GetPhasesStrategyE");
+        // pcaStream.WriteTimestamp("start GetPhasesStrategyE");
+        PhaseIdResults phaseIdResults = new PhaseIdResults(voxelIds);
 
         // pcaStream.WriteTimestamp("finished making grids");
         // now examine the groups of voxels to identify contiguous regions

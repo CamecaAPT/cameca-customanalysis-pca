@@ -66,6 +66,11 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     private ComponentsResults? componentsResults;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UpdateGridsCanExecute))]
+    [NotifyCanExecuteChangedFor(nameof(UpdateGridsCommand))]
+    private TwoDGridsResults? pcaGridsResults;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(UpdatePCAPhasesCanExecute))]
     [NotifyCanExecuteChangedFor(nameof(UpdatePCAPhasesCommand))]
     private PhaseIdResults? pcaPhaseIDResults;
@@ -87,6 +92,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     public ICollection<IRenderData> scoresHistogramData = Array.Empty<IRenderData>();
 
     public bool UpdateComponentsCanExecute => ComponentsResults is null;
+    public bool UpdateGridsCanExecute => PcaGridsResults is null;
     public bool UpdatePCAPhasesCanExecute => PcaPhaseIDResults is null;
 
     public bool UpdateRankEstimationCanExecute => NoiseEigenvalueResults is null;
@@ -217,6 +223,13 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     }
 
     // PCA Phases can be updated independently of the Components if the number of grids to use changes
+    // or if any of the properties to use in the calculation change
+    [RelayCommand(CanExecute = nameof(UpdateGridsCanExecute))]
+    public async Task UpdateGrids(CancellationToken cancellationToken)
+    {
+    }
+    
+    // PCA Phases can be updated independently of the Components and grids   if the number of grids to use changes
     // or if any of the properties to use in the calculation change
     [RelayCommand(CanExecute = nameof(UpdatePCAPhasesCanExecute))]
     public async Task UpdatePCAPhases(CancellationToken cancellationToken)
@@ -385,12 +398,9 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     partial void OnPcaPhaseIDResultsChanged(PhaseIdResults? value)
     {
         if (PcaPhaseIDResults is { IdentifiedPhase: Dictionary<VoxelID, int> identifiedPhase,
-            TwoDPeakProjections: Dictionary<string, TwoDPeakProjection> twoDPeakProjections,
             PhaseIndexMap: Dictionary<PcaPhaseName, int> phaseIndexMap } )
-     
         {   
             PcaPhasesRenderData = Array.Empty<IRenderData>();
-            SelectedGridRenderData = Array.Empty<IRenderData>();
 
             var jitterStdDev = optionsAccessor.GetOptions<PcaGlobalOptions>().JitterStdDev;
 
@@ -433,12 +443,23 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             }
 
             PcaPhasesRenderData = newPhasesData;
+
+        }
+    }
+
+    partial void OnPcaGridsResultsChanged(TwoDGridsResults? value)
+    {
+        if (PcaGridsResults is {
+                TwoDPeakProjections: Dictionary<TwoDGridID, TwoDPeakProjection> twoDPeakProjections
+            })
+        {
+            SelectedGridRenderData = Array.Empty<IRenderData>();
             int gridCount = twoDPeakProjections.Count;
             var newGridProjectionsData = new List<IRenderData>();
-            foreach (KeyValuePair<string, TwoDPeakProjection> kvp in twoDPeakProjections)
+            foreach (KeyValuePair<TwoDGridID, TwoDPeakProjection> kvp in twoDPeakProjections)
             {
                 var histogram = Resources.ChartObjects.CreateHistogram2D();
-                histogram.Name = kvp.Key;
+                histogram.Name = kvp.Key.ToString();
                 histogram.ColorMap = Resources.ColorMap.GetPresetColorMap(ColorMapPreset.GreyScale);
                 FillRenderDataWithGridData(histogram, kvp.Value);
                 newGridProjectionsData.Add(histogram);
@@ -446,7 +467,6 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             SelectedGridRenderData = newGridProjectionsData;
         }
     }
-
     // Updates the components 3D plots when the component data (derived from selected number of components) changes
     partial void OnComponentsResultsChanged(ComponentsResults? value)
     {
