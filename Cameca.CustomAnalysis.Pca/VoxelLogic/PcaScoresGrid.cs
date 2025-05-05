@@ -341,25 +341,40 @@ public class PcaScoresGrid
             sets[kvp.Key] = hashSet;
         }
     }
-    void subtractVoxelsFromHashSetDictionary(Dictionary<PcaPhaseName, HashSet<VoxelID>> subtractions, Dictionary<PcaPhaseName, HashSet<VoxelID>> sets)
+
+    // return the total number of voxels unassigned
+    int subtractVoxelsFromHashSetDictionary(Dictionary<PcaPhaseName, HashSet<VoxelID>> subtractions, Dictionary<PcaPhaseName, HashSet<VoxelID>> sets)
     {
+        int unassignedCount = 0;
         foreach (KeyValuePair<PcaPhaseName, HashSet<VoxelID>> kvp in subtractions)
         {
-            HashSet<VoxelID> hashSet;
+ 
             if (sets.ContainsKey(kvp.Key))
             {
-                hashSet = sets[kvp.Key];
+
+                HashSet<VoxelID> hashSet = sets[kvp.Key];
+                int countBeforeRemoval = hashSet.Count;
+
+                foreach (VoxelID voxelId in kvp.Value)
+                {
+                    hashSet.Remove(voxelId);
+                }
+                int subtractionsCount = kvp.Value.Count;
+                int countAfterRemoval = hashSet.Count;
+                int actuallyRemoved = countBeforeRemoval - countAfterRemoval;
+                if (actuallyRemoved != subtractionsCount)
+                {
+                    throw new Exception("subtractVoxels expected all voxels to exist in previous bucket");
+                }
+                unassignedCount += actuallyRemoved;
+                sets[kvp.Key] = hashSet;
             }
             else
             {
-                hashSet = new HashSet<VoxelID>();
+                throw new Exception("subtractVoxels expected existing bucket of voxels");
             }
-            foreach (VoxelID voxelId in kvp.Value)
-            {
-                hashSet.Remove(voxelId);
-            }
-            sets[kvp.Key] = hashSet;
         }
+        return unassignedCount;
     }
 
 
@@ -417,7 +432,7 @@ public class PcaScoresGrid
                 partitions[gridId] = partitionedIndices;
 
                 // Enable this to get a text file with partition data
-                // DumpPartitions(partitionedIndices, gridId);     
+                // DumpPartitions(partitionedIndices, gridId.ToString());     
             }
         }
         return gridsResults;
@@ -473,7 +488,7 @@ public class PcaScoresGrid
 
             // now, all the remaining entries in voxelLists are unassigned :  
             // assign these to component 0
-            string unassignedPcaCode = gridID + ".0";
+            string unassignedPcaCode = gridID.ToString() + ".0";
             List<PixelID> unassignedPixels = voxelLists.Keys.ToList();
             foreach (PixelID pixelID in unassignedPixels)
             {
@@ -488,11 +503,9 @@ public class PcaScoresGrid
 
         // PcaStream writes a file with text data about the progression of the algorithm
         // uncomment it here and uncomment the calls to DumpVoxelSetStats below
-        //  PcaStream pcaStream = new PcaStream("GetPhasesStrategyE");
-        // pcaStream.WriteTimestamp("start GetPhasesStrategyE");
+        PcaStream pcaStream = new PcaStream("GetPhasesStrategyE");
         PhaseIdResults phaseIdResults = new PhaseIdResults(voxelIds);
 
-        // pcaStream.WriteTimestamp("finished making grids");
         // now examine the groups of voxels to identify contiguous regions
         // in this case, 'unassigned' means voxels not yet associated with a list of voxels in a pcaPhase
         Dictionary<PcaPhaseName, HashSet<VoxelID>> unassignedVoxelBuckets = VoxelBuckets(pcaCodes);
@@ -534,10 +547,9 @@ public class PcaScoresGrid
         // for case 2) add the voxels to the core regions
         // for case 3) designate the voxel as an interface voxel
 
-        int voxelAssignmentIterationCount = 10;
-        for (int voxelAssignmentIteration = 0; voxelAssignmentIteration < voxelAssignmentIterationCount; voxelAssignmentIteration += 1)
+        int voxelAssignmentCount = 1;
+        while (voxelAssignmentCount > 0)
         {
-            // pcaStream.WriteTimestamp("start voxel assignment loop # " + voxelAssignmentIteration);
             Dictionary<PcaPhaseName, HashSet<VoxelID>> unassignedSubtractions = new Dictionary<PcaPhaseName, HashSet<VoxelID>>();
             Dictionary<PcaPhaseName, HashSet<VoxelID>> voxelSetAdditions = new Dictionary<PcaPhaseName, HashSet<VoxelID>>();
             Dictionary<PcaPhaseNameList, HashSet<VoxelID>> interfaceVoxelSetAdditions = new Dictionary<PcaPhaseNameList, HashSet<VoxelID>>();
@@ -606,7 +618,7 @@ public class PcaScoresGrid
             // calls to DumpVoxelSetStats are used to follow the progression of the algorithm is assigning voxels
             // these can be enabled if the pcaStream object is created above
 
-            // pcaStream.WriteTimestamp("finished voxel partitioning" );
+            pcaStream.WriteTimestamp("finished voxel partitioning" );
             // pcaStream.DumpVoxelSetStats("start pcaCodeVoxelSets", pcaCodeVoxelSets); 
             // pcaStream.DumpVoxelSetStats("start pcaCodeVoxelSets", pcaCodeVoxelSets);
             // pcaStream.DumpVoxelSetStats("startUnassigned", unassignedVoxelBuckets);
@@ -615,12 +627,12 @@ public class PcaScoresGrid
 
             addVoxelsToPcaPhaseNameListSet(interfaceVoxelSetAdditions, interfaceVoxelSets);
             addVoxelsToHashSetDictionary(voxelSetAdditions, pcaCodeVoxelSets);
-            subtractVoxelsFromHashSetDictionary(unassignedSubtractions, unassignedVoxelBuckets);
+            voxelAssignmentCount = subtractVoxelsFromHashSetDictionary(unassignedSubtractions, unassignedVoxelBuckets);
 
             // pcaStream.DumpVoxelSetStats("assignments sources", unassignedSubtractions);
             //  pcaStream.DumpVoxelSetStats("new pcaCodeVoxelSets", pcaCodeVoxelSets);
             //  pcaStream.DumpVoxelSetStats("stillUnassigned", unassignedVoxelBuckets);
-            //  pcaStream.WriteTimestamp("finished voxel loop");
+            pcaStream.WriteTimestamp("assigned " + voxelAssignmentCount + " voxels");
         }
 
         // now, pcaCodeVoxelSets is ready to be used for define a per-voxel component mapping
@@ -678,7 +690,7 @@ public class PcaScoresGrid
             }
         }
 
-        // pcaStream.Close();
+        pcaStream.Close();
         return phaseIdResults;
     }
 
