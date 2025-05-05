@@ -1,8 +1,6 @@
 ﻿using Cameca.CustomAnalysis.Interface;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 
 namespace Cameca.CustomAnalysis.Pca;
@@ -80,7 +78,7 @@ internal static class PcaCalculator
         int nFeatures = ionData.Ions.Count;
 
         var localBuffer = Enumerable.Range(0, nFeatures)
-            .Select(ionIndex => gridData.GetDataForIon(ionIndex).ToArray())
+            .Select(ionIndex => GetNormalizedIonCount(gridData.GetDataForIon(ionIndex)))
             .ToArray();
 
         var nonEmptyVoxels = new List<int>();
@@ -116,6 +114,19 @@ internal static class PcaCalculator
         return new EigenvalueResults(evals);
     }
 
+    // Each ion type counts should be divided by the square root of their mean prior to eigenanalysis
+    private static float[] GetNormalizedIonCount(ReadOnlyMemory<float> buffer)
+    {
+        var ionCounts = buffer.ToArray();
+        float mean = ionCounts.Average();
+        float sqRtMean = MathF.Sqrt(mean);
+        for (int i = 0; i < ionCounts.Length; i++)
+        {
+            ionCounts[i] /= sqRtMean;
+        }
+        return ionCounts;
+    }
+
     // manipulate the results of PCA to identify phases per voxel
     public static PhaseIdResults GetPhases(IIonData ionData, ComponentsResults compResults, PcaPhaseIdentificationProperties properties)
     {
@@ -146,7 +157,7 @@ internal static class PcaCalculator
         int nFeatures = ionData.Ions.Count;
 
         var localBuffer = Enumerable.Range(0, nFeatures)
-            .Select(ionIndex => gridData.GetDataForIon(ionIndex).ToArray())
+            .Select(ionIndex => GetNormalizedIonCount(gridData.GetDataForIon(ionIndex)))
             .ToArray();
 
         var nonEmptyVoxels = new List<int>();
