@@ -30,6 +30,12 @@ public struct TwoDGridID : IComparable<TwoDGridID>
         char cha = (char)(AAsciiValue + index);
         return cha.ToString();
     }
+    public static int IndexForGridLetter(char letter)
+    {
+        int AAsciiValue = (int)'A'; 
+        int gridLetterAsciiValue = (int)letter;
+        return gridLetterAsciiValue - AAsciiValue;
+    }
     public string ToString()
     {
         return stringValue;
@@ -37,11 +43,8 @@ public struct TwoDGridID : IComparable<TwoDGridID>
 
     public (int, int) AsIndexPair()
     {
-        int AAsciiValue = (int)'A';
-        char firstLetter = stringValue[0];
-        char secondLetter = stringValue[1];
-        int firstIndex = (int)firstLetter - AAsciiValue;
-        int secondIndex = (int)secondLetter - AAsciiValue;
+        int firstIndex = IndexForGridLetter((char)stringValue[0]);
+        int secondIndex = IndexForGridLetter((char)stringValue[1]);
         return (firstIndex, secondIndex);
     }
 

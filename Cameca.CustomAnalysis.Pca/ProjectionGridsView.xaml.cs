@@ -41,7 +41,7 @@ public partial class ProjectionGridsView : UserControl
     {
         if (d is not ProjectionGridsView projectionGridsView) { return; }
         ICollection<IRenderData> renderData = projectionGridsView.GridsSource;
-        int rdc = renderData.Count;
+        projectionGridsView.RefreshGridData();
     }
 
     private void GridsSourceCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -49,25 +49,28 @@ public partial class ProjectionGridsView : UserControl
         RefreshGridData();
     }
 
+    internal string AxisLabelForGridLetter(char gridLetter)
+    { 
+        return "PCA Component " + TwoDGridID.IndexForGridLetter(gridLetter);
+    }
+
     internal string AxisYLabelForGridID(string gridID)
     {
-        string[] components = gridID.Split("-");
-        if (components.Count() != 2)
+        if (gridID.Count() != 2)
         {
             return "Unknown Pca Axis";
         }
-        string component = components[0];
-        return "PCA Component " + component.Substring(1);
+        return AxisLabelForGridLetter(gridID[0]);
     }
+
+    // 
     internal string AxisXLabelForGridID(string gridID)
     {
-        string[] components = gridID.Split("-");
-        if (components.Count() != 2)
+        if ( gridID.Count() != 2 )
         {
             return "Unknown Pca Axis";
         }
-        string component = components[1];
-        return "PCA Component " + component;
+        return AxisLabelForGridLetter(gridID[1]);
     }
 
 
@@ -91,12 +94,14 @@ public partial class ProjectionGridsView : UserControl
             var renderData = renderList[whichGrid];
             List<IRenderData> singleList = new List<IRenderData> { renderData };
             Histogram2D histogram = ProjectionGrid2dHistogram;
+            //for whatever reason, for grid PQ, we seem to have put the P in the Y axis, and the Q in the Z axis
+            // so, the X axis gets its name from the second letter in the grid ID
             histogram.AxisXLabel = AxisXLabelForGridID(renderData.Name);
             histogram.AxisYLabel = AxisYLabelForGridID(renderData.Name);
             histogram.DataSource = singleList;
             histogram.IsLegendVisible = true;
             Label gridLabel = GridLabel;
-            gridLabel.Content = "Grid Index " + whichGrid;
+            gridLabel.Content = "Grid " + renderData.Name;
             // need to hook up to "grid label provider"
             // so that we can associate the nth grid with a grid label
         }
@@ -105,7 +110,10 @@ public partial class ProjectionGridsView : UserControl
     public ICollection<IRenderData> GridsSource
     {
         get { return (ICollection<IRenderData>)GetValue(GridsSourceProperty); }
-        set { SetValue(GridsSourceProperty, value); }
+        set { 
+                SetValue(GridsSourceProperty, value);
+                RefreshGridData();
+            }
     }
 
     private void AdvanceGridButton_Click(object sender, RoutedEventArgs e)

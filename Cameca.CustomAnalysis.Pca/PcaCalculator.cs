@@ -55,7 +55,7 @@ public class PcaScoresGridProducer: IScoresProvider {
         return (voxelId, scores);
     }
 
-    public PcaScoresGrid ScoresGrid()
+    public PcaScoresGrid GenerateScoresGrid()
     {
         int nComponents = compResults.Components.Count;
 
@@ -81,6 +81,7 @@ internal static class PcaCalculator
      */
     private const float ScoresCoefficient = 1000f;
     private const float LoadingsCoefficient = 0.001f;
+
 
     public static EigenvalueResults GetEignevalues(IIonData ionData, IGrid3DData gridData)
     {
@@ -125,14 +126,16 @@ internal static class PcaCalculator
     }
 
     // manipulate the results of PCA to identify phases per voxel
-    public static PhaseIdResults GetPhases(IIonData ionData, ComponentsResults compResults, PcaPhaseIdentificationProperties properties)
+    public static PcaScoresGrid GenerateScoresGrid(IIonData ionData, ComponentsResults compResults, PcaPhaseIdentificationProperties properties)
     {
-        // make a PcaGrid, then call grid.GetPhases
         PcaScoresGridProducer producer = new PcaScoresGridProducer(compResults, properties);
 
-        PcaScoresGrid scoresGrid = producer.ScoresGrid();
-        return scoresGrid.GetPhasesStrategyE(properties);
-    }
+        return producer.GenerateScoresGrid();
+    }     // manipulate the results of PCA to identify phases per voxel
+    public static TwoDGridsResults CalculateTwoDGrids(PcaScoresGrid scoresGrid, PcaPhaseIdentificationProperties properties)
+    {
+        return scoresGrid.CalculateTwoDGrids(properties);
+    }    // manipulate the results of PCA to identify phases per voxel
 
     public static NoiseEigenvalueResults GetNoiseEigenvalues(float[] evals, int gaps, int significance, bool refine)
     {

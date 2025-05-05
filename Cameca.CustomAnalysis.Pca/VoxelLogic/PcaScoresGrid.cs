@@ -455,7 +455,7 @@ public class PcaScoresGrid
 
             foreach (List<PixelID> pixelIdList in partitionedIndices)
             {
-                string pcaCode = gridID + "." + peakIndex.ToString();
+                string pcaCode = gridID.ToString() + "." + peakIndex.ToString();
                 // the pixelIdList contains a list of pixelIds identified as being part of the Nth partition
                 foreach (PixelID pixelID in pixelIdList)
                 {

@@ -36,7 +36,8 @@ public partial class PcaProperties : ObservableObject
     private bool refine = true;
 
     [ObservableProperty]
-    private int components = 0;
+    [field: Display(Name = "Components")]
+    private int numberOfComponents = 0;
 
     [ObservableProperty]
     [field:Display(Name = "Component Index")]
@@ -71,10 +72,6 @@ public partial class PcaProperties : ObservableObject
     [ObservableProperty]
     [field: Display(Name = "Peak Summit Allowance")]
     private float peakSummitAllowance = 0.8f;
-
-    [ObservableProperty]
-    [field: Display(Name = "PCA Phase Id Dimensions")]
-    private int numDimsForPCAPhaseId = 3;
 
     [ObservableProperty]
     [field: Display(Name = "PCA Phase Index")]
