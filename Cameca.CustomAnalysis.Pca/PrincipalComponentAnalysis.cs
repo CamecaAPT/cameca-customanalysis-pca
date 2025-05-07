@@ -22,11 +22,12 @@ using System.Windows.Markup;
 using System.Runtime.Intrinsics.Arm;
 using Cameca.Extensions.Controls;
 using Cameca.CustomAnalysis.Pca;
+using System.Xaml;
 
 namespace Cameca.CustomAnalysis.Pca;
 
 [DefaultView(PcaViewModel.UniqueId, typeof(PcaViewModel))]
-internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaProperties>
+internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaProperties>, IGridsUsageDelegate
 {
     private readonly INodeDataProvider nodeDataProvider;
     private readonly IOptionsAccessor optionsAccessor;
@@ -50,6 +51,9 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
     [ObservableProperty]
     private ICollection<IRenderData> selectedGridRenderData = Array.Empty<IRenderData>();
+
+    [ObservableProperty]
+    private IGridsUsageDelegate gridsUsageDelegate = new DoNothingGridsUsageDelegate();
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(UpdateCommand))]
@@ -105,6 +109,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
     public Func<double, string> AxisYLabelFormatter { get; } = (double value) => value.ToString("F3");
 
+    internal HashSet<string> gridsToExcludeFromPCA = new HashSet<string>();
     public PrincipalComponentAnalysis(
         IStandardAnalysisFilterNodeBaseServices services,
         ResourceFactory resourceFactory,
@@ -114,6 +119,24 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     {
         this.nodeDataProvider = nodeDataProvider;
         this.optionsAccessor = optionsAccessor;
+        this.gridsUsageDelegate = this;
+    }
+
+    public bool UsesGridForPca(string gridID)
+    {
+        return !gridsToExcludeFromPCA.Contains(gridID);
+    }
+    public void UseGridForPca(string gridID, bool useIt)
+    {
+        if (useIt)
+        {
+            gridsToExcludeFromPCA.Remove(gridID);
+        }
+        else
+        {
+            gridsToExcludeFromPCA.Add(gridID);
+        }
+        InvalidatePcaPhases();
     }
 
     protected override byte[]? GetSaveContent()
@@ -264,7 +287,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         if ((scoresGrid != null) && (gridsResults != null))
         {
             var pcaPhaseIdProperties = new PcaPhaseIdentificationProperties(Properties.GridProjectionBinSize, Properties.GridProjectionDelocalization, Properties.NoiseFloorFraction, Properties.PeakSummitAllowance, Properties.NumberOfComponents);
-            PcaPhaseIDResults = scoresGrid.GetPhasesStrategyE(pcaPhaseIdProperties);
+            PcaPhaseIDResults = scoresGrid.GetPhasesStrategyE(pcaPhaseIdProperties, gridsToExcludeFromPCA);
         }
     }
 

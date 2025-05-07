@@ -39,6 +39,17 @@
                  Click="AdvanceGridButton_Click" 
                  Margin="10,10,10,10">
             </Button>
+            <CheckBox x:Name="UseGridForPCAPhaseID" 
+                 Content="Use Grid for PCA Phase ID" 
+                 Height="32" 
+                 Width="140"
+                 Click="UseGridForPCAPhaseID_Click" 
+                 Margin="10,10,10,10">
+            </CheckBox>
+            <TextBlock x:Name="GridInfoText" 
+                 Width="140"
+                 Margin="10,10,10,10">
+            </TextBlock>
         </StackPanel>
         <Label x:Name="GridLabel" 
                  Grid.Column="1" 
@@ -53,7 +64,7 @@
                  Foreground="Black">
         </Label>
         <controls:Histogram2D x:Name="ProjectionGrid2dHistogram" 
-                Grid.Column="1" 
+                Grid.Column="2" 
                 Grid.Row="1" 
                 DataSource="{Binding SelectedGridRenderData, RelativeSource={RelativeSource AncestorType=local:ProjectionGridsView}}"
                 AxisXLabel="PCA dimension"

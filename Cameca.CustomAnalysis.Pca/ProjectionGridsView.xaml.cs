@@ -23,7 +23,8 @@ namespace Cameca.CustomAnalysis.Pca;
 /// </summary>
 public partial class ProjectionGridsView : UserControl
 {
-
+    string currentGridId = "";
+    HashSet<string> gridsToExcludeFromPCAPhaseID = new HashSet<string>();
     int whichGrid = 0;
     public ProjectionGridsView()
     {
@@ -36,6 +37,19 @@ public partial class ProjectionGridsView : UserControl
         typeof(ICollection<IRenderData>),
         typeof(ProjectionGridsView),
         new FrameworkPropertyMetadata(Array.Empty<IRenderData>(), GridsSourcePropertyChanged));
+
+    // GridsUsageProtocol is an object that can accept notifications of whether o not to use a particular grid as 
+    // part of the PCA Phase identification process.  So, when the "Use this grid in PCA Phase ID" button is clicked
+    // this object will get notified of the user intent.
+    public static readonly DependencyProperty GridsUsageDelegateProperty = DependencyProperty.Register(
+            nameof(GridsUsageDelegate),
+            typeof(IGridsUsageDelegate),
+            typeof(ProjectionGridsView),
+            new FrameworkPropertyMetadata(new DoNothingGridsUsageDelegate(), GridsUsageDelegatePropertyChanged));
+
+    private static void GridsUsageDelegatePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+    }
 
     private static void GridsSourcePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
@@ -82,6 +96,7 @@ public partial class ProjectionGridsView : UserControl
         if (rdc > 0)
         {
             List<IRenderData> renderList = renderDataCollection.ToList();
+
             if (whichGrid >= rdc)
             {
                 whichGrid = 0;
@@ -92,6 +107,7 @@ public partial class ProjectionGridsView : UserControl
             }
 
             var renderData = renderList[whichGrid];
+            currentGridId = renderData.Name;
             List<IRenderData> singleList = new List<IRenderData> { renderData };
             Histogram2D histogram = ProjectionGrid2dHistogram;
             //for whatever reason, for grid PQ, we seem to have put the P in the Y axis, and the Q in the Z axis
@@ -102,18 +118,28 @@ public partial class ProjectionGridsView : UserControl
             histogram.IsLegendVisible = true;
             Label gridLabel = GridLabel;
             gridLabel.Content = "Grid " + renderData.Name;
-            // need to hook up to "grid label provider"
-            // so that we can associate the nth grid with a grid label
+
+            UseGridForPCAPhaseID.IsChecked = GridsUsageDelegate.UsesGridForPca(currentGridId);
+        }
+    }
+
+    public IGridsUsageDelegate GridsUsageDelegate
+    {
+        get { return (IGridsUsageDelegate)GetValue(GridsUsageDelegateProperty); }
+        set
+        {
+            SetValue(GridsUsageDelegateProperty, value);
         }
     }
 
     public ICollection<IRenderData> GridsSource
     {
         get { return (ICollection<IRenderData>)GetValue(GridsSourceProperty); }
-        set { 
-                SetValue(GridsSourceProperty, value);
-                RefreshGridData();
-            }
+        set
+        {
+            SetValue(GridsSourceProperty, value);
+            RefreshGridData();
+        }
     }
 
     private void AdvanceGridButton_Click(object sender, RoutedEventArgs e)
@@ -126,7 +152,15 @@ public partial class ProjectionGridsView : UserControl
         whichGrid -= 1;
         RefreshGridData();
     }
+    private void UseGridForPCAPhaseID_Click(object sender, RoutedEventArgs e)
+    {
+        CheckBox checkBox = (CheckBox)sender;
+        bool? checkBoxChecked = checkBox.IsChecked;
+        bool isChecked = checkBoxChecked.HasValue ? checkBoxChecked.Value : true; 
+        GridsUsageDelegate.UseGridForPca(currentGridId, isChecked);
+    }
 
+    
     private static IEnumerable<T> GetChildren<T>(DependencyObject root) where T: DependencyObject
     {
         int childrenCount = VisualTreeHelper.GetChildrenCount(root);

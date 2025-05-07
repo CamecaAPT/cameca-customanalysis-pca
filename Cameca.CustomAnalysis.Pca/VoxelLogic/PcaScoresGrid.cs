@@ -437,7 +437,7 @@ public class PcaScoresGrid
         }
         return gridsResults;
     }
-    public PhaseIdResults GetPhasesStrategyE(PcaPhaseIdentificationProperties properties)
+    public PhaseIdResults GetPhasesStrategyE(PcaPhaseIdentificationProperties properties, HashSet<string> gridsToExclude)
     {
         List<VoxelID> voxelIds = pcaVoxels.Keys.ToList();
         int numDimsToInclude = Math.Min(properties.numDimsForPCAPhaseId, this.scoreDims);
@@ -460,43 +460,47 @@ public class PcaScoresGrid
             // for each grid, group the voxels into lists per pixel, then, knowing
             // which peaks contain which pixels, add the voxels PCA code for that grid to its entry in 
             // the PCA code dictionary
+
             TwoDGridID gridID = kvp.Key;
-            DensityPlane twoDGrid = twoDGrids[gridID];
-            List<List<PixelID>> partitionedIndices = kvp.Value;
-            (int firstDim, int secondDim) = gridID.AsIndexPair();
-
-            Dictionary<PixelID, List<VoxelID>> voxelLists = aggregateVoxelsIntoListsPerPixel(voxelIds, twoDGrid, pcaVoxels, firstDim, secondDim);
-            int peakIndex = 1;
-
-            foreach (List<PixelID> pixelIdList in partitionedIndices)
+            if (!gridsToExclude.Contains(gridID.ToString()))
             {
-                string pcaCode = gridID.ToString() + "." + peakIndex.ToString();
-                // the pixelIdList contains a list of pixelIds identified as being part of the Nth partition
-                foreach (PixelID pixelID in pixelIdList)
+                DensityPlane twoDGrid = twoDGrids[gridID];
+                List<List<PixelID>> partitionedIndices = kvp.Value;
+                (int firstDim, int secondDim) = gridID.AsIndexPair();
+
+                Dictionary<PixelID, List<VoxelID>> voxelLists = aggregateVoxelsIntoListsPerPixel(voxelIds, twoDGrid, pcaVoxels, firstDim, secondDim);
+                int peakIndex = 1;
+
+                foreach (List<PixelID> pixelIdList in partitionedIndices)
+                {
+                    string pcaCode = gridID.ToString() + "." + peakIndex.ToString();
+                    // the pixelIdList contains a list of pixelIds identified as being part of the Nth partition
+                    foreach (PixelID pixelID in pixelIdList)
+                    {
+                        // Lookup for all the voxels bucketed under this pixelId
+                        List<VoxelID> voxelIdsForThisPixel = voxelLists[pixelID];
+                        foreach (VoxelID voxelId in voxelIdsForThisPixel)
+                        {
+                            pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(pcaCode);
+                        }
+                        // remove that entry from voxelLists
+                        voxelLists.Remove(pixelID);
+                    }
+                    peakIndex += 1;
+                }
+
+                // now, all the remaining entries in voxelLists are unassigned :  
+                // assign these to component 0
+                string unassignedPcaCode = gridID.ToString() + ".0";
+                List<PixelID> unassignedPixels = voxelLists.Keys.ToList();
+                foreach (PixelID pixelID in unassignedPixels)
                 {
                     // Lookup for all the voxels bucketed under this pixelId
                     List<VoxelID> voxelIdsForThisPixel = voxelLists[pixelID];
                     foreach (VoxelID voxelId in voxelIdsForThisPixel)
                     {
-                        pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(pcaCode);
+                        pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(unassignedPcaCode);
                     }
-                    // remove that entry from voxelLists
-                    voxelLists.Remove(pixelID);
-                }
-                peakIndex += 1;
-            }
-
-            // now, all the remaining entries in voxelLists are unassigned :  
-            // assign these to component 0
-            string unassignedPcaCode = gridID.ToString() + ".0";
-            List<PixelID> unassignedPixels = voxelLists.Keys.ToList();
-            foreach (PixelID pixelID in unassignedPixels)
-            {
-                // Lookup for all the voxels bucketed under this pixelId
-                List<VoxelID> voxelIdsForThisPixel = voxelLists[pixelID];
-                foreach (VoxelID voxelId in voxelIdsForThisPixel)
-                {
-                    pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(unassignedPcaCode);
                 }
             }
         }
