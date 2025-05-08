@@ -103,14 +103,14 @@
             </TabItem>
 
             <TabItem Header="Grids">
-                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdatePCAPhasesCommand}"
+                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateGridsCommand}"
                                ButtonContent="Update"
-                               OverlayVisibility="{Binding UpdatePCAPhasesCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <local:ProjectionGridsView GridsSource="{Binding SelectedGridRenderData}" />
-
+                               OverlayVisibility="{Binding UpdateGridsCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <local:ProjectionGridsView GridsSource="{Binding SelectedGridRenderData}"   
+                                               GridsUsageDelegate="{Binding GridsUsageDelegate}" />
                 </utils:ButtonOverlayControl>
             </TabItem>
-            
+
             <TabItem Header="PCA Phases">
                 <utils:ButtonOverlayControl ButtonCommand="{Binding UpdatePCAPhasesCommand}"
                                 ButtonContent="Update"
@@ -161,7 +161,7 @@
                     </lvc:CartesianChart>
                 </utils:ButtonOverlayControl>
             </TabItem>
-            
+
             <TabItem Header="Scores">
                 <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateSelectedComponentCommand}"
                             ButtonContent="Update"
