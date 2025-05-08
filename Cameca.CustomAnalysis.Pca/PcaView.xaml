@@ -27,7 +27,7 @@
                                             OverlayVisibility="{Binding UpdateRankEstimationCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <Grid>
                         <controls:Chart2D DataSource="{Binding EigenvalueRenderData}"
-                                          IsLogScaleY="True"
+                                          IsLogScaleY="{Binding Properties.LogScaleY, Mode=TwoWay}"
                                           AxisXLabel="Sorted eigenvalue index"
                                           AxisYLabel="Eigenvalue"/>
                     </Grid>
