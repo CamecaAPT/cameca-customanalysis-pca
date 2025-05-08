@@ -80,7 +80,6 @@ internal static class PcaCalculator
     private const float ScoresCoefficient = 1000f;
     private const float LoadingsCoefficient = 0.001f;
 
-
     public static EigenvalueResults GetEignevalues(IIonData ionData, IGrid3DData gridData)
     {
         int nAllVoxels = gridData.NumVoxels[0] * gridData.NumVoxels[1] * gridData.NumVoxels[2];
