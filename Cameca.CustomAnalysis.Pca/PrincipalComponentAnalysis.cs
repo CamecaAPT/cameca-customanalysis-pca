@@ -23,11 +23,13 @@ using System.Runtime.Intrinsics.Arm;
 using Cameca.Extensions.Controls;
 using Cameca.CustomAnalysis.Pca;
 using System.Xaml;
+using System.Diagnostics.Metrics;
+using System.Resources;
 
 namespace Cameca.CustomAnalysis.Pca;
 
 [DefaultView(PcaViewModel.UniqueId, typeof(PcaViewModel))]
-internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaProperties>, IGridsUsageDelegate
+internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaProperties>, IGridsUsageDelegate, IHistogramsUsageDelegate
 {
     private readonly INodeDataProvider nodeDataProvider;
     private readonly IOptionsAccessor optionsAccessor;
@@ -50,10 +52,16 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     private IColorMap? componentsColorMap = null;
 
     [ObservableProperty]
+    public ICollection<IRenderData> scoresHistogramRenderData = Array.Empty<IRenderData>();
+
+    [ObservableProperty]
     private ICollection<IRenderData> selectedGridRenderData = Array.Empty<IRenderData>();
 
     [ObservableProperty]
     private IGridsUsageDelegate gridsUsageDelegate = new DoNothingGridsUsageDelegate();
+
+    [ObservableProperty]
+    private IHistogramsUsageDelegate histogramsUsageDelegate = new DoNothingHistogramsUsageDelegate();
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(UpdateCommand))]
@@ -67,7 +75,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(UpdateComponentsCanExecute))]
     [NotifyCanExecuteChangedFor(nameof(UpdateComponentsCommand))]
-    private ComponentsResults? pcaComponentsResults; 
+    private ComponentsResults? pcaComponentsResults;
 
     [ObservableProperty]
     private PcaScoresGrid? scoresGrid = null;
@@ -92,12 +100,6 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     [NotifyCanExecuteChangedFor(nameof(UpdateSelectedComponentCommand))]
     public ICollection<string> loadingsLabels = Array.Empty<string>();
 
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(UpdateSelectedComponentCanExecute))]
-    [NotifyCanExecuteChangedFor(nameof(UpdateSelectedComponentCommand))]
-    public ICollection<IRenderData> scoresHistogramData = Array.Empty<IRenderData>();
-
     public bool UpdateComponentsCanExecute => PcaComponentsResults is null;
     public bool UpdateGridsCanExecute => PcaGridsResults is null;
     public bool UpdatePCAPhasesCanExecute => PcaPhaseIDResults is null;
@@ -105,11 +107,12 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     public bool UpdateRankEstimationCanExecute => NoiseEigenvalueResults is null;
 
     public bool UpdateSelectedComponentCanExecute =>
-        !LoadingsSeries.Any() || !LoadingsLabels.Any() || !ScoresHistogramData.Any();
+        !LoadingsSeries.Any() || !LoadingsLabels.Any() || !ScoresHistogramRenderData.Any();
 
     public Func<double, string> AxisYLabelFormatter { get; } = (double value) => value.ToString("F3");
 
     internal HashSet<string> gridsToExcludeFromPCA = new HashSet<string>();
+    internal HashSet<string> histogramsToUseForPCA = new HashSet<string>();
     public PrincipalComponentAnalysis(
         IStandardAnalysisFilterNodeBaseServices services,
         ResourceFactory resourceFactory,
@@ -120,12 +123,14 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         this.nodeDataProvider = nodeDataProvider;
         this.optionsAccessor = optionsAccessor;
         this.gridsUsageDelegate = this;
+        this.histogramsUsageDelegate = this;
     }
 
     public bool UsesGridForPca(string gridID)
     {
         return !gridsToExcludeFromPCA.Contains(gridID);
     }
+
     public void UseGridForPca(string gridID, bool useIt)
     {
         if (useIt)
@@ -135,6 +140,23 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         else
         {
             gridsToExcludeFromPCA.Add(gridID);
+        }
+        InvalidatePcaPhases();
+    }
+
+    public bool UsesHistogramForPca(string gridID)
+    {
+        return histogramsToUseForPCA.Contains(gridID);
+    }
+    public void UseHistogramForPca(string gridID, bool useIt)
+    {
+        if (useIt)
+        {
+            histogramsToUseForPCA.Add(gridID);
+        }
+        else
+        {
+            histogramsToUseForPCA.Remove(gridID);
         }
         InvalidatePcaPhases();
     }
@@ -252,12 +274,63 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             Properties.ComponentIndex = Properties.NumberOfComponents;
         }
 
+        await UpdateHistograms(cancellationToken);
+        await UpdateGrids(cancellationToken);
         await UpdateSelectedComponent(cancellationToken);
     }
 
-    // PCA Phases can be updated independently of the Components if the number of grids to use changes
-    // or if any of the properties to use in the calculation change
     [RelayCommand(CanExecute = nameof(UpdateGridsCanExecute))]
+    public async Task UpdateHistograms(CancellationToken cancellationToken)
+    {
+        DataStateIsError = false;
+        if (await Resources.GetIonData(cancellationToken: cancellationToken) is not { } ionData)
+        {
+            DataStateIsError = true;
+            return;
+        }
+
+        var gridNode = Resources.GetGrid();
+        if (gridNode is null || await gridNode.GetDataAsync<IGrid3DData>(cancellationToken: cancellationToken) is not { } gridData)
+        {
+            DataStateIsError = true;
+            return;
+        }
+
+        if (PcaComponentsResults is null)
+        {
+            await UpdateComponents(cancellationToken);
+        }
+
+        var componentsResults = PcaComponentsResults;
+
+        // Scores Histogram
+        List<IRenderData> newHistogramsData = new List<IRenderData>();
+
+        foreach (ComponentResults componentResults in componentsResults.Components)
+        {
+            float[] scores = componentResults.Scores;
+            int voxels = scores.Length;
+            float binSize = 0.01f;
+            float min = scores.Min();
+            float max = scores.Max();
+            int binCount = (int)Math.Ceiling((max - min) / binSize);
+            var binnedScores = new int[binCount];
+            for (int i = 0; i < scores.Length; i++)
+            {
+                int index = (int)((scores[i] - min) / binSize);
+                binnedScores[index]++;
+            }
+            var scoreData = binnedScores.Select((y, i) => new Vector2(min + (i * binSize), y)).ToArray();
+            var scoresHistogram = Resources.ChartObjects.CreateHistogram (scoreData, color: Colors.Blue);
+            newHistogramsData.Add(scoresHistogram);
+        }
+        ScoresHistogramRenderData = newHistogramsData;
+
+
+    }
+// PCA Phases can be updated independently of the Components if the number of grids to use changes
+// or if any of the properties to use in the calculation change
+[RelayCommand(CanExecute = nameof(UpdateGridsCanExecute))]
     public async Task UpdateGrids(CancellationToken cancellationToken)
     {
         DataStateIsError = false;
@@ -273,9 +346,13 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             DataStateIsError = true;
             return;
         }
-        
-        var compResults = PcaComponentsResults;
 
+        if (PcaComponentsResults is null)
+        {
+           await UpdateComponents(cancellationToken);
+        }
+
+        var compResults = PcaComponentsResults;
         if (compResults != null)
         {
             var pcaPhaseIdProperties = new PcaPhaseIdentificationProperties(Properties.GridProjectionBinSize, Properties.GridProjectionDelocalization, Properties.NoiseFloorFraction, Properties.PeakSummitAllowance, Properties.NumberOfComponents);
@@ -283,29 +360,13 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             PcaGridsResults = PcaCalculator.CalculateTwoDGrids(ScoresGrid, pcaPhaseIdProperties);
         }
     }
-    
-    // PCA Phases can be updated independently of the Components and grids   if the number of grids to use changes
-    // or if any of the properties to use in the calculation change
-    [RelayCommand(CanExecute = nameof(UpdatePCAPhasesCanExecute))]
-    public async Task UpdatePCAPhases(CancellationToken cancellationToken)
-    {
 
-        var scoresGrid = ScoresGrid;
-        var gridsResults = PcaGridsResults;
-
-        if ((scoresGrid != null) && (gridsResults != null))
-        {
-            var pcaPhaseIdProperties = new PcaPhaseIdentificationProperties(Properties.GridProjectionBinSize, Properties.GridProjectionDelocalization, Properties.NoiseFloorFraction, Properties.PeakSummitAllowance, Properties.NumberOfComponents);
-            PcaPhaseIDResults = scoresGrid.GetPhasesStrategyE(pcaPhaseIdProperties, gridsToExcludeFromPCA);
-        }
-    }
 
     // Uses the component data (or computes for all componets if necessary) to generate plots for the selected component by index
     [RelayCommand(CanExecute = nameof(UpdateSelectedComponentCanExecute))]
     public async Task UpdateSelectedComponent(CancellationToken cancellationToken)
     {
         LoadingsLabels = Array.Empty<string>();
-        ScoresHistogramData = Array.Empty<IRenderData>();
 
         if (await Resources.GetIonData(cancellationToken: cancellationToken) is not { } ionData)
         {
@@ -315,10 +376,12 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
         int numComponents = Properties.NumberOfComponents;
         int selectedIndex = Properties.ComponentIndex;
-        
-        if (PcaComponentsResults is null){
+
+        if (PcaComponentsResults is null)
+        {
             await UpdateComponents(cancellationToken);
         }
+
         if (PcaComponentsResults?.Components.ElementAtOrDefault(selectedIndex) is not { Scores: { } scores, Loads: { } loadingData })
         {
             return;
@@ -351,24 +414,22 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             series
         };
         LoadingsLabels = ions.Select(x => x.Name).ToList();
+   }
 
-        // Scores Histogram
-        int voxels = scores.Length;
-        float binSize = 0.01f;
-        float min = scores.Min();
-        float max = scores.Max();
-        int binCount = (int)Math.Ceiling((max - min) / binSize);
-        var binnedScores = new int[binCount];
-        for (int i = 0; i < scores.Length; i++)
+    // PCA Phases can be updated independently of the Components and grids   if the number of grids to use changes
+    // or if any of the properties to use in the calculation change
+    [RelayCommand(CanExecute = nameof(UpdatePCAPhasesCanExecute))]
+    public async Task UpdatePCAPhases(CancellationToken cancellationToken)
+    {
+
+        var scoresGrid = ScoresGrid;
+        var gridsResults = PcaGridsResults;
+
+        if ((scoresGrid != null) && (gridsResults != null))
         {
-            int index = (int)((scores[i] - min) / binSize);
-            binnedScores[index]++;
+            var pcaPhaseIdProperties = new PcaPhaseIdentificationProperties(Properties.GridProjectionBinSize, Properties.GridProjectionDelocalization, Properties.NoiseFloorFraction, Properties.PeakSummitAllowance, Properties.NumberOfComponents);
+            PcaPhaseIDResults = scoresGrid.GetPhasesStrategyE(pcaPhaseIdProperties, gridsToExcludeFromPCA);
         }
-        var scoreData = binnedScores.Select((y, i) => new Vector2(min + (i * binSize), y)).ToArray();
-        var scoresHistogram = Resources.ChartObjects.CreateHistogram(
-            scoreData,
-            color: Colors.Blue);
-        ScoresHistogramData = new IRenderData[] { scoresHistogram };
     }
 
     // Updates the noise eigenvalues tab plot when the computed eigenvalue data changes
@@ -796,7 +857,6 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     {
         LoadingsSeries = new SeriesCollection();
         LoadingsLabels = Array.Empty<string>();
-        ScoresHistogramData = Array.Empty<IRenderData>();
     }
 
     private void InvalidateAll()

@@ -101,7 +101,16 @@
                     </Grid>
                 </utils:ButtonOverlayControl>
             </TabItem>
-
+            
+            <TabItem Header="Scores">
+                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateComponentsCommand}"
+                            ButtonContent="Update"
+                            OverlayVisibility="{Binding UpdateComponentsCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <local:ScoresHistogramsView HistogramsSource="{Binding ScoresHistogramsRenderData}"   
+                                               HistogramsUsageDelegate="{Binding HistogramsUsageDelegate}" />
+                </utils:ButtonOverlayControl>
+            </TabItem>
+            
             <TabItem Header="Grids">
                 <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateGridsCommand}"
                                ButtonContent="Update"
@@ -162,15 +171,6 @@
                 </utils:ButtonOverlayControl>
             </TabItem>
 
-            <TabItem Header="Scores">
-                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateSelectedComponentCommand}"
-                            ButtonContent="Update"
-                            OverlayVisibility="{Binding UpdateSelectedComponentCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <controls:Chart2D DataSource="{Binding ScoresHistogramData}"
-                                  AxisXLabel="Score"
-                                  AxisYLabel="Voxels"/>
-                </utils:ButtonOverlayControl>
-            </TabItem>
         </TabControl>
     </utils:ButtonOverlayControl>
 </UserControl>
