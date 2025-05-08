@@ -66,6 +66,6 @@
                 Grid.Column="2" 
                 Grid.Row="1"                                  
                 AxisXLabel="Score"
-                AxisYLabel="Voxels"/>
+                AxisYLabel="Voxels per PCA Unit"/>
      </Grid>
 </UserControl>
