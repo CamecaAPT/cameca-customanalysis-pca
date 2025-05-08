@@ -305,24 +305,29 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
         // Scores Histogram
         List<IRenderData> newHistogramsData = new List<IRenderData>();
-
+        int componentIndex = 0;
         foreach (ComponentResults componentResults in componentsResults.Components)
         {
             float[] scores = componentResults.Scores;
             int voxels = scores.Length;
-            float binSize = 0.01f;
+            float binSize = 0.02f;
+            float invBinSize = 1.0f / binSize;
             float min = scores.Min();
             float max = scores.Max();
             int binCount = (int)Math.Ceiling((max - min) / binSize);
-            var binnedScores = new int[binCount];
+            var binnedScores = new int[binCount]; // the y axis of the histogram should be in units of Voxels/PCA Unit
+                                                  // so that changing the binsize doesn't change the score
+            var normalizedScores = new float[binCount];
             for (int i = 0; i < scores.Length; i++)
             {
                 int index = (int)((scores[i] - min) / binSize);
-                binnedScores[index]++;
+                binnedScores[index] += 1;
             }
-            var scoreData = binnedScores.Select((y, i) => new Vector2(min + (i * binSize), y)).ToArray();
+            var scoreData = binnedScores.Select((y, i) => new Vector2(min + (i * binSize), y * invBinSize)).ToArray();
             var scoresHistogram = Resources.ChartObjects.CreateHistogram (scoreData, color: Colors.Blue);
+            scoresHistogram.Name = "PCA Component " + componentIndex;
             newHistogramsData.Add(scoresHistogram);
+            ++componentIndex;
         }
         ScoresHistogramRenderData = newHistogramsData;
 

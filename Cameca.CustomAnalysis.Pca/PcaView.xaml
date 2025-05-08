@@ -106,7 +106,7 @@
                 <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateComponentsCommand}"
                             ButtonContent="Update"
                             OverlayVisibility="{Binding UpdateComponentsCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <local:ScoresHistogramsView HistogramsSource="{Binding ScoresHistogramsRenderData}"   
+                    <local:ScoresHistogramsView HistogramsSource="{Binding ScoresHistogramRenderData}"   
                                                HistogramsUsageDelegate="{Binding HistogramsUsageDelegate}" />
                 </utils:ButtonOverlayControl>
             </TabItem>
