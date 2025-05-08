@@ -36,7 +36,8 @@ public partial class PcaProperties : ObservableObject
     private bool refine = true;
 
     [ObservableProperty]
-    private int components = 0;
+    [field: Display(Name = "Components")]
+    private int numberOfComponents = 0;
 
     [ObservableProperty]
     [field:Display(Name = "Component Index")]
@@ -57,16 +58,20 @@ public partial class PcaProperties : ObservableObject
     private bool invert = false;
 
     [ObservableProperty]
-    [field: Display(Name = "Noise Floor")]
+    [field: Display(Name = "Grid Projection Bin Size")]
+    private float gridProjectionBinSize = 0.5f;
+
+    [ObservableProperty]
+    [field: Display(Name = "Grid Projection Delocalization")]
+    private float gridProjectionDelocalization = 0.25f;
+
+    [ObservableProperty]
+    [field: Display(Name = "Peak ID Noise Floor")]
     private float noiseFloorFraction = 0.1f;
 
     [ObservableProperty]
     [field: Display(Name = "Peak Summit Allowance")]
     private float peakSummitAllowance = 0.8f;
-
-    [ObservableProperty]
-    [field: Display(Name = "PCA Phase Id Dimensions")]
-    private int numDimsForPCAPhaseId = 3;
 
     [ObservableProperty]
     [field: Display(Name = "PCA Phase Index")]

@@ -23,7 +23,8 @@ namespace Cameca.CustomAnalysis.Pca;
 /// </summary>
 public partial class ProjectionGridsView : UserControl
 {
-
+    string currentGridId = "";
+    HashSet<string> gridsToExcludeFromPCAPhaseID = new HashSet<string>();
     int whichGrid = 0;
     public ProjectionGridsView()
     {
@@ -37,12 +38,24 @@ public partial class ProjectionGridsView : UserControl
         typeof(ProjectionGridsView),
         new FrameworkPropertyMetadata(Array.Empty<IRenderData>(), GridsSourcePropertyChanged));
 
+    // GridsUsageProtocol is an object that can accept notifications of whether o not to use a particular grid as 
+    // part of the PCA Phase identification process.  So, when the "Use this grid in PCA Phase ID" button is clicked
+    // this object will get notified of the user intent.
+    public static readonly DependencyProperty GridsUsageDelegateProperty = DependencyProperty.Register(
+            nameof(GridsUsageDelegate),
+            typeof(IGridsUsageDelegate),
+            typeof(ProjectionGridsView),
+            new FrameworkPropertyMetadata(new DoNothingGridsUsageDelegate(), GridsUsageDelegatePropertyChanged));
+
+    private static void GridsUsageDelegatePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+    }
+
     private static void GridsSourcePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is not ProjectionGridsView projectionGridsView) { return; }
         ICollection<IRenderData> renderData = projectionGridsView.GridsSource;
-        int rdc = renderData.Count;
-        Debug.WriteLine("GridsSourcePropertyChanged called -- render data count is " + rdc);
+        projectionGridsView.RefreshGridData();
     }
 
     private void GridsSourceCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -50,79 +63,83 @@ public partial class ProjectionGridsView : UserControl
         RefreshGridData();
     }
 
+    internal string AxisLabelForGridLetter(char gridLetter)
+    { 
+        return "PCA Component " + TwoDGridID.IndexForGridLetter(gridLetter);
+    }
+
     internal string AxisYLabelForGridID(string gridID)
     {
-        string[] components = gridID.Split("-");
-        if (components.Count() != 2)
+        if (gridID.Count() != 2)
         {
             return "Unknown Pca Axis";
         }
-        string component = components[0];
-        return "PCA Component " + component.Substring(1);
+        return AxisLabelForGridLetter(gridID[0]);
     }
+
+    // 
     internal string AxisXLabelForGridID(string gridID)
     {
-        string[] components = gridID.Split("-");
-        if (components.Count() != 2)
+        if ( gridID.Count() != 2 )
         {
             return "Unknown Pca Axis";
         }
-        string component = components[1];
-        return "PCA Component " + component;
+        return AxisLabelForGridLetter(gridID[1]);
     }
+
 
     private void RefreshGridData()
     { 
         ICollection<IRenderData> renderDataCollection = this.GridsSource;
         int rdc = renderDataCollection.Count;
+ 
         if (rdc > 0)
         {
             List<IRenderData> renderList = renderDataCollection.ToList();
+
             if (whichGrid >= rdc)
             {
                 whichGrid = 0;
             }
+            if (whichGrid < 0)
+            {
+                whichGrid = rdc - 1;
+            }
 
             var renderData = renderList[whichGrid];
+            currentGridId = renderData.Name;
             List<IRenderData> singleList = new List<IRenderData> { renderData };
             Histogram2D histogram = ProjectionGrid2dHistogram;
+            //for whatever reason, for grid PQ, we seem to have put the P in the Y axis, and the Q in the Z axis
+            // so, the X axis gets its name from the second letter in the grid ID
             histogram.AxisXLabel = AxisXLabelForGridID(renderData.Name);
             histogram.AxisYLabel = AxisYLabelForGridID(renderData.Name);
             histogram.DataSource = singleList;
+            histogram.IsLegendVisible = true;
+            Label gridLabel = GridLabel;
+            gridLabel.Content = "Grid " + renderData.Name;
+
+            UseGridForPCAPhaseID.IsChecked = GridsUsageDelegate.UsesGridForPca(currentGridId);
         }
     }
 
-    public void FillRenderDataWithGridData(IHistogram2DRenderData renderData, TwoDPeakProjection projection)
+    public IGridsUsageDelegate GridsUsageDelegate
     {
-       // renderData.ColorMap = Resources.ColorMap.GetPresetColorMap(ColorMapPreset.GreyScale);
-        DensityPlane dp = projection.densityPlane;
-        (TwoDGridCoord minCoord, TwoDGridCoord maxCoord) = dp.MinMaxGridCoords();
-        int spanX = 1 + maxCoord.x - minCoord.x;
-        int spanY = 1 + maxCoord.y - minCoord.y;
-        int span = Math.Max(spanX, spanY);
-        int numCoords = span * span;
-        float[] dat = new float[numCoords * 4];
-        for (int q = 0; q < spanY; q += 1)
+        get { return (IGridsUsageDelegate)GetValue(GridsUsageDelegateProperty); }
+        set
         {
-            int qOffset = q * span;
-            int gridq = q + minCoord.y;
-            for (int p = 0; p < spanX; p += 1)
-            {
-                int arrayIndex = qOffset + p;
-                int gridp = p + minCoord.x;
-                dat[arrayIndex] = dp.valueAtGridCoords(gridp, gridq);
-            }
+            SetValue(GridsUsageDelegateProperty, value);
         }
-        ReadOnlyMemory2D<float> rom = new ReadOnlyMemory2D<float>(dat, span, span);
-        Vector2 binsize = new Vector2(0.5f, 0.5f); // Vector2(dp.binsize, dp.binsize);
-        Vector2 origin = new Vector2(minCoord.x * dp.binsize, minCoord.y * dp.binsize);
-        renderData.Update(rom, binsize, origin);
     }
 
     public ICollection<IRenderData> GridsSource
     {
         get { return (ICollection<IRenderData>)GetValue(GridsSourceProperty); }
-        set { SetValue(GridsSourceProperty, value); }
+        set
+        {
+            SetValue(GridsSourceProperty, value);
+            RefreshGridData();
+        }
     }
 
     private void AdvanceGridButton_Click(object sender, RoutedEventArgs e)
@@ -130,7 +147,20 @@ public partial class ProjectionGridsView : UserControl
         whichGrid += 1;
         RefreshGridData();
     }
+    private void PreviousGridButton_Click(object sender, RoutedEventArgs e)
+    {
+        whichGrid -= 1;
+        RefreshGridData();
+    }
+    private void UseGridForPCAPhaseID_Click(object sender, RoutedEventArgs e)
+    {
+        CheckBox checkBox = (CheckBox)sender;
+        bool? checkBoxChecked = checkBox.IsChecked;
+        bool isChecked = checkBoxChecked.HasValue ? checkBoxChecked.Value : true; 
+        GridsUsageDelegate.UseGridForPca(currentGridId, isChecked);
+    }
 
+    
     private static IEnumerable<T> GetChildren<T>(DependencyObject root) where T: DependencyObject
     {
         int childrenCount = VisualTreeHelper.GetChildrenCount(root);

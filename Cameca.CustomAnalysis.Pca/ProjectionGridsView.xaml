@@ -12,21 +12,63 @@
         <local:SingleRenderDataValueConverter x:Key="SingleRenderDataValueConverter" />
     </UserControl.Resources>
     <Grid>
-        
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        
-        <StackPanel Grid.Row="0" Orientation="Horizontal">
-            <Button x:Name="AdvanceGridButton" Content="Advance To Next Grid" Height="32" Width="140"
-                Click="AdvanceGridButton_Click">
+        <StackPanel Grid.Column="0" 
+                    Grid.RowSpan="2"
+                    Orientation="Vertical" 
+                    HorizontalAlignment="Center"
+                    Background="#efefef">
+            <Button x:Name="PreviousGridButton" 
+                 Content="Go to Previous Grid" 
+                 Height="32" 
+                 Width="140"
+                 Click="PreviousGridButton_Click" 
+                 Margin="10,10,10,10">
             </Button>
+            <Button x:Name="AdvanceGridButton" 
+                 Content="Advance To Next Grid" 
+                 Height="32" 
+                 Width="140"
+                 Click="AdvanceGridButton_Click" 
+                 Margin="10,10,10,10">
+            </Button>
+            <CheckBox x:Name="UseGridForPCAPhaseID" 
+                 Content="Use Grid for PCA Phase ID" 
+                 Height="32" 
+                 Width="140"
+                 Click="UseGridForPCAPhaseID_Click" 
+                 Margin="10,10,10,10">
+            </CheckBox>
+            <TextBlock x:Name="GridInfoText" 
+                 Width="140"
+                 Margin="10,10,10,10">
+            </TextBlock>
         </StackPanel>
-
-        <controls:Histogram2D x:Name="ProjectionGrid2dHistogram" Grid.Row="1" DataSource="{Binding SelectedGridRenderData, RelativeSource={RelativeSource AncestorType=local:ProjectionGridsView}}"
-             AxisXLabel="PCA dimension 1"
-             AxisYLabel="PCA dimension 0"/>
+        <Label x:Name="GridLabel" 
+                 Grid.Column="1" 
+                 Grid.Row="0" 
+                 Content="Grid Title" 
+                 Height="32" 
+                 Width="140" 
+                 FontSize="16" 
+                 FontFamily="Calibri"  
+                 FontWeight="Bold"   
+                 Background="White"   
+                 Foreground="Black">
+        </Label>
+        <controls:Histogram2D x:Name="ProjectionGrid2dHistogram" 
+                Grid.Column="2" 
+                Grid.Row="1" 
+                DataSource="{Binding SelectedGridRenderData, RelativeSource={RelativeSource AncestorType=local:ProjectionGridsView}}"
+                AxisXLabel="PCA dimension"
+                AxisYLabel="PCA dimension"/>
 
     </Grid>
 </UserControl>

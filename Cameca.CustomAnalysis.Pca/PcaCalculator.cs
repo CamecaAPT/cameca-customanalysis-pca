@@ -9,12 +9,20 @@ public delegate float[] GetScoresDelegate(int voxelIndex);
 
 public struct PcaPhaseIdentificationProperties
 {
+    public float gridProjectionBinSize;
+    public float gridProjectionDelocalization;
     public float noiseFloorFraction;
     public float peakSummitAllowance;
     public int numDimsForPCAPhaseId;
 
-    public PcaPhaseIdentificationProperties(float noiseFloor, float peakSummitAllowance, int numDimsForPCAPhaseId)
+    public PcaPhaseIdentificationProperties(float gridProjectionBinSize,
+          float gridProjectionDelocalization,
+          float noiseFloor, 
+          float peakSummitAllowance, 
+          int numDimsForPCAPhaseId)
     {
+        this.gridProjectionBinSize = gridProjectionBinSize;
+        this.gridProjectionDelocalization = gridProjectionDelocalization;
         this.noiseFloorFraction = noiseFloor;
         this.peakSummitAllowance = peakSummitAllowance;
         this.numDimsForPCAPhaseId = numDimsForPCAPhaseId;
@@ -45,7 +53,7 @@ public class PcaScoresGridProducer: IScoresProvider {
         return (voxelId, scores);
     }
 
-    public PcaScoresGrid ScoresGrid()
+    public PcaScoresGrid GenerateScoresGrid()
     {
         int nComponents = compResults.Components.Count;
 
@@ -128,14 +136,16 @@ internal static class PcaCalculator
     }
 
     // manipulate the results of PCA to identify phases per voxel
-    public static PhaseIdResults GetPhases(IIonData ionData, ComponentsResults compResults, PcaPhaseIdentificationProperties properties)
+    public static PcaScoresGrid GenerateScoresGrid(IIonData ionData, ComponentsResults compResults, PcaPhaseIdentificationProperties properties)
     {
-        // make a PcaGrid, then call grid.GetPhases
         PcaScoresGridProducer producer = new PcaScoresGridProducer(compResults, properties);
 
-        PcaScoresGrid scoresGrid = producer.ScoresGrid();
-        return scoresGrid.GetPhasesStrategyE(properties);
-    }
+        return producer.GenerateScoresGrid();
+    }     // manipulate the results of PCA to identify phases per voxel
+    public static TwoDGridsResults CalculateTwoDGrids(PcaScoresGrid scoresGrid, PcaPhaseIdentificationProperties properties)
+    {
+        return scoresGrid.CalculateTwoDGrids(properties);
+    }    // manipulate the results of PCA to identify phases per voxel
 
     public static NoiseEigenvalueResults GetNoiseEigenvalues(float[] evals, int gaps, int significance, bool refine)
     {
