@@ -86,6 +86,10 @@ public partial class PcaProperties : ObservableObject
 
     [Display(AutoGenerateField = false)]
     public SerializableColorMap? ComponentsColorMap { get; set; }
+
+    [Display(AutoGenerateField = false)]
+    [ObservableProperty]
+    private bool logScaleY = true;
 }
 
 public class SerializableColorMap

@@ -11,6 +11,10 @@ public partial class PcaGlobalOptions : ObservableObject
     private float jitterStdDev = 0f;
 
     [ObservableProperty]
-    [field: Display(Name = "Default Color Map ")]
+    [field: Display(Name = "Default Color Map")]
     private ColorMapPreset colorMapPreset = ColorMapPreset.Plasma;
+
+    [ObservableProperty]
+    [field: Display(Name = "Default Chart to Log Scale")]
+    private bool isLogScaleDefault = true;
 }

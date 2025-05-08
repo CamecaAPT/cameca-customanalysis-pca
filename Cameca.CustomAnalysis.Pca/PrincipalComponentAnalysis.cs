@@ -139,6 +139,15 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         InvalidatePcaPhases();
     }
 
+    protected override void OnAdded(NodeAddedEventArgs eventArgs)
+    {
+        base.OnAdded(eventArgs);
+        if (eventArgs.Trigger != EventTrigger.Load)
+        {
+            Properties.LogScaleY = optionsAccessor.GetOptions<PcaGlobalOptions>().IsLogScaleDefault;
+        }
+    }
+
     protected override byte[]? GetSaveContent()
     {
         if (PcaColorMap is not null)
