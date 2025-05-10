@@ -1,20 +1,24 @@
 
 using System;
 using System.IO;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.Intrinsics.Arm;
-using System.Windows.Controls;
-using System.Text.RegularExpressions;
-using System.Security.Cryptography.X509Certificates;
+
 
 public struct PixelID : IComparable<PixelID>
 {
     public int pixelId;
-    static int maxgrid = 510;
+    
+    // Here are some hardcoded constants for maintaining the grid data
+    // each grid row has potentially 2^10 pixelIDs per row (i.e. 1024 -- not all actually used)
+    // advancing the y index by one advances the pixel ID by 1024
+    // pixe3l ID 0 refers to the pixel at 0,0
+    // other constants are defined here for ease of calculation later
+    public const int GridStrideExp = 10;
+    public const int GridStride = 1 << GridStrideExp;
+    public const int HalfGridStride = 1 << (GridStrideExp - 1); // pixel ids advance 1024 from one row to the next
+    public const int Maxgrid = HalfGridStride - 2; // buckets from -510 to 510 are possible
 
     public PixelID(int pixelId)
     {
@@ -23,17 +27,18 @@ public struct PixelID : IComparable<PixelID>
 
     public static PixelID? PixelIDFor(int x, int y)
     {
-        if ((x > maxgrid) || (x < -maxgrid) || (y > maxgrid) || (y < -maxgrid))
+        if ((x > Maxgrid) || (x < -Maxgrid) || (y > Maxgrid) || (y < -Maxgrid))
         {
             return null;
         }
-        return new PixelID(y * 1024 + x);
+        int newId = y * GridStride + x;
+        return new PixelID(newId);
     }
 
     public (int, int) xyCoords()
     {
-        int y = (512 + pixelId) >> 10;
-        int x = pixelId - (y * 1024);
+        int y = (HalfGridStride + pixelId) >> GridStrideExp;
+        int x = pixelId - (y * GridStride);
         return (x, y);
     }
 
@@ -95,6 +100,11 @@ public struct PeakID
 //   1/64   3/32   1/64
 //   3/32   9/16   3/32 
 //   1/64   3/32   1/64
+//
+// Pixel data is not kept in a 2D array -- 
+// Rather, a dictionary is kept with the key being the PixelID
+// This is memory efficient, because the grid is likely sparsely populated, and lookup
+// efficient, as the PixelID is really represented by an integer
 public class DensityPlane
 {
     float halfBinsize;
@@ -111,7 +121,7 @@ public class DensityPlane
         oobPoints = 0;
         oneOverBinsize = 1.0f / binSep;
         data = new Dictionary<PixelID, float>();
-        maxval = 1022.0f * binSep;
+        maxval = PixelID.Maxgrid * binSep;
     }
 
     public delegate void ForEachPixelCallback(PixelID pixelId, float value);
@@ -363,8 +373,12 @@ public class DensityPlane
 
     public float valueAtGridCoords(int x, int y)
     {
-        PixelID pixelId = this.BinFor(x, y);
-        return this.valueAtPixel(pixelId);
+        PixelID? pixelId = PixelID.PixelIDFor(x, y);
+        if (pixelId == null)
+        {
+            return 0.0f;
+        }
+        return this.valueAtPixel(pixelId.Value);
     }
 
     public float valueAtPixel(PixelID pixelId)
@@ -375,11 +389,6 @@ public class DensityPlane
             return binValue;
         }
         return 0.0f;
-    }
-
-    public PixelID BinFor(int x, int y)
-    {
-        return new PixelID(y * 1024 + x);
     }
 
     public (int, int) PixelIndicesFor(float x, float y)
@@ -451,9 +460,7 @@ public class DensityPlane
         addValueAtCoords(xBinIndex - 1, yBinIndex + 1, xm1 * yp1);
         addValueAtCoords(xBinIndex, yBinIndex + 1, x0 * yp1);
         addValueAtCoords(xBinIndex + 1, yBinIndex + 1, xp1 * yp1);
-
     }
-
 }
 
 

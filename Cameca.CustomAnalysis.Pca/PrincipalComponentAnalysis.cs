@@ -148,6 +148,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     {
         return histogramsToUseForPCA.Contains(gridID);
     }
+    
     public void UseHistogramForPca(string gridID, bool useIt)
     {
         if (useIt)
@@ -365,7 +366,6 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             PcaGridsResults = PcaCalculator.CalculateTwoDGrids(ScoresGrid, pcaPhaseIdProperties);
         }
     }
-
 
     // Uses the component data (or computes for all componets if necessary) to generate plots for the selected component by index
     [RelayCommand(CanExecute = nameof(UpdateSelectedComponentCanExecute))]
@@ -718,7 +718,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             }
         }
         ReadOnlyMemory2D<float> rom = new ReadOnlyMemory2D<float>(dat, span, span);
-        Vector2 binsize = new Vector2(0.5f, 0.5f); // Vector2(dp.binsize, dp.binsize);
+        Vector2 binsize = new Vector2(dp.binsize, dp.binsize);
         Vector2 origin = new Vector2(minCoord.y * dp.binsize, minCoord.x * dp.binsize);
         renderData.Update(rom, binsize, origin);
     }

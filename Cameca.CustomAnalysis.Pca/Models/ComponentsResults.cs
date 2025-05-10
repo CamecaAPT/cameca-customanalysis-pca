@@ -1,6 +1,4 @@
 ﻿using Cameca.CustomAnalysis.Interface;
-using System;
-using System.Linq;
 using System.Collections.Generic;
 
 namespace Cameca.CustomAnalysis.Pca;

@@ -14,7 +14,10 @@ using System.Windows.Media;
 namespace Cameca.CustomAnalysis.Pca;
 
 /// <summary>
-/// Interaction logic for ProjectionGridsView.xaml
+/// Interaction logic for ScoresHistogramsView.xaml
+/// This is the pane which shows a histogram of number of voxels with a particular PCA score in a PCA dimension
+/// And can cycle through the different grids with the Advance / Move Back buttons
+/// There is an (as yet unused) button for 'use this dimension in the PCA Phase determination'
 /// </summary>
 public partial class ScoresHistogramsView : UserControl
 {
