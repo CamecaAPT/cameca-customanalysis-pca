@@ -1,8 +1,4 @@
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System;
-using System.IO;
  
 // CandidateRanker is used to identify the 'best' candidates from all the PixelSuggestion 
 // objects it is asked to consider. Items added to the list of candidates are the 'best'

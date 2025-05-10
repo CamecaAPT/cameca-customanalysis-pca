@@ -5,7 +5,6 @@ using System;
 using PcaExtensionMethods;
 using Cameca.CustomAnalysis.Pca;
 
-
 public class TwoDGridPartitionFinder
 {
     DensityPlane grid;
