@@ -37,10 +37,15 @@ public class PcaScoresGrid
                                              // calculate the x,y,z position of the voxel on the grid if
                                              // the grid dimensions are known
 
-    Dictionary<TwoDGridID, List<List<PixelID>>> partitions; // key is grid ID
+    Dictionary<TwoDGridID, List<List<PixelID>>> twoDPartitions; // key is grid ID
           // value is lists of associations of voxelID with different peaks
 
     Dictionary<TwoDGridID, DensityPlane> twoDGrids;  // key is grid ID
+    
+    Dictionary<OneDGridID, List<List<PixelID>>> oneDPartitions; // key is grid ID
+          // value is lists of associations of voxelID with different peaks
+
+    Dictionary<TwoDGridID, DensityLine> oneDGrids;  // key is grid ID
 
     int scoreDims;
     ThreeDGridDimensions gridDims;
@@ -98,7 +103,7 @@ public class PcaScoresGrid
         pcaVoxels = pcaVoxelsInit(scoresProvider, nIndices);
 
         gridDims = gridDimensions;
-        partitions = new Dictionary<TwoDGridID, List<List<PixelID>>>();
+        twoDPartitions = new Dictionary<TwoDGridID, List<List<PixelID>>>();
         twoDGrids = new Dictionary<TwoDGridID, DensityPlane>();
     }
 
@@ -403,7 +408,7 @@ public class PcaScoresGrid
     {
         TwoDGridsResults gridsResults = new TwoDGridsResults();
         twoDGrids.Clear();
-        partitions.Clear();
+        twoDPartitions.Clear();
 
         List<VoxelID> voxelIds = pcaVoxels.Keys.ToList();
 
@@ -424,12 +429,12 @@ public class PcaScoresGrid
                 twoDGrids[gridId] = twoDGrid;
 
                 // this identifies the peaks --  step B) above
-                List<List<PixelID>> partitionedIndices = IdentifyPartitions(twoDGrid, i, j, properties);
-                partitions[gridId] = partitionedIndices;
+                List<List<PixelID>> partitionedIndices = IdentifyTwoDPartitions(twoDGrid, i, j, properties);
+                twoDPartitions[gridId] = partitionedIndices;
 
                 var projection = new TwoDPeakProjection(twoDGrid);
                 gridsResults.SetTwoDPeakProjectionFor(gridId, projection);
-                partitions[gridId] = partitionedIndices;
+                twoDPartitions[gridId] = partitionedIndices;
 
                 // Enable this to get a text file with partition data
                 // DumpPartitions(partitionedIndices, gridId.ToString());     
@@ -452,9 +457,7 @@ public class PcaScoresGrid
         // the grid to be used in PCA phase Identification,
         // get the grid ID and assign pca codes to all the voxels based on 
         // which peak it is part of in the grid
-
-        // TODO start loop
-        foreach (KeyValuePair<TwoDGridID, List<List<PixelID>>> kvp in partitions)
+        foreach (KeyValuePair<TwoDGridID, List<List<PixelID>>> kvp in twoDPartitions)
         {
             // now label each voxel with a PCA code based on its peak association
             // for each grid, group the voxels into lists per pixel, then, knowing
@@ -699,14 +702,14 @@ public class PcaScoresGrid
     }
 
 
-    // identifyPartitions use the density map from the twoDGrid to separate 
+    // IdentifyTwoDPartitions use the density map from the twoDGrid to separate 
     // voxels that belong to different peaks in the DensityPlane
     // first, identify the peaks and their associated pixels
     // then, for each voxel, see if it lands in on of the partitioned pixels.
     // If it does, add it to the appropriate list
     // return the list of lists
     // indices not identified are not returned in any list
-    public List<List<PixelID>> IdentifyPartitions(DensityPlane twoDGrid, int dimX, int dimy, PcaPhaseIdentificationProperties props)
+    public List<List<PixelID>> IdentifyTwoDPartitions(DensityPlane twoDGrid, int dimX, int dimy, PcaPhaseIdentificationProperties props)
     {
         // to identify the first maximum, just find the pixel with the highest value
         // then, accumulate neighboring pixels, avoiding neighbors with higher values
