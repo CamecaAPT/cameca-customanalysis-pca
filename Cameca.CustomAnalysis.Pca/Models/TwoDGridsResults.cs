@@ -1,6 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
-using System;
 using Cameca.CustomAnalysis.Pca;
 // TwoDGridsResults represents the projection of the PCA Components results
 // onto two dimensional drids for different pairs of axes

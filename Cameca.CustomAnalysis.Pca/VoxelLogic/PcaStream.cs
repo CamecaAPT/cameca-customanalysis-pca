@@ -1,10 +1,7 @@
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System;
 using System.IO;
-using Cameca.CustomAnalysis.Interface;
-using System.DirectoryServices.ActiveDirectory;
 
 // PcaStream is a utility class for writing information to a file during a run of the 
 // Pca code in APSuite

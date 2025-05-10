@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System;
-using System.IO;
 
 // DensityProfile represents a histogram-ish population along one axis
 // Bins are regularly spaced from the minimum to the maximum

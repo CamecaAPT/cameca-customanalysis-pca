@@ -1,23 +1,10 @@
 
 using PcaExtensionMethods;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System;
 using System.IO;
-using System.Windows.Controls;
-using System.Collections;
-using System.Windows.Input;
-using System.Text;
-using System.Windows.Media.Animation;
-using System.Reflection.PortableExecutable;
 using Cameca.CustomAnalysis.Pca;
-using System.Runtime.Intrinsics.Arm;
-using System.Net.Http;
-using System.Data.SqlTypes;
-using System.Reflection;
-using System.Windows;
-
 
 // PcaScoresGrid represents a three dimensional grid containing the PCA scores for a collection of voxels
 // PcaScoresGrid is initialized with the size of the grid in x y and z, so that it can then map 
