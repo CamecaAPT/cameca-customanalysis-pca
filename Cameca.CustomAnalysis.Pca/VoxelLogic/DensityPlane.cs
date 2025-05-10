@@ -14,7 +14,11 @@ using System.Security.Cryptography.X509Certificates;
 public struct PixelID : IComparable<PixelID>
 {
     public int pixelId;
-    static int maxgrid = 510;
+    // each grid row has potentially 2^10 pixelID (i.e. 1024 -- not all actually used)
+    public const int GridStrideExp = 10;
+    public const int GridStride = 1 << GridStrideExp;
+    public const int HalfGridStride = 1 << (GridStrideExp - 1); // pixel ids advance 1024 from one row to the next
+    public const int Maxgrid = HalfGridStride - 2; // buckets from -510 to 510 are possible
 
     public PixelID(int pixelId)
     {
@@ -23,17 +27,18 @@ public struct PixelID : IComparable<PixelID>
 
     public static PixelID? PixelIDFor(int x, int y)
     {
-        if ((x > maxgrid) || (x < -maxgrid) || (y > maxgrid) || (y < -maxgrid))
+        if ((x > Maxgrid) || (x < -Maxgrid) || (y > Maxgrid) || (y < -Maxgrid))
         {
             return null;
         }
-        return new PixelID(y * 1024 + x);
+        int newId = y * GridStride + x;
+        return new PixelID(newId);
     }
 
     public (int, int) xyCoords()
     {
-        int y = (512 + pixelId) >> 10;
-        int x = pixelId - (y * 1024);
+        int y = (HalfGridStride + pixelId) >> GridStrideExp;
+        int x = pixelId - (y * GridStride);
         return (x, y);
     }
 
@@ -111,7 +116,7 @@ public class DensityPlane
         oobPoints = 0;
         oneOverBinsize = 1.0f / binSep;
         data = new Dictionary<PixelID, float>();
-        maxval = 1022.0f * binSep;
+        maxval = PixelID.Maxgrid * binSep;
     }
 
     public delegate void ForEachPixelCallback(PixelID pixelId, float value);
@@ -363,8 +368,12 @@ public class DensityPlane
 
     public float valueAtGridCoords(int x, int y)
     {
-        PixelID pixelId = this.BinFor(x, y);
-        return this.valueAtPixel(pixelId);
+        PixelID? pixelId = PixelID.PixelIDFor(x, y);
+        if (pixelId == null)
+        {
+            return 0.0f;
+        }
+        return this.valueAtPixel(pixelId.Value);
     }
 
     public float valueAtPixel(PixelID pixelId)
@@ -375,11 +384,6 @@ public class DensityPlane
             return binValue;
         }
         return 0.0f;
-    }
-
-    public PixelID BinFor(int x, int y)
-    {
-        return new PixelID(y * 1024 + x);
     }
 
     public (int, int) PixelIndicesFor(float x, float y)
@@ -428,6 +432,10 @@ public class DensityPlane
             }
         }
 
+        if ((x < -1.0f)  || (y < -1.0f))
+        {
+            Debug.Assert(true);
+        }
         int xBinIndex;
         int yBinIndex;
         (xBinIndex, yBinIndex) = PixelIndicesFor(x, y);

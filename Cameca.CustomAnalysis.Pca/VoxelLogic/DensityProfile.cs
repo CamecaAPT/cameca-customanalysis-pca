@@ -4,7 +4,6 @@ using System.Linq;
 using System;
 using System.IO;
 
-
 // DensityProfile represents a histogram-ish population along one axis
 // Bins are regularly spaced from the minimum to the maximum
 // Bins have an integer id according to their distance from 0
@@ -15,8 +14,8 @@ using System.IO;
 // between bins to preserve a constant smoothing for all added points
 // There is always a bin at zero
 // bins at negative values have negative indices
-// "out of bounds" limits at -1023 and 1023
-//  points outside of the bounds are counted but not binned
+// "out of bounds" limits at -1024 and 1024
+// points outside of the bounds are counted but not binned
 // Points are added to the profile using a splat transfer function, in a way that the 
 // delocalization for every point added to the profile is constant.  That is,
 // if a point is added at the center of a bin, it contributes .75 to that bin and .125 to each neighbor bin
@@ -30,9 +29,12 @@ public class DensityProfile
     float oneOverBinsize;
     int oobPoints;
     Dictionary<int, float> data;
+
+    const int MaxBinIndex = 1024;
+
     public DensityProfile(float binsize)
     {
-        this.maxval = binsize * 1023.0f;
+        this.maxval = binsize * MaxBinIndex;
         this.halfBinsize = binsize * 0.5f;
         this.binsize = binsize;
         this.oneOverBinsize = 1.0f / binsize;

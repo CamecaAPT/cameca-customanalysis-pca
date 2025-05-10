@@ -478,13 +478,19 @@ public class PcaScoresGrid
                     foreach (PixelID pixelID in pixelIdList)
                     {
                         // Lookup for all the voxels bucketed under this pixelId
-                        List<VoxelID> voxelIdsForThisPixel = voxelLists[pixelID];
-                        foreach (VoxelID voxelId in voxelIdsForThisPixel)
+                        // it is possible there are none -- this could happen if the pixel in question is entirely populated by 
+                        // splat components from voxels in adjacent pixels
+                        if (voxelLists.ContainsKey(pixelID))
                         {
-                            pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(pcaCode);
+                            List<VoxelID> voxelIdsForThisPixel = voxelLists[pixelID];
+                            foreach (VoxelID voxelId in voxelIdsForThisPixel)
+                            {
+                                pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(pcaCode);
+                            }
+                            // remove that entry from voxelLists
+                            voxelLists.Remove(pixelID);
                         }
-                        // remove that entry from voxelLists
-                        voxelLists.Remove(pixelID);
+ 
                     }
                     peakIndex += 1;
                 }
