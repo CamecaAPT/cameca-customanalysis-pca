@@ -14,8 +14,6 @@ using System.IO;
 // between bins to preserve a constant smoothing for all added points
 // There is always a bin at zero
 // bins at negative values have negative indices
-// "out of bounds" limits at -1024 and 1024
-// points outside of the bounds are counted but not binned
 // Points are added to the profile using a splat transfer function, in a way that the 
 // delocalization for every point added to the profile is constant.  That is,
 // if a point is added at the center of a bin, it contributes .75 to that bin and .125 to each neighbor bin
@@ -23,18 +21,16 @@ using System.IO;
 
 public class DensityProfile
 {
-    float maxval;
+    float maxPermittedValue;
     float halfBinsize;
     float binsize;
     float oneOverBinsize;
     int oobPoints;
     Dictionary<int, float> data;
 
-    const int MaxBinIndex = 1024;
-
     public DensityProfile(float binsize)
     {
-        this.maxval = binsize * MaxBinIndex;
+        this.maxPermittedValue = binsize * (int.MaxValue -2);
         this.halfBinsize = binsize * 0.5f;
         this.binsize = binsize;
         this.oneOverBinsize = 1.0f / binsize;
@@ -65,7 +61,7 @@ public class DensityProfile
 
     public void AddPointAt(float x)
     {
-        if (Math.Abs(x) > maxval)
+        if (Math.Abs(x) > maxPermittedValue)
         {
             oobPoints += 1;
             return;
@@ -96,7 +92,6 @@ public class DensityProfile
         data[binIndex - 1] = populationAtBin(binIndex - 1) + xm1;
         data[binIndex + 1] = populationAtBin(binIndex + 1) + xp1;
     }
-
 }
 
 

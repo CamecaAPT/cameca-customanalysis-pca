@@ -14,7 +14,12 @@ using System.Security.Cryptography.X509Certificates;
 public struct PixelID : IComparable<PixelID>
 {
     public int pixelId;
-    // each grid row has potentially 2^10 pixelID (i.e. 1024 -- not all actually used)
+    
+    // Here are some hardcoded constants for maintaining the grid data
+    // each grid row has potentially 2^10 pixelIDs per row (i.e. 1024 -- not all actually used)
+    // advancing the y index by one advances the pixel ID by 1024
+    // pixe3l ID 0 refers to the pixel at 0,0
+    // other constants are defined here for ease of calculation later
     public const int GridStrideExp = 10;
     public const int GridStride = 1 << GridStrideExp;
     public const int HalfGridStride = 1 << (GridStrideExp - 1); // pixel ids advance 1024 from one row to the next
@@ -100,6 +105,11 @@ public struct PeakID
 //   1/64   3/32   1/64
 //   3/32   9/16   3/32 
 //   1/64   3/32   1/64
+//
+// Pixel data is not kept in a 2D array -- 
+// Rather, a dictionary is kept with the key being the PixelID
+// This is memory efficient, because the grid is likely sparsely populated, and lookup
+// efficient, as the PixelID is really represented by an integer
 public class DensityPlane
 {
     float halfBinsize;
@@ -432,10 +442,6 @@ public class DensityPlane
             }
         }
 
-        if ((x < -1.0f)  || (y < -1.0f))
-        {
-            Debug.Assert(true);
-        }
         int xBinIndex;
         int yBinIndex;
         (xBinIndex, yBinIndex) = PixelIndicesFor(x, y);
@@ -459,9 +465,7 @@ public class DensityPlane
         addValueAtCoords(xBinIndex - 1, yBinIndex + 1, xm1 * yp1);
         addValueAtCoords(xBinIndex, yBinIndex + 1, x0 * yp1);
         addValueAtCoords(xBinIndex + 1, yBinIndex + 1, xp1 * yp1);
-
     }
-
 }
 
 

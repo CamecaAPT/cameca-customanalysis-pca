@@ -148,6 +148,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     {
         return histogramsToUseForPCA.Contains(gridID);
     }
+    
     public void UseHistogramForPca(string gridID, bool useIt)
     {
         if (useIt)
@@ -365,7 +366,6 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             PcaGridsResults = PcaCalculator.CalculateTwoDGrids(ScoresGrid, pcaPhaseIdProperties);
         }
     }
-
 
     // Uses the component data (or computes for all componets if necessary) to generate plots for the selected component by index
     [RelayCommand(CanExecute = nameof(UpdateSelectedComponentCanExecute))]

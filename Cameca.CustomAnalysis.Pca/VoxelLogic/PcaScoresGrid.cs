@@ -490,7 +490,6 @@ public class PcaScoresGrid
                             // remove that entry from voxelLists
                             voxelLists.Remove(pixelID);
                         }
- 
                     }
                     peakIndex += 1;
                 }
