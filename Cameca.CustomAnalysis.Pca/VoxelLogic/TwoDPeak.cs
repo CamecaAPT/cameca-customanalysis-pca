@@ -1,8 +1,6 @@
 using System.Collections.Generic;
-using System.Diagnostics;
 using System;
 using PcaExtensionMethods;
-
 
 // PixelSuggestion represents a pixel that could be added to a TwoDPeak as part of the PartitionFinder
 // peak partitioning algorithm
