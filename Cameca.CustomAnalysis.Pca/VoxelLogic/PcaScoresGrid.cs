@@ -1,10 +1,23 @@
 
 using PcaExtensionMethods;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System;
 using System.IO;
+using System.Windows.Controls;
+using System.Collections;
+using System.Windows.Input;
+using System.Text;
+using System.Windows.Media.Animation;
+using System.Reflection.PortableExecutable;
 using Cameca.CustomAnalysis.Pca;
+using System.Runtime.Intrinsics.Arm;
+using System.Net.Http;
+using System.Data.SqlTypes;
+using System.Reflection;
+using System.Windows;
+
 
 // PcaScoresGrid represents a three dimensional grid containing the PCA scores for a collection of voxels
 // PcaScoresGrid is initialized with the size of the grid in x y and z, so that it can then map 
@@ -28,11 +41,11 @@ public class PcaScoresGrid
           // value is lists of associations of voxelID with different peaks
 
     Dictionary<TwoDGridID, DensityPlane> twoDGrids;  // key is grid ID
-    
-    Dictionary<OneDGridID, List<List<PixelID>>> oneDPartitions; // key is grid ID
-          // value is lists of associations of voxelID with different peaks
 
-    Dictionary<TwoDGridID, DensityLine> oneDGrids;  // key is grid ID
+    Dictionary<OneDGridID, List<List<BinID>>> oneDPartitions; // key is grid ID
+          // value is lists of associations of binID with different partitions
+
+    Dictionary<OneDGridID, DensityLine> oneDGrids;  // key is grid ID
 
     int scoreDims;
     ThreeDGridDimensions gridDims;
@@ -92,6 +105,8 @@ public class PcaScoresGrid
         gridDims = gridDimensions;
         twoDPartitions = new Dictionary<TwoDGridID, List<List<PixelID>>>();
         twoDGrids = new Dictionary<TwoDGridID, DensityPlane>();
+        oneDPartitions = new Dictionary<OneDGridID, List<List<BinID>>>();
+        oneDGrids = new Dictionary<OneDGridID, DensityLine>();
     }
 
     static Dictionary<VoxelID, PcaVoxel> pcaVoxelsInit(IScoresProvider scoresProvider, int nIndices)
@@ -369,28 +384,38 @@ public class PcaScoresGrid
         return unassignedCount;
     }
 
+    public OneDGridsResults CalculateOneDGrids(PcaPhaseIdentificationProperties properties)
+    {
+        OneDGridsResults gridsResults = new OneDGridsResults();
+        oneDGrids.Clear();
+        oneDPartitions.Clear();
 
-    // GetPhasesStrategyE is produces PhaseIdResults based on the first three 
-    // PCA dimensions only  
-    //
-    // The strategy goes like this:
-    //
-    // A) make three 2D grids representing the density of voxels with PCA scores in 
-    //    each combination of the first three PCA dimensions 
-    //    in other words dim1xdim2,  dim1xdim3,  dim2xdim3
-    // B) identify peaks in each 2D grid -- each peak corresponds to a section of a PCA code
-    //      A1 is a code snippet representing the first peak of the first grid
-    //      A2 is a code snippet representing the second peak of the first grid  
-    //      B1 is a code snippet representing the first peak of the second grid    
-    //      B0 is a code snippet representing no association with any peak of the second grid
-    //      etc.
-    // C) look at all of the PCA codes of the form
-    //      AhBkCl
-    //    where h, k, and l are non-zero.  Regions of contiguous voxels that share 
-    //    the same code will be designated as the same phase 
-    // D) add voxels that abut any of the contiguous regions to those regions iff
-    //    the code they have matches all code snippet for which they have a non-zero number
-    //    i.e. A0B1C1  is a match for contiguous regions A1B1C1 and A2B1C1
+        List<VoxelID> voxelIds = pcaVoxels.Keys.ToList();
+
+        float binSeparation = properties.oneDProjectionBinSize;
+        int numDimsToInclude = this.scoreDims;
+ 
+        // now, make a oneD grid for each dimensions
+        for (int i = 0; i < (numDimsToInclude - 1); ++i)
+        {
+ 
+            OneDGridID gridId = new OneDGridID(i);
+
+            var grid = CalculateOneDDensity(voxelIds, i, binSeparation, delocalization);
+            oneDGrids[gridId] = grid;
+
+            // this identifies the main peak and other regions
+            List<List<BinID>> partitionedIndices = IdentifyOneDPartitions(oneDGrid, i, properties);
+            oneDPartitions[gridId] = partitionedIndices;
+
+            var projection = new OneDPeakProjection(oneDGrid);
+            gridsResults.SetOneDPeakProjectionFor(gridId, projection);
+            oneDPartitions[gridId] = partitionedIndices;
+     
+        }
+        return gridsResults;
+    }
+
     public TwoDGridsResults CalculateTwoDGrids(PcaPhaseIdentificationProperties properties)
     {
         TwoDGridsResults gridsResults = new TwoDGridsResults();
@@ -429,7 +454,29 @@ public class PcaScoresGrid
         }
         return gridsResults;
     }
-    public PhaseIdResults GetPhasesStrategyE(PcaPhaseIdentificationProperties properties, HashSet<string> gridsToExclude)
+
+    // GetPhasesStrategyE is produces PhaseIdResults based on the first three 
+    // PCA dimensions only  
+    //
+    // The strategy goes like this:
+    //
+    // A) make three 2D grids representing the density of voxels with PCA scores in 
+    //    each combination of the first three PCA dimensions 
+    //    in other words dim1xdim2,  dim1xdim3,  dim2xdim3
+    // B) identify peaks in each 2D grid -- each peak corresponds to a section of a PCA code
+    //      A1 is a code snippet representing the first peak of the first grid
+    //      A2 is a code snippet representing the second peak of the first grid  
+    //      B1 is a code snippet representing the first peak of the second grid    
+    //      B0 is a code snippet representing no association with any peak of the second grid
+    //      etc.
+    // C) look at all of the PCA codes of the form
+    //      AhBkCl
+    //    where h, k, and l are non-zero.  Regions of contiguous voxels that share 
+    //    the same code will be designated as the same phase 
+    // D) add voxels that abut any of the contiguous regions to those regions iff
+    //    the code they have matches all code snippet for which they have a non-zero number
+    //    i.e. A0B1C1  is a match for contiguous regions A1B1C1 and A2B1C1
+    public PhaseIdResults GetPhasesStrategyE(PcaPhaseIdentificationProperties properties, HashSet<string> twoDridsToExclude, HashSet<string> oneDGridsToInclude)
     {
         List<VoxelID> voxelIds = pcaVoxels.Keys.ToList();
         int numDimsToInclude = Math.Min(properties.numDimsForPCAPhaseId, this.scoreDims);
@@ -468,18 +515,13 @@ public class PcaScoresGrid
                     foreach (PixelID pixelID in pixelIdList)
                     {
                         // Lookup for all the voxels bucketed under this pixelId
-                        // it is possible there are none -- this could happen if the pixel in question is entirely populated by 
-                        // splat components from voxels in adjacent pixels
-                        if (voxelLists.ContainsKey(pixelID))
+                        List<VoxelID> voxelIdsForThisPixel = voxelLists[pixelID];
+                        foreach (VoxelID voxelId in voxelIdsForThisPixel)
                         {
-                            List<VoxelID> voxelIdsForThisPixel = voxelLists[pixelID];
-                            foreach (VoxelID voxelId in voxelIdsForThisPixel)
-                            {
-                                pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(pcaCode);
-                            }
-                            // remove that entry from voxelLists
-                            voxelLists.Remove(pixelID);
+                            pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(pcaCode);
                         }
+                        // remove that entry from voxelLists
+                        voxelLists.Remove(pixelID);
                     }
                     peakIndex += 1;
                 }
@@ -691,6 +733,38 @@ public class PcaScoresGrid
 
         pcaStream.Close();
         return phaseIdResults;
+    }
+
+
+    // IdentifyOneDPartitions use the projection from the oneDGrid to separate 
+    // voxels that belong to different parts in the Density Line
+    // typically, this is used for the case where there is only one identifiable peak in the 
+    // projection -- the partitioning is done into voxels that land inside the peak (1), 
+    // and voxels that land well away from the peak (2).  An interface region (0) is defined
+    // for voxels that are close to the peak, but not inside it.
+    // then, for each voxel, see if it lands in on of the partitioned bins
+    // If it does, add it to the appropriate list
+    // return the list of lists
+    // indices not identified are not returned in any list
+    public List<List<PixelID>> IdentifyOneDPartitions(DensityLine oneDGrid, int dimX, PcaPhaseIdentificationProperties props)
+    {
+        // to identify the first maximum, just find the pixel with the highest value
+        // then, accumulate neighboring pixels, avoiding neighbors with higher values
+        // accumulate neighbors in order of their density value.
+        // stop accumulating when a slope increase is found:
+        //   this indicates there must be another maximum to look for
+        // also, stop at 10% of peak max
+        // to look for another maximum, find the remaining pixel with the maximum value.
+        // continue accumulating pixels into all peaks
+
+        // partitionFinder operates on the grid, identifying pixels
+        // associated with the different maxima
+        OneDGridPartitionFinder partitionFinder = new OneDGridPartitionFinder(oneDGrid, props);
+
+        partitionFinder.FindPartitions();
+        var pixelLists = partitionFinder.GetPixelLists();
+        partitionFinder.Clear();
+        return pixelLists;
     }
 
 
