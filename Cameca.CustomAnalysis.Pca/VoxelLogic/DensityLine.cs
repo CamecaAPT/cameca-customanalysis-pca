@@ -11,202 +11,160 @@ using System.Windows.Controls;
 using System.Text.RegularExpressions;
 using System.Security.Cryptography.X509Certificates;
 
-public struct PixelID : IComparable<PixelID>
+public struct BinID : IComparable<BinID>
 {
-    public int pixelId;
-    static int maxgrid = 510;
+    public int binId;
 
-    public PixelID(int pixelId)
+    public BinID(int binId)
     {
-        this.pixelId = pixelId;
+        this.binId = binId;
     }
 
-    public static PixelID? PixelIDFor(int x, int y)
+    public int xCoord()
     {
-        if ((x > maxgrid) || (x < -maxgrid) || (y > maxgrid) || (y < -maxgrid))
-        {
-            return null;
-        }
-        return new PixelID(y * 1024 + x);
+        return (binId);
     }
 
-    public (int, int) xyCoords()
+    public int CompareTo(BinID other)
     {
-        int y = (512 + pixelId) >> 10;
-        int x = pixelId - (y * 1024);
-        return (x, y);
-    }
-
-    public int CompareTo(PixelID other)
-    {
-        return other.pixelId > pixelId ? -1 : other.pixelId < pixelId ? 1 : 0;
+        return other.binId > binId ? -1 : other.binId < binId ? 1 : 0;
     }
 
     public string DebugStr()
     {
-        int x;
-        int y;
-        (x, y) = this.xyCoords();
-        return pixelId.ToString() + ":{" + x + "," + y + "}";
+        return binId.ToString();
     }
 }
 
 
-public struct PeakID
+public struct RangeID
 {
-    PixelID peakMax;
-    public PeakID(PixelID pixelId)
+    BinID rangeBin;
+    public RangeID(BinID binId)
     {
-        peakMax = pixelId;
+        rangeBin = binId;
     }
 
     public string DebugStr()
     {
-        return peakMax.DebugStr();
+        return rangeBin.DebugStr();
     }
 }
 
-// DensityPlane represents a 2D density plot, and the bins exist on a 2D grid
+// DensityLine represents a 1D density plot, and the bins exist on a 1D grid
 // Bins are regularly spaced from the minimum to the maximum
 // a binsize maps a floating point coordinate to a grid coordinate.
-// if the binsize is 1, then the grid coordinate at p-1, q=1 represents the floating point coordinate 1.0, 1.0
-// if the binsize is 0.5, then the grid coordinate at p-1, q=1 represents the floating point coordinate 0.5, 0.5
-// Bins have an integer id derived from their p and q coordinates :  1024q + p 
-// So, for a binsize of 1.0, the xy coordinate 3.0,4.0 would correspond to 
-// the bin at p = 3, q = 4 and the ID would be 4099
-// if the binsize is 0.5, a point at x=3, y=4 would be the gridpoint p=6, q=8, and the ID would be 8198
+// if the binsize is 1, then the grid coordinate at p = 1, represents the floating point value 1.0 
+// if the binsize is 0.5, then the grid coordinate at p = 1 represents the floating point value 0.5 
 //
-// The data is collected in a Dictionary<int, float>
+// The data is collected in a Dictionary<BinID, float>
 // if a bin is unpopulated, there is no Dictionary entry for the corresponding ID
 // smoothing is applied at population time: when a point is added,  it is automatically split 
 // between bins to preserve a constant smoothing for all added points
 // There is always a bin at zero
-// bins at negative values have negative indices
-// "out of bounds" limits at -510 and 510
-//  points outside of the bounds are counted but not binned
+// Any int is a valid binID, but data is not added for bins at MaxInt and MinInt, 
+// by enforcing "out of bounds" limits at (int.MaxValue - 2) * binSize;
+// points outside of the bounds are counted but not binned
 // 
-// Points are added to the Plane using a splat transfer function, in a way that the 
+// Points are added to the Line using a splat transfer function, in a way that the 
 // delocalization for every point added to the profile is almost constant.  That is,
-// if a point is added at a corner of the grid, equidistant from four different grid points, 
-// it contributes .25 to each of the four bins The 1 dimensional transfer function is used in both 
-// dimensions, so that if a point is added exactly at a grid point, it only contributes 9/16 to that point
-// and 7/16 to the surrounding points following this matrix of contributions:
-//
-//   1/64   3/32   1/64
-//   3/32   9/16   3/32 
-//   1/64   3/32   1/64
-public class DensityPlane
+// if a point is added exatly between two bin points, it contributes .5 to each of the two bins.
+// If a point is added exactly at a bin point, it contributes .75 to that bin and .125 to each of the two
+// bins above and below it.
+
+public class DensityLine
 {
     float halfBinsize;
     public float binsize;
     float oneOverBinsize;
     int oobPoints;
     float maxval;
-    Dictionary<PixelID, float> data;
+    Dictionary<BinID, float> data;
     
-    public DensityPlane(float binSep)
+    public DensityLine(float binSize)
     {
-        binsize = binSep;
-        halfBinsize = binSep * 0.5f; 
+        binsize = binSize;
+        halfBinsize = binSize * 0.5f; 
         oobPoints = 0;
-        oneOverBinsize = 1.0f / binSep;
-        data = new Dictionary<PixelID, float>();
-        maxval = 1022.0f * binSep;
+        oneOverBinsize = 1.0f / binSize;
+        data = new Dictionary<BinID, float>();
+        maxval = (int.MaxValue - 2) * binSize; // setting to (MaxBucket-2) ensures there will be a bucket above and below the target bucket for a splat
     }
 
-    public delegate void ForEachPixelCallback(PixelID pixelId, float value);
+    public delegate void ForEachBinCallback(BinID binId, float value);
 
-    public void ForEachPixel(ForEachPixelCallback callback)
+    public void ForEachBin(ForEachBinCallback callback)
     {
-        foreach (KeyValuePair<PixelID, float> kvp in data)
+        foreach (KeyValuePair<BinID, float> kvp in data)
         {
             callback(kvp.Key, kvp.Value);
         }
     }
 
-    public DensityPlane Convolve(List<float> normalizedCoefficients)
+    public DensityLine Convolve(List<float> normalizedCoefficients)
     {
-        DensityPlane newDP = new DensityPlane(this.binsize);
+        DensityLine newDL = new DensityLine(this.binsize);
         if (normalizedCoefficients.Count > 0)
         {
             int maxx = normalizedCoefficients.Count - 1;
             int minx = -maxx;
             int maxy = maxx;
             int miny = minx;
-            void convolutionFunction(PixelID pixelId, float value)
+            void convolutionFunction(BinID binId, float value)
             {
-                (int p, int q) = pixelId.xyCoords();
+                (int p, int q) = binId.xyCoords();
                 for (int x = minx; x <= maxx; x+=1)
                 {
                     int xCoefficientIndex = (int)Math.Abs(x);
                     float xCoeff = normalizedCoefficients[xCoefficientIndex];
-                    for (int y = miny; y <= maxy; y += 1)
-                    {
-                        int yCoefficientIndex = (int)Math.Abs(y);
-                        float yCoeff = normalizedCoefficients[yCoefficientIndex];
-                        PixelID? nthPixelID = PixelID.PixelIDFor(p + x, q + y);
-                        if (nthPixelID != null)
-                        {  
-                            newDP.AddValueAtPixel(nthPixelID.Value, value * xCoeff * yCoeff);
-                        }
+
+                    BinID? nthBinID = BinID.BinIDFor(p + x);
+                    if (nthBinID != null)
+                    {  
+                        newDP.AddValueAtBin(nthBinID.Value, value * xCoeff * yCoeff);
                     }
                 }
             }
-            ForEachPixel(convolutionFunction);
+            ForEachBin(convolutionFunction);
         }
-        return newDP;
+        return newDL;
     }
 
-    public void AddValueAtPixel(PixelID pixelId, float value)
+    public void AddValueAtBin(BinID binId, float value)
     {
-        data[pixelId] = valueAtPixel(pixelId) + value;
+        data[binId] = valueAtBin(binId) + value;
     }
 
-    public List<PixelID> GridPointIds()
+    public List<BinID> GridPointIds()
     {
         return data.Keys.ToList();
     }
 
-    internal void AddIfNonZero(int x, int y, List<PixelID> list)
-    {
-        PixelID? possibleBin = PixelID.PixelIDFor(x, y);
-        if (possibleBin != null)
-        {
-            PixelID pixelId = possibleBin.Value;
-            if (data.ContainsKey(pixelId))
-            {
-                list.Add(pixelId);
-            }
-              
-        }
-    }
-
     // check for the 8 neighboring pixels and add them if they have a non-zero value
-    public List<PixelID> PixelIdsNeighboring(PixelID pixelId)
+    public List<BinID> NeighboringNonZeroBins(BinID binId)
     {
         //int x;
         //int y;
-        (int x, int y) = pixelId.xyCoords();
-        List<PixelID> neighbors = new List<PixelID>();
-        AddIfNonZero(x - 1, y - 1, neighbors);
-        AddIfNonZero(x - 1, y, neighbors);
-        AddIfNonZero(x - 1, y + 1, neighbors);
-        AddIfNonZero(x, y-1, neighbors);
-        AddIfNonZero(x, y+1, neighbors);
-        AddIfNonZero(x + 1, y-1, neighbors);
-        AddIfNonZero(x + 1, y, neighbors);
-        AddIfNonZero(x + 1, y + 1, neighbors);
-
+        (int x) = binId.xCoord();
+        List<BinID> neighbors = new List<BinID>();
+        if (x > int.MinValue)
+        {
+            neighbors.Add(BinID(x - 1));
+        }
+        if (x < int.MaxValue)
+        {
+            neighbors.Add(BinID(x + 1));
+        }
 		return neighbors;
 	}
 	
-    public float MaximumValue(List<PixelID> candidates)
+    public float MaximumValue(List<BinID> candidates)
     {
         float maxScore = float.MinValue;
 
-        foreach (PixelID candidate in candidates)
+        foreach (BinID candidate in candidates)
         {
-            float nthScore = valueAtPixel(candidate);
+            float nthScore = valueAtBin(candidate);
             if (nthScore > maxScore)
             {
                 maxScore = nthScore;
@@ -215,17 +173,17 @@ public class DensityPlane
         return maxScore;
     }
     
-    public PixelID? FindMaximum(List<PixelID> candidates)
+    public BinID? FindMaximum(List<BinID> candidates)
     {
         if (candidates.Count == 0)
         {
             return null;
         }
-        PixelID bestCandidate = candidates[0];
-        float currMax = valueAtPixel(bestCandidate);
-        foreach (PixelID candidate in candidates)
+        BinID bestCandidate = candidates[0];
+        float currMax = valueAtBin(bestCandidate);
+        foreach (BinID candidate in candidates)
         {
-            float nthPopulation = valueAtPixel(candidate);
+            float nthPopulation = valueAtBin(candidate);
             if (nthPopulation > currMax)
             {
                 currMax = nthPopulation;
@@ -235,120 +193,80 @@ public class DensityPlane
         return bestCandidate;
     }
     
-    public (TwoDGridCoord, TwoDGridCoord) MinMaxGridCoords()
+    public (BinID, BinID) MinMaxBinIDs()
     {
-        int miny = 0;
-        int minx = 0;
-        int maxy = 0;
-        int maxx = 0;
-        bool first = true;
-      
-        var pixelIds = data.Keys.ToList();
-        pixelIds.Sort();
-        foreach (PixelID pixelId in pixelIds)
+        if (data.Count == 0)
         {
-            int x;
-            int y;
-            (x, y) = pixelId.xyCoords();
-            if (!first)
-            {
-                miny = Math.Min(y, miny);
-                maxy = Math.Max(y, maxy);
-                minx = Math.Min(x, minx);
-                maxx = Math.Max(x, maxx);
-            }
-            else
-            {
-                miny = y;
-                maxy = y;
-                minx = x;
-                maxx = x;
-                first = false;
-            }
-            float binx = x * binsize;
-            float biny = y * binsize;
-            // Debug.WriteLine("x = " + binx + ",y = " + biny + ", population = " + data[key]);
+            return (BinID(0), BinID(0));
         }
-        return (new TwoDGridCoord(minx, miny), new TwoDGridCoord(maxx, maxy));
+        
+        // find the min and max bin IDs
+        var binIds = data.Keys.ToList();
+        binIds.Sort();
+        return (binIds.First, binIds.Last);
     }
     
     public void WriteToStream(StreamWriter stream)
     {
-        TwoDGridCoord min;
-        TwoDGridCoord max;
+        OneDGridCoord min;
+        OneDGridCoord max;
         (min, max) = MinMaxGridCoords();
 
         int xSize = 1 + max.x - min.x;
-		int ySize = 1 + max.y - min.y;
 		stream.WriteLine("x size= " + xSize);
-		stream.WriteLine("y size= " + ySize);
 
 		stream.Write("{ " );
 		// now csv data for the grid from min to max
-		for (int y = min.y; y <= max.y; ++y)
-		{
-			string l = "{";
-			for (int x = min.x; x <= max.x; ++x)
-			{
-				PixelID? xthKey = PixelID.PixelIDFor(x, y);
-                if (xthKey != null)
-                {
-                    PixelID xthPixelId = xthKey.Value;
-                    float xthValue = 0;
-                    if (data.ContainsKey(xthPixelId))
-                    {
-                        xthValue = data[xthPixelId];
-                    }
-                    l = l + xthValue;
-                    if (x != max.x)
-                    {
-                        l = l + ",";
-                    }
-                }
-			}
-			l = l + "}";
-			stream.Write(l);
-			if (y != max.y)
-			{
-				stream.Write(",");
-			}
-		}
+        for (int x = min.x; x <= max.x; ++x)
+        {
+            BinID xthBinId= BinID(x);
+
+
+            float xthValue = 0;
+            if (data.ContainsKey(xthBinId))
+            {
+                xthValue = data[xthBinId];
+            }
+            l = l + xthValue;
+            if (x != max)
+            {
+                l = l + ",";
+            }
+
+        }
+        l = l + "}";
+        stream.Write(l);
+        if (y != max.y)
+        {
+            stream.Write(",");
+        }
 		stream.Write("}");
     }
     
     public void ConsoleDump(string prefix)
     {
-        int miny = 0; 
         int minx = 0;
-        int maxy = 0;
         int maxx = 0;
         bool first = true;
-        Debug.WriteLine("DensityProfile Dump " + prefix);
-        var pixelIds = data.Keys.ToList();
-        pixelIds.Sort();
-        foreach (PixelID pixelId in pixelIds)
+        Debug.WriteLine("DensityLine Dump " + prefix);
+        var binIds = data.Keys.ToList();
+        binIds.Sort();
+        foreach (BinID binId in binIds)
         {
-            int x;
-            int y;
-            (x, y) = pixelId.xyCoords();
+            int x = binId.xCoord();
             if (!first)
             {
-                miny = Math.Min(y, miny);
-                maxy = Math.Max(y, maxy); 
                 minx = Math.Min(x, minx);
                 maxx = Math.Max(x, maxx);
             }
             else
             {
-                miny = y;
-                maxy = y;
                 minx = x;
                 maxx = x;
                 first = false;
             }
             float binx = x * binsize;
-            float biny = y * binsize;
-            Debug.WriteLine("x = " + binx + ",y = " + biny + ", population = " + data[pixelId]);
+            Debug.WriteLine("x = " + binx + ", population = " + data[binId]);
         }
     }
     
@@ -361,49 +279,18 @@ public class DensityPlane
         }
     }
 
-    public float valueAtGridCoords(int x, int y)
-    {
-        PixelID pixelId = this.BinFor(x, y);
-        return this.valueAtPixel(pixelId);
-    }
-
-    public float valueAtPixel(PixelID pixelId)
+    public float valueAtBin(BinID binId)
     {
         float binValue;
-        if (data.TryGetValue(pixelId, out binValue))
+        if (data.TryGetValue(binId, out binValue))
         {
             return binValue;
         }
         return 0.0f;
     }
 
-    public PixelID BinFor(int x, int y)
+    public void AddPointAt(float x)
     {
-        return new PixelID(y * 1024 + x);
-    }
-
-    public (int, int) PixelIndicesFor(float x, float y)
-    {
-        int xBinIndex = (int)MathF.Floor((x + halfBinsize) * oneOverBinsize);
-        int yBinIndex = (int)MathF.Floor((y + halfBinsize) * oneOverBinsize);
-        return (xBinIndex, yBinIndex);
-    }
-
-    public PixelID? PixelIDFor(float x, float y)
-    {
-        int binx;
-        int biny;
-        (binx, biny) = PixelIndicesFor(x, y);
-        return PixelID.PixelIDFor(binx, biny);
-    }
-
-    public void AddPointAt(float x, float y)
-    {
-        if ((Math.Abs(x) > maxval) || (Math.Abs(y) > maxval)) {
-            oobPoints += 1;
-            return;
-        }
-
         float Neg1Func(float x)
         {
             return (.5f * MathF.Pow(x - 0.5f, 2));
@@ -419,41 +306,28 @@ public class DensityPlane
             return (.5f * MathF.Pow(x + 0.5f, 2));
         }
 
-        void addValueAtCoords(int x, int y, float val)
+        void addValueAtCoord(int x, float val)
         {
-            PixelID? pixelId = PixelID.PixelIDFor(x, y);
-            if (pixelId != null)
-            {
-                AddValueAtPixel(pixelId.Value, val);
-            }
+            BinID binId = BinID(x);
+            AddValueAtBin(binId.Value, val);
         }
 
-        int xBinIndex;
-        int yBinIndex;
-        (xBinIndex, yBinIndex) = PixelIndicesFor(x, y);
+        if ((Math.Abs(x) > maxval) || (Math.Abs(y) > maxval)) {
+            oobPoints += 1;
+            return;
+        }
+
+        int xBinIndex = MathF.Floor((x + halfBinsize) * oneOverBinsize);
 
         float xRem = (x - (xBinIndex * binsize)) * oneOverBinsize;
         float xm1 = (float)Neg1Func(xRem);
         float xp1 = (float)Pos1Func(xRem);    // these are the spline transfer functions
         float x0 = (float)ZeroFunc(xRem); 
-       
-        float yRem = (y - (yBinIndex * binsize)) * oneOverBinsize;
-        float ym1 = (float)Neg1Func(yRem);
-        float yp1 = (float)Pos1Func(yRem);    // these are the spline transfer functions
-        float y0 = (float)ZeroFunc(yRem);
 
-        addValueAtCoords(xBinIndex - 1, yBinIndex - 1, xm1 * ym1);
-        addValueAtCoords(xBinIndex, yBinIndex - 1, x0 * ym1);
-        addValueAtCoords(xBinIndex + 1, yBinIndex - 1, xp1 * ym1);
-        addValueAtCoords(xBinIndex - 1, yBinIndex, xm1 * y0);
-        addValueAtCoords(xBinIndex, yBinIndex, x0 * y0);
-        addValueAtCoords(xBinIndex + 1, yBinIndex, xp1 * y0);
-        addValueAtCoords(xBinIndex - 1, yBinIndex + 1, xm1 * yp1);
-        addValueAtCoords(xBinIndex, yBinIndex + 1, x0 * yp1);
-        addValueAtCoords(xBinIndex + 1, yBinIndex + 1, xp1 * yp1);
-
+        addValueAtCoord(xBinIndex - 1, xm1);
+        addValueAtCoord(xBinIndex, x0);
+        addValueAtCoord(xBinIndex + 1, xp1);
     }
-
 }
 
 
