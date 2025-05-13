@@ -17,6 +17,7 @@ using System.Net.Http;
 using System.Data.SqlTypes;
 using System.Reflection;
 using System.Windows;
+using System.Reflection.Metadata.Ecma335;
 
 
 // PcaScoresGrid represents a three dimensional grid containing the PCA scores for a collection of voxels
@@ -159,6 +160,32 @@ public class PcaScoresGrid
         return voxelLists;
     }
 
+    Dictionary<BinID, List<VoxelID>> aggregateVoxelsIntoListsPerBin(List<VoxelID> voxelIds, DensityLine line, Dictionary<VoxelID, PcaVoxel> pcaVoxels, int pcaDimension)
+    {
+        // For each voxel, assign the voxel to the List corresponding with its bin
+        Dictionary<BinID, List<VoxelID>> voxelLists = new Dictionary<BinID, List<VoxelID>>();
+        foreach (VoxelID voxelId in voxelIds)
+        {
+            PcaVoxel voxel = pcaVoxels[voxelId];
+            BinID? nthBinId = line.BinIDFor(voxel.scoreVector[pcaDimension]);
+            if (nthBinId != null)
+            {
+                BinID binID = nthBinId.Value;
+                List<VoxelID>? voxelIDListForBin;
+                if (voxelLists.TryGetValue(binID, out voxelIDListForBin))
+                {
+                    voxelIDListForBin.Add(voxelId);
+                }
+                else
+                {
+                    voxelIDListForBin = new List<VoxelID>();
+                    voxelIDListForBin.Add(voxelId);
+                    voxelLists[binID] = voxelIDListForBin;
+                }
+            }
+        }
+        return voxelLists;
+    }
     // VoxelBuckets essentially inverts the dictionary passed in
     // returns a dictionary where the key is the pcaCode string,
     // and the value is a HashSet of VoxelIDs with that pcaCode
@@ -392,7 +419,8 @@ public class PcaScoresGrid
 
         List<VoxelID> voxelIds = pcaVoxels.Keys.ToList();
 
-        float binSeparation = properties.oneDProjectionBinSize;
+        float binSeparation = properties.oneDProjectionBinSize; 
+        float delocalization = properties.oneDProjectionDelocalization;
         int numDimsToInclude = this.scoreDims;
  
         // now, make a oneD grid for each dimensions
@@ -401,8 +429,8 @@ public class PcaScoresGrid
  
             OneDGridID gridId = new OneDGridID(i);
 
-            var grid = CalculateOneDDensity(voxelIds, i, binSeparation, delocalization);
-            oneDGrids[gridId] = grid;
+            var oneDGrid = CalculateOneDDensity(voxelIds, i, binSeparation, delocalization);
+            oneDGrids[gridId] = oneDGrid;
 
             // this identifies the main peak and other regions
             List<List<BinID>> partitionedIndices = IdentifyOneDPartitions(oneDGrid, i, properties);
@@ -455,7 +483,7 @@ public class PcaScoresGrid
         return gridsResults;
     }
 
-    // GetPhasesStrategyE is produces PhaseIdResults based on the first three 
+    // GetPhasesStrategyF is produces PhaseIdResults based on the first three 
     // PCA dimensions only  
     //
     // The strategy goes like this:
@@ -476,7 +504,7 @@ public class PcaScoresGrid
     // D) add voxels that abut any of the contiguous regions to those regions iff
     //    the code they have matches all code snippet for which they have a non-zero number
     //    i.e. A0B1C1  is a match for contiguous regions A1B1C1 and A2B1C1
-    public PhaseIdResults GetPhasesStrategyE(PcaPhaseIdentificationProperties properties, HashSet<string> twoDridsToExclude, HashSet<string> oneDGridsToInclude)
+    public PhaseIdResults GetPhasesStrategyF(PcaPhaseIdentificationProperties properties, HashSet<string> twoDridsToExclude, HashSet<string> oneDGridsToInclude)
     {
         List<VoxelID> voxelIds = pcaVoxels.Keys.ToList();
         int numDimsToInclude = Math.Min(properties.numDimsForPCAPhaseId, this.scoreDims);
@@ -499,7 +527,7 @@ public class PcaScoresGrid
             // the PCA code dictionary
 
             TwoDGridID gridID = kvp.Key;
-            if (!gridsToExclude.Contains(gridID.ToString()))
+            if (!twoDridsToExclude.Contains(gridID.ToString()))
             {
                 DensityPlane twoDGrid = twoDGrids[gridID];
                 List<List<PixelID>> partitionedIndices = kvp.Value;
@@ -530,6 +558,7 @@ public class PcaScoresGrid
                 // assign these to component 0
                 string unassignedPcaCode = gridID.ToString() + ".0";
                 List<PixelID> unassignedPixels = voxelLists.Keys.ToList();
+
                 foreach (PixelID pixelID in unassignedPixels)
                 {
                     // Lookup for all the voxels bucketed under this pixelId
@@ -542,9 +571,51 @@ public class PcaScoresGrid
             }
         }
 
+        // now, add the oneD grids
+        foreach (string s in oneDGridsToInclude)
+        {
+            OneDGridID gridId = new OneDGridID(s);
+            DensityLine oneDGrid = oneDGrids[gridId];
+            List<List<BinID>> partitionedIndices = oneDPartitions[gridId];
+            int pcaDimension = gridId.PCAIndex();
+            Dictionary<BinID, List<VoxelID>> voxelLists = aggregateVoxelsIntoListsPerBin(voxelIds, oneDGrid, pcaVoxels, pcaDimension);
+            int peakIndex = 1; 
+            foreach (List<BinID> binIdList in partitionedIndices)
+            {
+                string pcaCode = gridId.ToString() + "." + peakIndex.ToString();
+                // the pixelIdList contains a list of pixelIds identified as being part of the Nth partition
+                foreach (BinID binId in binIdList)
+                {
+                    // Lookup for all the voxels bucketed under this binId
+                    List<VoxelID> voxelIdsForThisBin = voxelLists[binId];
+                    foreach (VoxelID voxelId in voxelIdsForThisBin)
+                    {
+                        pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(pcaCode);
+                    }
+                    // remove that entry from voxelLists
+                    voxelLists.Remove(binId);
+                }
+                peakIndex += 1;
+            }
+            // now, all the remaining entries in voxelLists are unassigned :  
+            // assign these to component 0
+            string unassignedPcaCode = gridId.ToString() + ".0";
+            List<BinID> unassignedBins = voxelLists.Keys.ToList();
+
+            foreach (BinID binID in unassignedBins)
+            {
+                // Lookup for all the voxels bucketed under this pixelId
+                List<VoxelID> voxelIdsForThisBin = voxelLists[binID];
+                foreach (VoxelID voxelId in voxelIdsForThisBin)
+                {
+                    pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(unassignedPcaCode);
+                }
+            }
+        }
+
         // PcaStream writes a file with text data about the progression of the algorithm
         // uncomment it here and uncomment the calls to DumpVoxelSetStats below
-        PcaStream pcaStream = new PcaStream("GetPhasesStrategyE");
+        PcaStream pcaStream = new PcaStream("GetPhasesStrategyF");
         PhaseIdResults phaseIdResults = new PhaseIdResults(voxelIds);
 
         // now examine the groups of voxels to identify contiguous regions
@@ -746,7 +817,7 @@ public class PcaScoresGrid
     // If it does, add it to the appropriate list
     // return the list of lists
     // indices not identified are not returned in any list
-    public List<List<PixelID>> IdentifyOneDPartitions(DensityLine oneDGrid, int dimX, PcaPhaseIdentificationProperties props)
+    public List<List<BinID>> IdentifyOneDPartitions(DensityLine oneDGrid, int dimX, PcaPhaseIdentificationProperties props)
     {
         // to identify the first maximum, just find the pixel with the highest value
         // then, accumulate neighboring pixels, avoiding neighbors with higher values
@@ -762,9 +833,9 @@ public class PcaScoresGrid
         OneDGridPartitionFinder partitionFinder = new OneDGridPartitionFinder(oneDGrid, props);
 
         partitionFinder.FindPartitions();
-        var pixelLists = partitionFinder.GetPixelLists();
+        var binLists = partitionFinder.GetBinLists();
         partitionFinder.Clear();
-        return pixelLists;
+        return binLists;
     }
 
 
@@ -900,40 +971,72 @@ public class PcaScoresGrid
         }
         if (delocalizationDistance > (binsize / 2))
         {
-
-            float delocRequested = delocalizationDistance * delocalizationDistance;
-            float delocRemaining = delocRequested - (binsize * binsize * 0.25f);
-            // gaussian smoothing parameter calculated from this:
-            float gaussianSmoothParam = (float)MathF.Sqrt(2.0f * MathF.PI * delocRemaining);
-            float binsizeOverGaussianSmoothParam = binsize / gaussianSmoothParam;
-            int smoothingCutoffLimit = (int) MathF.Ceiling((1.0f / binsizeOverGaussianSmoothParam) * 1.5f);
-            List<double> smoothCoefficients = new List<double>();
-            for (int h = 0; h <= smoothingCutoffLimit; ++h)
-            {
-                // for gridpoint h, calculate the strength of the 1D gaussian at that 
-                // distance. The gridpoint h is at a distance h * binsize from zero 
-                // so, pass in h as x, and binsizeOverGaussianSmoothParam as inverseG
-                smoothCoefficients.Add(gaussianOfXWithInverseG(h, binsizeOverGaussianSmoothParam));
-            }
-
-            List<float> normalizedCoefficients = normalizeCoefficients(smoothCoefficients); // need these all to add up to one, counting the non-zero values twice
-            
-            // In the case of a small extra delocalization, a gaussian doesn't capture
-            // enough delocalization, because there are not enough buckets in the main part of the curve
-            // In this case, boost the coefficients at -1 and 1 to produce the expected delocalization
-            List<float> adjustedCoefficients = adjustCoefficientsForDeloc(normalizedCoefficients, delocRemaining, binsize);
+            List<float> coefficients = CoefficientsForExtraDelocalization(delocalizationDistance, binsize);
 
             // Now, apply the 'gaussian blur' using the coefficients in the 
             // normalizedCoefficients list.  Loop through each point in 
             // densityPlane and, for each point, fill the values
             // in a new densityPlane
 
-            densityPlane = densityPlane.Convolve(normalizedCoefficients);
+            densityPlane = densityPlane.Convolve(coefficients);
          }
 
         return densityPlane;
     }
 
+    internal List<float> CoefficientsForExtraDelocalization(float delocalizationDistance, float binsize)
+    {
+        float delocRequested = delocalizationDistance * delocalizationDistance;
+        float delocRemaining = delocRequested - (binsize * binsize * 0.25f);
+        // gaussian smoothing parameter calculated from this:
+        float gaussianSmoothParam = (float)MathF.Sqrt(2.0f * MathF.PI * delocRemaining);
+        float binsizeOverGaussianSmoothParam = binsize / gaussianSmoothParam;
+        int smoothingCutoffLimit = (int)MathF.Ceiling((1.0f / binsizeOverGaussianSmoothParam) * 1.5f);
+        List<double> smoothCoefficients = new List<double>();
+        for (int h = 0; h <= smoothingCutoffLimit; ++h)
+        {
+            // for gridpoint h, calculate the strength of the 1D gaussian at that 
+            // distance. The gridpoint h is at a distance h * binsize from zero 
+            // so, pass in h as x, and binsizeOverGaussianSmoothParam as inverseG
+            smoothCoefficients.Add(gaussianOfXWithInverseG(h, binsizeOverGaussianSmoothParam));
+        }
+
+        // The sum of the coefficients should add up to one,
+        // counting the non-zero values twice
+        List<float> normalizedCoefficients = normalizeCoefficients(smoothCoefficients); 
+             
+        // In the case of a small extra delocalization, a gaussian doesn't capture
+        // enough delocalization, because there are not enough buckets in the main part of the curve
+        // In this case, boost the coefficients at -1 and 1 to produce the expected delocalization
+        List<float> adjustedCoefficients = adjustCoefficientsForDeloc(normalizedCoefficients, delocRemaining, binsize);
+        return adjustedCoefficients;
+    }
+
+
+    public DensityLine CalculateOneDDensity(List<VoxelID> voxelIds, int pcaDim, float binsize, float delocalizationDistance)
+    {
+        DensityLine densityLine = new DensityLine(binsize);
+        for (int v = 0; v < voxelIds.Count; ++v)
+        {
+            VoxelID voxelId = voxelIds[v];
+            var voxel = pcaVoxels[voxelId];
+            var xVal = voxel.scoreVector[pcaDim]; 
+            densityLine.AddPointAt(xVal);
+        }
+        if (delocalizationDistance > (binsize / 2))
+        {
+            List<float> coefficients = CoefficientsForExtraDelocalization(delocalizationDistance, binsize);
+
+            // Now, apply the 'gaussian blur' using the coefficients in the 
+            // normalizedCoefficients list.  Loop through each point in 
+            // densityPlane and, for each point, fill the values
+            // in a new densityPlane
+
+            densityLine = densityLine.Convolve(coefficients);
+        }
+
+        return densityLine;
+    }
     // CalculateOneDDensities is not used, but here's what it does:
     // it creates a profile along each of the principal PCA dimensions 
     // of the density of voxels along that dimension 

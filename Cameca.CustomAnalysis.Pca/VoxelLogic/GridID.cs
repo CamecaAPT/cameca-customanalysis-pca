@@ -11,10 +11,19 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 using System.Xml.Schema;
 using Cameca.CustomAnalysis.Interface;
+using System.Windows.Controls;
 
-public struct GridID : IComparable<GridID>
+public interface IStringConvertible : IComparable<IStringConvertible>
 {
-    string stringValue;
+    public string ToString();
+
+
+    public int CompareTo(IStringConvertible other);
+ 
+}
+
+public struct GridID 
+{
 
     public static string GridLetterForIndex(int index)
     {
@@ -24,19 +33,11 @@ public struct GridID : IComparable<GridID>
     }
     public static int IndexForGridLetter(char letter)
     {
-        int AAsciiValue = (int)'A'; 
+        int AAsciiValue = (int)'A';
         int gridLetterAsciiValue = (int)letter;
         return gridLetterAsciiValue - AAsciiValue;
     }
-    public string ToString()
-    {
-        return stringValue;
-    }
 
-    public int CompareTo(OneDGridID other)
-    {
-        return stringValue.CompareTo(other.stringValue) ;
-    }
 }
  
  

@@ -426,14 +426,13 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     [RelayCommand(CanExecute = nameof(UpdatePCAPhasesCanExecute))]
     public async Task UpdatePCAPhases(CancellationToken cancellationToken)
     {
-
         var scoresGrid = ScoresGrid;
         var gridsResults = PcaGridsResults;
 
         if ((scoresGrid != null) && (gridsResults != null))
         {
             var pcaPhaseIdProperties = new PcaPhaseIdentificationProperties(Properties.GridProjectionBinSize, Properties.GridProjectionDelocalization, Properties.NoiseFloorFraction, Properties.PeakSummitAllowance, Properties.NumberOfComponents);
-            PcaPhaseIDResults = scoresGrid.GetPhasesStrategyE(pcaPhaseIdProperties, gridsToExcludeFromPCA);
+            PcaPhaseIDResults = scoresGrid.GetPhasesStrategyF(pcaPhaseIdProperties, gridsToExcludeFromPCA, histogramsToUseForPCA);
         }
     }
 

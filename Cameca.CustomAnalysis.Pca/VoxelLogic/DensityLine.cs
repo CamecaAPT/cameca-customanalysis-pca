@@ -24,6 +24,14 @@ public struct BinID : IComparable<BinID>
     {
         return (binId);
     }
+    public BinID NextLowerBin()
+    {
+        return new BinID(binId - 1);
+    }
+    public BinID NextHigherBin()
+    {
+        return new BinID(binId + 1);
+    }
 
     public int CompareTo(BinID other)
     {
@@ -93,6 +101,39 @@ public class DensityLine
 
     public delegate void ForEachBinCallback(BinID binId, float value);
 
+    public BinID LocalMaxNear(BinID binId)
+    {
+        BinID lowerBin = binId.NextLowerBin();
+        BinID higherBin = binId.NextHigherBin();
+        float lowerBinValue = valueAtBin(lowerBin);
+        float higherBinValue = valueAtBin(higherBin);
+        float binVal = valueAtBin(binId);
+        if ((binVal < higherBinValue) || (binVal < lowerBinValue))
+        {
+            if (lowerBinValue > higherBinValue)
+            {
+                while (lowerBinValue > binVal)
+                {
+                    binId = lowerBin;
+                    lowerBin = binId.NextLowerBin();
+                    binVal = lowerBinValue;
+                    lowerBinValue = valueAtBin(lowerBin);
+                }
+            }
+            else
+            {
+                while (higherBinValue > binVal)
+                {
+                    binId = higherBin;
+                    higherBin = binId.NextHigherBin();
+                    binVal = higherBinValue;
+                    higherBinValue = valueAtBin(higherBin);
+                }
+            }
+        }
+        return binId;
+    }
+
     public void ForEachBin(ForEachBinCallback callback)
     {
         foreach (KeyValuePair<BinID, float> kvp in data)
@@ -112,17 +153,15 @@ public class DensityLine
             int miny = minx;
             void convolutionFunction(BinID binId, float value)
             {
-                (int p, int q) = binId.xyCoords();
+                int p = binId.xCoord();
                 for (int x = minx; x <= maxx; x+=1)
                 {
                     int xCoefficientIndex = (int)Math.Abs(x);
                     float xCoeff = normalizedCoefficients[xCoefficientIndex];
 
-                    BinID? nthBinID = BinID.BinIDFor(p + x);
-                    if (nthBinID != null)
-                    {  
-                        newDP.AddValueAtBin(nthBinID.Value, value * xCoeff * yCoeff);
-                    }
+                    BinID nthBinID = new BinID(p + x);
+  
+                    newDL.AddValueAtBin(nthBinID, value * xCoeff);
                 }
             }
             ForEachBin(convolutionFunction);
@@ -140,20 +179,39 @@ public class DensityLine
         return data.Keys.ToList();
     }
 
+    public int? BinIndexFor(float x)
+    {
+        if ((x < maxval) && (x > -maxval))
+        {
+            int binIndex = (int)MathF.Floor((x + halfBinsize) * oneOverBinsize);
+            return binIndex;
+        }
+        else
+        {
+            return null;
+        }
+    }
+
+    public BinID? BinIDFor(float x)
+    {
+        int? binx = BinIndexFor(x);
+        return binx == null ? null : new BinID(binx.Value);
+    }
+
     // check for the 8 neighboring pixels and add them if they have a non-zero value
     public List<BinID> NeighboringNonZeroBins(BinID binId)
     {
         //int x;
         //int y;
-        (int x) = binId.xCoord();
+        int x = binId.xCoord();
         List<BinID> neighbors = new List<BinID>();
         if (x > int.MinValue)
         {
-            neighbors.Add(BinID(x - 1));
+            neighbors.Add(new BinID(x - 1));
         }
         if (x < int.MaxValue)
         {
-            neighbors.Add(BinID(x + 1));
+            neighbors.Add(new BinID(x + 1));
         }
 		return neighbors;
 	}
@@ -197,50 +255,47 @@ public class DensityLine
     {
         if (data.Count == 0)
         {
-            return (BinID(0), BinID(0));
+            BinID zeroBin = new BinID(0);
+            return (zeroBin, zeroBin);
         }
         
         // find the min and max bin IDs
         var binIds = data.Keys.ToList();
         binIds.Sort();
-        return (binIds.First, binIds.Last);
+        return (binIds.First(), binIds.Last());
     }
     
     public void WriteToStream(StreamWriter stream)
     {
-        OneDGridCoord min;
-        OneDGridCoord max;
-        (min, max) = MinMaxGridCoords();
+        BinID min;
+        BinID max;
+        (min, max) = MinMaxBinIDs();
 
-        int xSize = 1 + max.x - min.x;
+        string line = string.Empty;
+        int xSize = 1 + max.xCoord() - min.xCoord();
 		stream.WriteLine("x size= " + xSize);
 
 		stream.Write("{ " );
+        int maxx = max.xCoord();
 		// now csv data for the grid from min to max
-        for (int x = min.x; x <= max.x; ++x)
+        for (int x = min.xCoord(); x <= maxx; ++x)
         {
-            BinID xthBinId= BinID(x);
-
+            BinID xthBinId= new BinID(x);
 
             float xthValue = 0;
             if (data.ContainsKey(xthBinId))
             {
                 xthValue = data[xthBinId];
             }
-            l = l + xthValue;
-            if (x != max)
+            line = line + xthValue;
+            if (x != maxx)
             {
-                l = l + ",";
+                line = line + ",";
             }
 
         }
-        l = l + "}";
-        stream.Write(l);
-        if (y != max.y)
-        {
-            stream.Write(",");
-        }
-		stream.Write("}");
+        line = line + "}";
+        stream.Write(line);
     }
     
     public void ConsoleDump(string prefix)
@@ -308,16 +363,16 @@ public class DensityLine
 
         void addValueAtCoord(int x, float val)
         {
-            BinID binId = BinID(x);
-            AddValueAtBin(binId.Value, val);
+            BinID binId = new BinID(x);
+            AddValueAtBin(binId, val);
         }
 
-        if ((Math.Abs(x) > maxval) || (Math.Abs(y) > maxval)) {
+        if (Math.Abs(x) > maxval) {
             oobPoints += 1;
             return;
         }
 
-        int xBinIndex = MathF.Floor((x + halfBinsize) * oneOverBinsize);
+        int xBinIndex = (int)MathF.Floor((x + halfBinsize) * oneOverBinsize);
 
         float xRem = (x - (xBinIndex * binsize)) * oneOverBinsize;
         float xm1 = (float)Neg1Func(xRem);

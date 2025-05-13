@@ -4,23 +4,25 @@ using System.Linq;
 using System;
 using PcaExtensionMethods;
 using Cameca.CustomAnalysis.Pca;
+using System.Windows.Controls;
 
 
 public class OneDGridPartitionFinder
 {
-    DensityPlane grid;
+    DensityLine line;
     List<BinID> unplacedBinIds;
     List<BinID> rejectedBinIds;
+    List<BinID> foundIncreaseBinIds;
     Dictionary<RangeID, OneDPeak> peaks;
     PcaPhaseIdentificationProperties properties;
 
-    public OneDGridPartitionFinder(DensityPlane oneDGrid, PcaPhaseIdentificationProperties props)
+    public OneDGridPartitionFinder(DensityLine densityLine, PcaPhaseIdentificationProperties props)
     {
-        this.grid = oneDGrid;
+        this.line = densityLine;
         this.peaks = new Dictionary<RangeID, OneDPeak> ();
         this.rejectedBinIds = new List<BinID>();
         this.foundIncreaseBinIds = new List<BinID>();
-        this.unplacedBinIds = oneDGrid.GridPointIds();
+        this.unplacedBinIds = densityLine.GridPointIds();
         this.properties = props;
     }
  
@@ -30,7 +32,7 @@ public class OneDGridPartitionFinder
         peaks.Clear();
         rejectedBinIds.Clear();
         unplacedBinIds.Clear();
-        unplacedBinIds = grid.GridPointIds();
+        unplacedBinIds = line.GridPointIds();
     }
 
     public List<List<BinID>> GetBinLists()
@@ -39,10 +41,10 @@ public class OneDGridPartitionFinder
         foreach (RangeID peakKey in peaks.Keys.ToList())
         {
             OneDPeak nthPeak = peaks[peakKey];
-            List<BinID> peakPixelList = nthPeak.PixelList();
-            pixelLists.Add(peakPixelList);
+            List<BinID> peakBinList = nthPeak.BinList();
+            binLists.Add(peakBinList);
         }
-        return pixelLists;
+        return binLists;
     }
 
     // FindPartitions attempts to separate the oneDGrid into regions -- 
@@ -63,10 +65,22 @@ public class OneDGridPartitionFinder
     //
     // we'll model the peak as a bi-gaussian, and use the top 3/4 of the peak as a guide to find where 
     // to cut off the peak region, and also how wide a border region should be defined.
-    public FindPartitions()
+    public List<List<BinID>> FindPartitions()
     {
+        List<List<BinID>> partitions = new List<List<BinID>> ();
+        BinID? maybeMaximumBinId = line.FindMaximum(unplacedBinIds);
+        while (maybeMaximumBinId != null)
+        {
+            BinID binId = maybeMaximumBinId.Value;
+            OneDPeak peak = new OneDPeak(this, line, binId);
+            peak.IdentifyBins();
+            List<BinID> binList = peak.BinList();
+            partitions.Add(binList);
+            binList.ForEach(bin => { unplacedBinIds.Remove(bin); });
 
-
+            maybeMaximumBinId = line.FindMaximum(unplacedBinIds);
+        }
+        return partitions;
     }
 
     public List<BinID> filterForAvailableIds(List<BinID> binIds)
@@ -74,6 +88,14 @@ public class OneDGridPartitionFinder
         // return a list containing all the items in the
         // input list which are in the unplacedBinIds list
         return binIds.Where(binId => unplacedBinIds.Contains(binId)).ToList();
+    }
+    public float PeakSummitAllowance()
+    {
+        return properties.peakSummitAllowance;
+    }
+    public float NoiseFloorFraction()
+    {
+        return properties.noiseFloorFraction;
     }
 }   
 

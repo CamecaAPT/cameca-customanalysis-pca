@@ -65,7 +65,7 @@ public partial class ProjectionGridsView : UserControl
 
     internal string AxisLabelForGridLetter(char gridLetter)
     { 
-        return "PCA Component " + TwoDGridID.IndexForGridLetter(gridLetter);
+        return "PCA Component " + GridID.IndexForGridLetter(gridLetter);
     }
 
     internal string AxisYLabelForGridID(string gridID)

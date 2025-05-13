@@ -9,6 +9,8 @@ public delegate float[] GetScoresDelegate(int voxelIndex);
 
 public struct PcaPhaseIdentificationProperties
 {
+    public float oneDProjectionBinSize;
+    public float oneDProjectionDelocalization; 
     public float gridProjectionBinSize;
     public float gridProjectionDelocalization;
     public float noiseFloorFraction;
@@ -21,6 +23,8 @@ public struct PcaPhaseIdentificationProperties
           float peakSummitAllowance, 
           int numDimsForPCAPhaseId)
     {
+        this.oneDProjectionBinSize = 0.1f;
+        this.oneDProjectionDelocalization = 0.05f; 
         this.gridProjectionBinSize = gridProjectionBinSize;
         this.gridProjectionDelocalization = gridProjectionDelocalization;
         this.noiseFloorFraction = noiseFloor;
@@ -145,6 +149,10 @@ internal static class PcaCalculator
     public static TwoDGridsResults CalculateTwoDGrids(PcaScoresGrid scoresGrid, PcaPhaseIdentificationProperties properties)
     {
         return scoresGrid.CalculateTwoDGrids(properties);
+    }
+    public static OneDGridsResults CalculateOneDGrids(PcaScoresGrid scoresGrid, PcaPhaseIdentificationProperties properties)
+    {
+        return scoresGrid.CalculateOneDGrids(properties);
     }    // manipulate the results of PCA to identify phases per voxel
 
     public static NoiseEigenvalueResults GetNoiseEigenvalues(float[] evals, int gaps, int significance, bool refine)

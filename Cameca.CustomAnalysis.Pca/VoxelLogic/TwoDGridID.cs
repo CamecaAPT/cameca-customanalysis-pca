@@ -1,10 +1,12 @@
 using System;
 
-public struct TwoDGridID : IComparable<TwoDGridID>
+public struct TwoDGridID : IStringConvertible
 {
+    string stringValue;
 
-    public TwoDGridID(int firstDim, int secondDim) : GridID(GridID.GridLetterForIndex(firstDim) + GridID.GridLetterForIndex(secondDim))
+    public TwoDGridID(int firstDim, int secondDim)  
     {
+        stringValue = GridID.GridLetterForIndex(firstDim) + GridID.GridLetterForIndex(secondDim);
     }
 
     public (int, int) AsIndexPair()
@@ -14,9 +16,13 @@ public struct TwoDGridID : IComparable<TwoDGridID>
         return (firstIndex, secondIndex);
     }
 
-    public int CompareTo(TwoDGridID other)
+    public string ToString()  
     {
-        return stringValue.CompareTo(other.stringValue) ;
+        return stringValue;
+    }
+    public int CompareTo(IStringConvertible other)
+    {
+        return stringValue.CompareTo(other.ToString());
     }
 }
  
