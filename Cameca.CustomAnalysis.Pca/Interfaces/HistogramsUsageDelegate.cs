@@ -1,8 +1,4 @@
-﻿using Cameca.CustomAnalysis.Interface;
-using CommunityToolkit.Mvvm.ComponentModel;
-using System.ComponentModel.DataAnnotations;
-
-namespace Cameca.CustomAnalysis.Pca;
+﻿namespace Cameca.CustomAnalysis.Pca;
 
 /// IHistogramsUsageDelegate is used to communicate changes from the UI back to the model about
 /// which oneDGrids (PCA histograms) to use in the PCA Phase determination process

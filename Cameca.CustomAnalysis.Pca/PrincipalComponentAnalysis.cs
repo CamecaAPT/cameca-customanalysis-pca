@@ -16,13 +16,11 @@ using LiveCharts;
 using LiveCharts.Configurations;
 using LiveCharts.Wpf;
 using System.Collections.ObjectModel;
-using static Cameca.CustomAnalysis.Interface.IonFormula;
 using CommunityToolkit.HighPerformance;
 using Cameca.CustomAnalysis.Pca;
 using Cameca.CustomAnalysis.Pca.Utils;
 using Cameca.CustomAnalysis.Pca.Models;
 using Cameca.CustomAnalysis.Pca.VoxelLogic;
-
 
 namespace Cameca.CustomAnalysis.Pca;
 
