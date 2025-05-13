@@ -12,6 +12,7 @@ public interface IHistogramsUsageDelegate
 {
     void UseHistogramForPca(string histogramID, bool useIt);
     bool UsesHistogramForPca(string histogramID);
+    string HistogramInfo(string histogramID);
 }
 
 /// DoNothingHistogramsUsageDelegate is the default implementation of the delegate
@@ -30,5 +31,10 @@ public class DoNothingHistogramsUsageDelegate : IHistogramsUsageDelegate
     public bool UsesHistogramForPca(string gridID)
     {
         return true;
+    }
+
+    public string HistogramInfo(string histogramID)
+    {
+        return "No Info";
     }
 }

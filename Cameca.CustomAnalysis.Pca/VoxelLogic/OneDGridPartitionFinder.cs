@@ -5,6 +5,7 @@ using System;
 using PcaExtensionMethods;
 using Cameca.CustomAnalysis.Pca;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 
 public class OneDGridPartitionFinder
@@ -69,17 +70,48 @@ public class OneDGridPartitionFinder
     {
         List<List<BinID>> partitions = new List<List<BinID>> ();
         BinID? maybeMaximumBinId = line.FindMaximum(unplacedBinIds);
-        while (maybeMaximumBinId != null)
-        {
-            BinID binId = maybeMaximumBinId.Value;
-            OneDPeak peak = new OneDPeak(this, line, binId);
-            peak.IdentifyBins();
-            List<BinID> binList = peak.BinList();
-            partitions.Add(binList);
-            binList.ForEach(bin => { unplacedBinIds.Remove(bin); });
 
-            maybeMaximumBinId = line.FindMaximum(unplacedBinIds);
+        if (maybeMaximumBinId != null)
+        {
+            float firstMaximum = line.valueAtBin(maybeMaximumBinId.Value);
+            float noiseLevel = firstMaximum * 0.05f;
+            while ((maybeMaximumBinId != null) && (line.valueAtBin(maybeMaximumBinId.Value) > noiseLevel))
+            {
+                BinID binId = maybeMaximumBinId.Value;
+                OneDPeak peak = new OneDPeak(this, line, binId);
+                peak.IdentifyBins(noiseLevel);
+                List<BinID> binList = peak.BinList();
+                partitions.Add(binList);
+                binList.ForEach(bin => { unplacedBinIds.Remove(bin); });
+                peaks[peak.rangeId] = peak;
+                maybeMaximumBinId = line.FindMaximum(unplacedBinIds);
+            }
         }
+
+        // Now, if only one peak was identified, create an artificial second peak with all the points well away from the first peak
+        if (peaks.Count == 1)
+        {
+            List<RangeID> keys = peaks.Keys.ToList();
+            OneDPeak peak = peaks[keys[0]];
+            List<BinID> borderBinIds = peak.BorderBins();
+            if (borderBinIds.Count == 2)
+            {
+                List<BinID> binList = new List<BinID>();
+                float border1 = line.xValueFor(borderBinIds[0]); 
+                float border2 = line.xValueFor(borderBinIds[1]);
+                float upperBar = MathF.Max(border1 + 0.5f, border2 + 0.5f);
+                unplacedBinIds.ForEach(bin =>
+                {
+                    float xVal = line.xValueFor(bin);
+                    if (xVal > upperBar)
+                    {
+                        binList.Add(bin);
+                    }
+                });
+                partitions.Add(binList);
+            }
+        }
+        
         return partitions;
     }
 

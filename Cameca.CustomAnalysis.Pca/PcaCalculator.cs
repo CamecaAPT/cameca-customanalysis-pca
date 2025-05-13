@@ -138,14 +138,13 @@ internal static class PcaCalculator
         }
         return ionCounts;
     }
-
-    // manipulate the results of PCA to identify phases per voxel
+ 
     public static PcaScoresGrid GenerateScoresGrid(IIonData ionData, ComponentsResults compResults, PcaPhaseIdentificationProperties properties)
     {
         PcaScoresGridProducer producer = new PcaScoresGridProducer(compResults, properties);
 
         return producer.GenerateScoresGrid();
-    }     // manipulate the results of PCA to identify phases per voxel
+    }
     public static TwoDGridsResults CalculateTwoDGrids(PcaScoresGrid scoresGrid, PcaPhaseIdentificationProperties properties)
     {
         return scoresGrid.CalculateTwoDGrids(properties);
@@ -153,7 +152,7 @@ internal static class PcaCalculator
     public static OneDGridsResults CalculateOneDGrids(PcaScoresGrid scoresGrid, PcaPhaseIdentificationProperties properties)
     {
         return scoresGrid.CalculateOneDGrids(properties);
-    }    // manipulate the results of PCA to identify phases per voxel
+    }
 
     public static NoiseEigenvalueResults GetNoiseEigenvalues(float[] evals, int gaps, int significance, bool refine)
     {

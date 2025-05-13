@@ -83,7 +83,12 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(UpdateGridsCanExecute))]
     [NotifyCanExecuteChangedFor(nameof(UpdateGridsCommand))]
-    private TwoDGridsResults? pcaGridsResults;
+    private OneDGridsResults? pcaOneDGridsResults;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UpdateGridsCanExecute))]
+    [NotifyCanExecuteChangedFor(nameof(UpdateGridsCommand))]
+    private TwoDGridsResults? pcaTwoDGridsResults;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(UpdatePCAPhasesCanExecute))]
@@ -101,7 +106,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     public ICollection<string> loadingsLabels = Array.Empty<string>();
 
     public bool UpdateComponentsCanExecute => PcaComponentsResults is null;
-    public bool UpdateGridsCanExecute => PcaGridsResults is null;
+    public bool UpdateGridsCanExecute => PcaTwoDGridsResults is null;
     public bool UpdatePCAPhasesCanExecute => PcaPhaseIDResults is null;
 
     public bool UpdateRankEstimationCanExecute => NoiseEigenvalueResults is null;
@@ -162,6 +167,15 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         InvalidatePcaPhases();
     }
 
+    public string HistogramInfo(string histogramID)
+    {
+        string info = "";
+        if (scoresGrid != null)
+        {
+            info = scoresGrid.HistogramInfo(histogramID);
+        }
+        return info;
+    }
     protected override void OnAdded(NodeAddedEventArgs eventArgs)
     {
         base.OnAdded(eventArgs);
@@ -326,7 +340,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             }
             var scoreData = binnedScores.Select((y, i) => new Vector2(min + (i * binSize), y * invBinSize)).ToArray();
             var scoresHistogram = Resources.ChartObjects.CreateHistogram (scoreData, color: Colors.Blue);
-            scoresHistogram.Name = "PCA Component " + componentIndex;
+            scoresHistogram.Name = GridID.GridLetterForIndex(componentIndex);
             newHistogramsData.Add(scoresHistogram);
             ++componentIndex;
         }
@@ -362,8 +376,9 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         if (compResults != null)
         {
             var pcaPhaseIdProperties = new PcaPhaseIdentificationProperties(Properties.GridProjectionBinSize, Properties.GridProjectionDelocalization, Properties.NoiseFloorFraction, Properties.PeakSummitAllowance, Properties.NumberOfComponents);
-            ScoresGrid = PcaCalculator.GenerateScoresGrid(ionData, compResults, pcaPhaseIdProperties); 
-            PcaGridsResults = PcaCalculator.CalculateTwoDGrids(ScoresGrid, pcaPhaseIdProperties);
+            ScoresGrid = PcaCalculator.GenerateScoresGrid(ionData, compResults, pcaPhaseIdProperties);
+            PcaTwoDGridsResults = PcaCalculator.CalculateTwoDGrids(ScoresGrid, pcaPhaseIdProperties);
+            PcaOneDGridsResults = PcaCalculator.CalculateOneDGrids(ScoresGrid, pcaPhaseIdProperties);
         }
     }
 
@@ -427,9 +442,10 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     public async Task UpdatePCAPhases(CancellationToken cancellationToken)
     {
         var scoresGrid = ScoresGrid;
-        var gridsResults = PcaGridsResults;
+        var oneDGridsResults = PcaOneDGridsResults;
+        var twoDGridsResults = PcaTwoDGridsResults;
 
-        if ((scoresGrid != null) && (gridsResults != null))
+        if ((scoresGrid != null) && (oneDGridsResults != null) && (twoDGridsResults != null))
         {
             var pcaPhaseIdProperties = new PcaPhaseIdentificationProperties(Properties.GridProjectionBinSize, Properties.GridProjectionDelocalization, Properties.NoiseFloorFraction, Properties.PeakSummitAllowance, Properties.NumberOfComponents);
             PcaPhaseIDResults = scoresGrid.GetPhasesStrategyF(pcaPhaseIdProperties, gridsToExcludeFromPCA, histogramsToUseForPCA);
@@ -550,10 +566,51 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
         }
     }
-
-    partial void OnPcaGridsResultsChanged(TwoDGridsResults? value)
+    partial void OnPcaOneDGridsResultsChanged(OneDGridsResults? value)
     {
-        if (PcaGridsResults is {
+        if (PcaOneDGridsResults is
+            {
+                OneDPeakProjections: Dictionary<OneDGridID, OneDPeakProjection> oneDPeakProjections
+            })
+        {
+            // Scores Histogram
+            List<IRenderData> newHistogramsData = new List<IRenderData>();
+            int componentIndex = 0;
+            foreach (KeyValuePair<OneDGridID, OneDPeakProjection> kvp in oneDPeakProjections)       
+            {
+                OneDGridID gridId = kvp.Key; 
+                DensityLine line = kvp.Value.densityLine;
+                BinID minBin;
+                BinID maxBin;
+
+                (minBin, maxBin) = line.MinMaxBinIDs();
+                float binSize = line.binsize;
+                float invBinSize = 1.0f / binSize;
+                int min = minBin.xCoord();
+                int max = maxBin.xCoord();
+                int binCount = (1 + max - min) ;
+                var binnedScores = new float[binCount]; // the y axis of the histogram should be in units of Voxels/PCA Unit
+                                                      // so that changing the binsize doesn't change the score
+                var normalizedScores = new float[binCount];
+                BinID bin = minBin;
+                for (int i = 0; i < binCount; i++)
+                {
+                    binnedScores[i] = line.valueAtBin(bin);
+                    bin = bin.NextHigherBin();
+                }
+                var scoreData = binnedScores.Select((y, i) => new Vector2((min + i) * binSize, y * invBinSize)).ToArray();
+                var scoresHistogram = Resources.ChartObjects.CreateHistogram(scoreData, color: Colors.Blue);
+                scoresHistogram.Name = gridId.ToString();
+                newHistogramsData.Add(scoresHistogram);
+                ++componentIndex;
+            }
+            ScoresHistogramRenderData = newHistogramsData;
+        }
+    }
+    partial void OnPcaTwoDGridsResultsChanged(TwoDGridsResults? value)
+    {
+        if (PcaTwoDGridsResults is
+            {
                 TwoDPeakProjections: Dictionary<TwoDGridID, TwoDPeakProjection> twoDPeakProjections
             })
         {
@@ -872,7 +929,8 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
     private void InvalidatePcaGrids()
     {
-        PcaGridsResults = null;
+        PcaOneDGridsResults = null;
+        PcaTwoDGridsResults = null;
         InvalidatePcaPhases();
     }
 

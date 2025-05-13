@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Windows.Navigation;
 using Cameca.CustomAnalysis.Pca;
 // OneDGridsResults represents the projection of the PCA Components results
 // onto a single dimension's line
@@ -16,7 +17,6 @@ public class OneDGridsResults
     {
         OneDPeakProjections[key] = projection;
     }
-
 }
     
   

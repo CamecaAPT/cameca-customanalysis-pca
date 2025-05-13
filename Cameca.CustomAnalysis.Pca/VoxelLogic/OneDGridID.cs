@@ -28,7 +28,7 @@ public struct OneDGridID : IStringConvertible
     {
         return GridID.IndexForGridLetter(stringValue[0]);
     }
-    public string AsString()
+    public override string ToString()
     {
         return stringValue;
     }

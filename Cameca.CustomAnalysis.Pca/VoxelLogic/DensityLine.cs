@@ -197,6 +197,10 @@ public class DensityLine
         int? binx = BinIndexFor(x);
         return binx == null ? null : new BinID(binx.Value);
     }
+    public float xValueFor(BinID binId)
+    {
+        return binsize * binId.xCoord();
+    }
 
     // check for the 8 neighboring pixels and add them if they have a non-zero value
     public List<BinID> NeighboringNonZeroBins(BinID binId)

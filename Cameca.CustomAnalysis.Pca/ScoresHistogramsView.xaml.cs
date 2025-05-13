@@ -64,7 +64,7 @@ public partial class ScoresHistogramsView : UserControl
     // 
     internal string AxisXLabelForHistogramID(string histogramID)
     {
-        return histogramID;
+        return "PCA Component " + GridID.IndexForGridLetter(histogramID[0]);
     }
 
 
@@ -99,6 +99,7 @@ public partial class ScoresHistogramsView : UserControl
             histogramLabel.Content = "Histogram " + renderData.Name;
 
             UseHistogramForPCAPhaseID.IsChecked = HistogramsUsageDelegate.UsesHistogramForPca(currentHistogramId);
+            HistogramInfoText.Text = HistogramsUsageDelegate.HistogramInfo(currentHistogramId);
         }
     }
 

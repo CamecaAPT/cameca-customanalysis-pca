@@ -16,7 +16,7 @@ public struct TwoDGridID : IStringConvertible
         return (firstIndex, secondIndex);
     }
 
-    public string ToString()  
+    public override string ToString() 
     {
         return stringValue;
     }

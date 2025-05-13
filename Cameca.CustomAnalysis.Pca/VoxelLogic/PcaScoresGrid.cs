@@ -18,6 +18,7 @@ using System.Data.SqlTypes;
 using System.Reflection;
 using System.Windows;
 using System.Reflection.Metadata.Ecma335;
+using System.Windows.Documents;
 
 
 // PcaScoresGrid represents a three dimensional grid containing the PCA scores for a collection of voxels
@@ -424,9 +425,8 @@ public class PcaScoresGrid
         int numDimsToInclude = this.scoreDims;
  
         // now, make a oneD grid for each dimensions
-        for (int i = 0; i < (numDimsToInclude - 1); ++i)
+        for (int i = 0; i < numDimsToInclude; ++i)
         {
- 
             OneDGridID gridId = new OneDGridID(i);
 
             var oneDGrid = CalculateOneDDensity(voxelIds, i, binSeparation, delocalization);
@@ -439,7 +439,6 @@ public class PcaScoresGrid
             var projection = new OneDPeakProjection(oneDGrid);
             gridsResults.SetOneDPeakProjectionFor(gridId, projection);
             oneDPartitions[gridId] = partitionedIndices;
-     
         }
         return gridsResults;
     }
@@ -587,13 +586,16 @@ public class PcaScoresGrid
                 foreach (BinID binId in binIdList)
                 {
                     // Lookup for all the voxels bucketed under this binId
-                    List<VoxelID> voxelIdsForThisBin = voxelLists[binId];
-                    foreach (VoxelID voxelId in voxelIdsForThisBin)
+                    if (voxelLists.ContainsKey(binId))
                     {
-                        pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(pcaCode);
+                        List<VoxelID> voxelIdsForThisBin = voxelLists[binId];
+                        foreach (VoxelID voxelId in voxelIdsForThisBin)
+                        {
+                            pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(pcaCode);
+                        }
+                        // remove that entry from voxelLists
+                        voxelLists.Remove(binId);
                     }
-                    // remove that entry from voxelLists
-                    voxelLists.Remove(binId);
                 }
                 peakIndex += 1;
             }
@@ -1074,8 +1076,29 @@ public class PcaScoresGrid
         }
         return densities;
     }
+
+    public string HistogramInfo(string histogramString)
+    {
+        string info = "";
+        OneDGridID gridId = new OneDGridID(histogramString);
+        if (oneDPartitions.ContainsKey(gridId))
+        {
+            List<List<BinID>> lists = oneDPartitions[gridId]; 
+            DensityLine line = oneDGrids[gridId];
+            int regionCount = lists.Count;
+            info = "Regions Identified: " + regionCount;
+            for (int r = 0; r < regionCount; ++r)
+            {
+                List<BinID> rthList = lists[r];
+                BinID minBin = rthList.Min();
+                BinID maxBin = rthList.Max();
+                float lowBin = line.xValueFor(minBin);
+                float highBin = line.xValueFor(maxBin);
+                info += "\n  region " + r + "\n    low: " + lowBin.ToString() + "\n    high: " + highBin.ToString();
+            }
+        }
+
+        return info;
+    }
 }
-
-
-
-
+  

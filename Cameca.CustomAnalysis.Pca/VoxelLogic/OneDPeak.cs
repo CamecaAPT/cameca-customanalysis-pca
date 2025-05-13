@@ -52,12 +52,11 @@ public class OneDPeak
     // Strategy -- just go from the peakMaxBinId to the left and right until 
     // increase is found or noise level reached
 
-    public void IdentifyBins()
+    public void IdentifyBins(float noiseLevel)
     {
         inPeakBinIds.Add(peakMaxBinId);
         float peakValue = referenceLine.valueAtBin(this.peakMaxBinId);
         float summitThreshhold = peakValue * summitAllowance;
-        float noiseLevel = peakValue * noiseFloorFraction;
 
         // first find bins on the lower dise of the peak
         BinID nextBin = peakMaxBinId.NextLowerBin();
