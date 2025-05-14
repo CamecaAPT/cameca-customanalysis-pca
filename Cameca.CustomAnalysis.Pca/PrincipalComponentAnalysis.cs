@@ -317,10 +317,14 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
 
         var componentsResults = PcaComponentsResults;
-
+        if (componentsResults is null)
+        {
+            return;
+        }
         // Scores Histogram
         List<IRenderData> newHistogramsData = new List<IRenderData>();
         int componentIndex = 0;
+
         foreach (ComponentResults componentResults in componentsResults.Components)
         {
             float[] scores = componentResults.Scores;
@@ -410,7 +414,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         // Loading
         int features = loadingData.Length;
         var ions = ionData.Ions;
-        if (ions.Count() != features)
+        if (ions.Count != features)
         {
             throw new InvalidOperationException("Count of ion ranges unexpectedly does not match the number of PCA features");
         }
@@ -517,6 +521,10 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
         {   
             PcaPhasesRenderData = Array.Empty<IRenderData>();
+            if (PcaComponentsResults is null)
+            {
+                return;
+            }
             var voxelIndices = PcaComponentsResults.VoxelIndices;
             if (voxelIndices is null) 
             {
@@ -586,8 +594,8 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
                 (minBin, maxBin) = line.MinMaxBinIDs();
                 float binSize = line.binsize;
                 float invBinSize = 1.0f / binSize;
-                int min = minBin.xCoord();
-                int max = maxBin.xCoord();
+                int min = minBin.XCoord();
+                int max = maxBin.XCoord();
                 int binCount = (1 + max - min) ;
                 var binnedScores = new float[binCount]; // the y axis of the histogram should be in units of Voxels/PCA Unit
                                                       // so that changing the binsize doesn't change the score
@@ -595,7 +603,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
                 BinID bin = minBin;
                 for (int i = 0; i < binCount; i++)
                 {
-                    binnedScores[i] = line.valueAtBin(bin);
+                    binnedScores[i] = line.ValueAtBin(bin);
                     bin = bin.NextHigherBin();
                 }
                 var scoreData = binnedScores.Select((y, i) => new Vector2((min + i) * binSize, y * invBinSize)).ToArray();
@@ -770,7 +778,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             {
                 int arrayIndex = qOffset + p;
                 int gridp = p + minCoord.x;
-                dat[arrayIndex] = dp.valueAtGridCoords(gridp, gridq);
+                dat[arrayIndex] = dp.ValueAtGridCoords(gridp, gridq);
             }
         }
         ReadOnlyMemory2D<float> rom = new ReadOnlyMemory2D<float>(dat, span, span);
@@ -791,7 +799,6 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
   
     protected override async IAsyncEnumerable<ReadOnlyMemory<ulong>> GetIndicesDelegateAsync(IIonData ionData, IProgress<double>? progress, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-
         DataStateIsError = false;
         if (PcaComponentsResults is null)
         {
@@ -812,10 +819,10 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         int yBinStride = gridData.NumVoxels[1];
 
         var binner = new PositionToVoxels(minVector, voxelSize, xBinStride, yBinStride);
+        var phaseIds = PcaPhaseIDResults;
 
         if (Properties.UsePCAPhaseForDetatchedROI)
         {
-            var phaseIds = PcaPhaseIDResults;
             int pcaPhaseOfInterest = Properties.PcaPhaseIndex;
 
             // Build buffers of filtered indices to return
@@ -830,8 +837,10 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
                 {
                     int bin = binner.ToVoxel(positions.Span[chunkIndex]);
 
+                    int? maybePhase = phaseIds.PhaseForVoxelIntValue(bin);
+                  
                     // Properties.ComponentIndex is the selectedComponent
-                    if (phaseIds.PhaseForVoxelIntValue(bin) == pcaPhaseOfInterest)
+                    if ((maybePhase != null) && (maybePhase.Value == pcaPhaseOfInterest))
                     {
                         buffer.Span[bufferIndex++] = index;
                     }

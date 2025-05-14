@@ -17,14 +17,14 @@ using System.Windows.Shapes;
 public class OneDPeak
 {
     public RangeID rangeId;
-    BinID peakMaxBinId; // this is also the id for this object in container's dictionary
-    List<BinID> borderBinIds;
-    List<BinID> inPeakBinIds; 
-    DensityLine referenceLine;
-    OneDGridPartitionFinder partitionFinder; // will supply available neighbors
-    float peakValue;
-    float summitAllowance;  // the value above which to ignore 'second peak'
-    float noiseFloorFraction;  // the value below which to stop looking for peak bins
+    readonly BinID peakMaxBinId; // this is also the id for this object in container's dictionary
+    readonly List<BinID> borderBinIds;
+    readonly List<BinID> inPeakBinIds;
+    readonly DensityLine referenceLine;
+    readonly OneDGridPartitionFinder partitionFinder; // will supply available neighbors
+    readonly float peakValue;
+    readonly float summitAllowance;  // the value above which to ignore 'second peak'
+    readonly float noiseFloorFraction;  // the value below which to stop looking for peak bins
 
     public OneDPeak(OneDGridPartitionFinder partitionFinder, DensityLine line, BinID peakMaxBinId)
     {
@@ -37,7 +37,7 @@ public class OneDPeak
         this.summitAllowance = partitionFinder.PeakSummitAllowance(); // hard code this value
         this.noiseFloorFraction = partitionFinder.NoiseFloorFraction(); // hard code this value
 
-        this.peakValue = line.valueAtBin(peakMaxBinId);
+        this.peakValue = line.ValueAtBin(peakMaxBinId);
     }
 
     public List<BinID> BinList()
@@ -55,32 +55,32 @@ public class OneDPeak
     public void IdentifyBins(float noiseLevel, List<BinID> availableBins)
     {
         inPeakBinIds.Add(peakMaxBinId);
-        float peakValue = referenceLine.valueAtBin(this.peakMaxBinId);
+        float peakValue = referenceLine.ValueAtBin(this.peakMaxBinId);
         float summitThreshhold = peakValue * summitAllowance;
 
         // first find bins on the lower side of the peak
         BinID nextBin = peakMaxBinId.NextLowerBin();
-        float nextValue = referenceLine.valueAtBin(nextBin);
+        float nextValue = referenceLine.ValueAtBin(nextBin);
         float currentValue = peakValue;
         while (availableBins.Contains(nextBin) && (nextValue > noiseLevel) && ((nextValue > summitThreshhold) || (nextValue < currentValue)))
         {
             currentValue = nextValue;
             inPeakBinIds.Add(nextBin);
             nextBin = nextBin.NextLowerBin();
-            nextValue = referenceLine.valueAtBin(nextBin);
+            nextValue = referenceLine.ValueAtBin(nextBin);
         }
         borderBinIds.Add(nextBin);
 
         // now, find bins on the upper side
         nextBin = peakMaxBinId.NextHigherBin();
-        nextValue = referenceLine.valueAtBin(nextBin);
+        nextValue = referenceLine.ValueAtBin(nextBin);
         currentValue = peakValue;
         while (availableBins.Contains(nextBin) && (nextValue > noiseLevel) && ((nextValue > summitThreshhold) || (nextValue < currentValue)))
         {
             currentValue = nextValue;
             inPeakBinIds.Add(nextBin);
             nextBin = nextBin.NextHigherBin();
-            nextValue = referenceLine.valueAtBin(nextBin);
+            nextValue = referenceLine.ValueAtBin(nextBin);
         }
         borderBinIds.Add(nextBin);
     }

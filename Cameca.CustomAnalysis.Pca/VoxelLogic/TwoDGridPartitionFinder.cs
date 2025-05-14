@@ -7,11 +7,11 @@ using Cameca.CustomAnalysis.Pca;
 
 public class TwoDGridPartitionFinder
 {
-    DensityPlane grid;
+    readonly DensityPlane grid;
     List<PixelID> unplacedPixelIds;
-    List<PixelID> rejectedPixelIds;
+    readonly List<PixelID> rejectedPixelIds;
     List<PixelID> foundIncreasePixelIds; // when a peak finds an increase, remember it here
-    Dictionary<PeakID, TwoDPeak> peaks;
+    readonly Dictionary<PeakID, TwoDPeak> peaks;
     PcaPhaseIdentificationProperties properties;
 
     // These are the return codes returned by IterateIdentifyingPeaks()
@@ -221,7 +221,7 @@ public class TwoDGridPartitionFinder
             float higherPixelVal = 0.0f;
             if (foundIncreasePixelIds.Count > 0)
             {
-                higherPixelVal = grid.valueAtPixel(foundIncreasePixelIds[0]);
+                higherPixelVal = grid.ValueAtPixel(foundIncreasePixelIds[0]);
             }
             float searchFloor = Math.Max(higherPixelVal, noiseFloor);
             ReturnCode returnCode = IterateIdentifyingPeaks(searchFloor);
@@ -252,7 +252,7 @@ public class TwoDGridPartitionFinder
                     {
                         // its possible we have another peak to find
                         // first. filter any previous identified higherPixels to see if they are now part of a new peak:
-                        foundIncreasePixelIds = filterForAvailableIds(foundIncreasePixelIds);
+                        foundIncreasePixelIds = FilterForAvailableIds(foundIncreasePixelIds);
                         if (foundIncreasePixelIds.Count > 0)
                         {
                             // it is a certainty we still have a peak to find
@@ -277,7 +277,7 @@ public class TwoDGridPartitionFinder
         }
     }
 
-    public List<PixelID> filterForAvailableIds(List<PixelID> pixelIds)
+    public List<PixelID> FilterForAvailableIds(List<PixelID> pixelIds)
     {
         // return a list containing all the items in the
         // input list which are in the unplacedPixelIds list

@@ -35,9 +35,9 @@ public struct PcaPhaseIdentificationProperties
 
 public class PcaScoresGridProducer: IScoresProvider {
 
-    ComponentsResults compResults;
-    PcaPhaseIdentificationProperties properties;
-    int nComponents;
+    readonly ComponentsResults compResults;
+    readonly PcaPhaseIdentificationProperties properties;
+    readonly int nComponents;
 
     public PcaScoresGridProducer(ComponentsResults results, PcaPhaseIdentificationProperties props)
     {
@@ -66,7 +66,7 @@ public class PcaScoresGridProducer: IScoresProvider {
         int z = compResults.Grid3DData.NumVoxels[2];
 
         ThreeDGridDimensions gridDimensions = new ThreeDGridDimensions(x, y, z);
-        return new PcaScoresGrid(this, compResults.VoxelIndices.Count(), nComponents, gridDimensions);
+        return new PcaScoresGrid(this, compResults.VoxelIndices.Length, nComponents, gridDimensions);
     }
 }
 

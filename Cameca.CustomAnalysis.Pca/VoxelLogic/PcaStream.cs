@@ -10,15 +10,15 @@ using System.IO;
 
 public class PcaStream  
 {
-    StreamWriter outputFile;
-    DateTime creationTime;
+    readonly StreamWriter outputFile;
+    readonly DateTime creationTime;
 
     public void DumpVoxelSetStats(string prefix, Dictionary<string, HashSet<VoxelID>> voxelSets)
     {
         outputFile.WriteLine(prefix);
         foreach(KeyValuePair<string, HashSet<VoxelID>> kvp in voxelSets)
         {
-            outputFile.WriteLine(kvp.Key + ": " + kvp.Value.Count());
+            outputFile.WriteLine(kvp.Key + ": " + kvp.Value.Count);
         }
         outputFile.WriteLine("!");
     }

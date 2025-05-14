@@ -17,12 +17,12 @@ public struct PixelSuggestion : IComparable<PixelSuggestion>
         this.peakId = peak;
     }
 
-    public int CompareTo(PixelSuggestion other)
+    public readonly int CompareTo(PixelSuggestion other)
     {
         return other.score < score ? -1 : other.score > score ? 1 : 0;
     }
 
-    public string DebugStr()
+    public readonly string DebugStr()
     {
         return "PixelID: " + pixelId.DebugStr() + ", score: " + score + ", peak: " + peakId.DebugStr();
 
@@ -82,16 +82,16 @@ public struct PixelSuggestion : IComparable<PixelSuggestion>
 public class TwoDPeak
 {
     public PeakID peakId;
-    PixelID peakMaxPixelId; // this is also the id for this object in container's dictionary
-    List<PixelID> borderPixelIds;
-    List<PixelID> inPeakPixelIds;
-    List<PixelSuggestion> nextCandidates;
-    List<PixelSuggestion> topCandidates; // this list is recycled as the return vehicle for getting next suggestions
-    DensityPlane referenceGrid;
+    readonly PixelID peakMaxPixelId; // this is also the id for this object in container's dictionary
+    readonly List<PixelID> borderPixelIds;
+    readonly List<PixelID> inPeakPixelIds;
+    readonly List<PixelSuggestion> nextCandidates;
+    readonly List<PixelSuggestion> topCandidates; // this list is recycled as the return vehicle for getting next suggestions
+    readonly DensityPlane referenceGrid;
     List<PixelID> foundIncreaseIds; // list of pixelIds at edge which increase relative to neighbor
-    TwoDGridPartitionFinder partitionFinder; // will supply available neighbors
-    float peakValue;
-    float summitAllowance;  // the value above which to ignore 'second peak'
+    readonly TwoDGridPartitionFinder partitionFinder; // will supply available neighbors
+    readonly float peakValue;
+    readonly float summitAllowance;  // the value above which to ignore 'second peak'
 
     public TwoDPeak(TwoDGridPartitionFinder partitionFinder, DensityPlane grid, PixelID peakMaxPixelId)
     {
@@ -106,7 +106,7 @@ public class TwoDPeak
         this.foundIncreaseIds = new List<PixelID>();
         this.summitAllowance = partitionFinder.PeakSummitAllowance(); // hard code this value
 
-        this.peakValue = grid.valueAtPixel(peakMaxPixelId);
+        this.peakValue = grid.ValueAtPixel(peakMaxPixelId);
         PixelSuggestion firstSuggestion = new PixelSuggestion(peakId, peakMaxPixelId, this.peakValue);
 
         nextCandidates.Add(firstSuggestion);
@@ -123,7 +123,7 @@ public class TwoDPeak
     }
     // if suggestion accepted, remove from list and 
     // add adjacent pixels to list
-    public void removeFromCandidates(PixelSuggestion suggestion)
+    public void RemoveFromCandidates(PixelSuggestion suggestion)
     {
         nextCandidates.Remove(suggestion);
     }
@@ -131,18 +131,18 @@ public class TwoDPeak
     // add adjacent pixels to list
     public void SuggestionAccepted(PixelSuggestion suggestion)
     {
-        removeFromCandidates(suggestion);
+        RemoveFromCandidates(suggestion);
         bool isBorder = false;
         
         List<PixelID> newPossibilities = referenceGrid.PixelIdsNeighboring(suggestion.pixelId);
-        List<PixelID> availableIds = partitionFinder.filterForAvailableIds(newPossibilities);
+        List<PixelID> availableIds = partitionFinder.FilterForAvailableIds(newPossibilities);
         foreach(PixelID availableId in availableIds)
         {
             // this might already be in our list of candidates -- if it is, skip
 
             if (!IsCandidate(availableId))
             {
-                float neighborScore = referenceGrid.valueAtPixel(availableId);
+                float neighborScore = referenceGrid.ValueAtPixel(availableId);
 
                 // for now, hard code 
                 if ((neighborScore > suggestion.score) && (suggestion.score < this.peakValue * this.summitAllowance))
@@ -199,7 +199,7 @@ public class TwoDPeak
     // if suggestion rejected, remove from list
     public void SuggestionRejected(PixelSuggestion suggestion)
     {
-        removeFromCandidates(suggestion);
+        RemoveFromCandidates(suggestion);
     }
 
     public List<PixelSuggestion> NextSuggestions()

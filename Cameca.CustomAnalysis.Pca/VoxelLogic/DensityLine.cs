@@ -10,17 +10,18 @@ using System.Runtime.Intrinsics.Arm;
 using System.Windows.Controls;
 using System.Text.RegularExpressions;
 using System.Security.Cryptography.X509Certificates;
+using System.Collections.ObjectModel;
 
-public struct BinID : IComparable<BinID>
+public readonly struct BinID : IComparable<BinID>
 {
-    public int binId;
+    public readonly int binId;
 
     public BinID(int binId)
     {
         this.binId = binId;
     }
 
-    public int xCoord()
+    public int XCoord()
     {
         return (binId);
     }
@@ -45,9 +46,9 @@ public struct BinID : IComparable<BinID>
 }
 
 
-public struct RangeID
+public readonly struct RangeID
 {
-    BinID rangeBin;
+    readonly BinID rangeBin;
     public RangeID(BinID binId)
     {
         rangeBin = binId;
@@ -82,12 +83,12 @@ public struct RangeID
 
 public class DensityLine
 {
-    float halfBinsize;
+    readonly float halfBinsize;
     public float binsize;
-    float oneOverBinsize;
+    readonly float oneOverBinsize;
     int oobPoints;
-    float maxval;
-    Dictionary<BinID, float> data;
+    readonly float maxval;
+    readonly Dictionary<BinID, float> data;
     
     public DensityLine(float binSize)
     {
@@ -105,9 +106,9 @@ public class DensityLine
     {
         BinID lowerBin = binId.NextLowerBin();
         BinID higherBin = binId.NextHigherBin();
-        float lowerBinValue = valueAtBin(lowerBin);
-        float higherBinValue = valueAtBin(higherBin);
-        float binVal = valueAtBin(binId);
+        float lowerBinValue = ValueAtBin(lowerBin);
+        float higherBinValue = ValueAtBin(higherBin);
+        float binVal = ValueAtBin(binId);
         if ((binVal < higherBinValue) || (binVal < lowerBinValue))
         {
             if (lowerBinValue > higherBinValue)
@@ -117,7 +118,7 @@ public class DensityLine
                     binId = lowerBin;
                     lowerBin = binId.NextLowerBin();
                     binVal = lowerBinValue;
-                    lowerBinValue = valueAtBin(lowerBin);
+                    lowerBinValue = ValueAtBin(lowerBin);
                 }
             }
             else
@@ -127,7 +128,7 @@ public class DensityLine
                     binId = higherBin;
                     higherBin = binId.NextHigherBin();
                     binVal = higherBinValue;
-                    higherBinValue = valueAtBin(higherBin);
+                    higherBinValue = ValueAtBin(higherBin);
                 }
             }
         }
@@ -153,7 +154,7 @@ public class DensityLine
             int miny = minx;
             void convolutionFunction(BinID binId, float value)
             {
-                int p = binId.xCoord();
+                int p = binId.XCoord();
                 for (int x = minx; x <= maxx; x+=1)
                 {
                     int xCoefficientIndex = (int)Math.Abs(x);
@@ -171,7 +172,7 @@ public class DensityLine
 
     public void AddValueAtBin(BinID binId, float value)
     {
-        data[binId] = valueAtBin(binId) + value;
+        data[binId] = ValueAtBin(binId) + value;
     }
 
     public List<BinID> GridPointIds()
@@ -197,17 +198,17 @@ public class DensityLine
         int? binx = BinIndexFor(x);
         return binx == null ? null : new BinID(binx.Value);
     }
-    public float xValueFor(BinID binId)
+    public float XValueFor(BinID binId)
     {
-        return binsize * binId.xCoord();
+        return binsize * binId.XCoord();
     }
 
     // check for the 8 neighboring pixels and add them if they have a non-zero value
-    public List<BinID> NeighboringNonZeroBins(BinID binId)
+    public static List<BinID> NeighboringNonZeroBins(BinID binId)
     {
         //int x;
         //int y;
-        int x = binId.xCoord();
+        int x = binId.XCoord();
         List<BinID> neighbors = new List<BinID>();
         if (x > int.MinValue)
         {
@@ -226,7 +227,7 @@ public class DensityLine
 
         foreach (BinID candidate in candidates)
         {
-            float nthScore = valueAtBin(candidate);
+            float nthScore = ValueAtBin(candidate);
             if (nthScore > maxScore)
             {
                 maxScore = nthScore;
@@ -242,10 +243,10 @@ public class DensityLine
             return null;
         }
         BinID bestCandidate = candidates[0];
-        float currMax = valueAtBin(bestCandidate);
+        float currMax = ValueAtBin(bestCandidate);
         foreach (BinID candidate in candidates)
         {
-            float nthPopulation = valueAtBin(candidate);
+            float nthPopulation = ValueAtBin(candidate);
             if (nthPopulation > currMax)
             {
                 currMax = nthPopulation;
@@ -276,13 +277,13 @@ public class DensityLine
         (min, max) = MinMaxBinIDs();
 
         string line = string.Empty;
-        int xSize = 1 + max.xCoord() - min.xCoord();
+        int xSize = 1 + max.XCoord() - min.XCoord();
 		stream.WriteLine("x size= " + xSize);
 
 		stream.Write("{ " );
-        int maxx = max.xCoord();
+        int maxx = max.XCoord();
 		// now csv data for the grid from min to max
-        for (int x = min.xCoord(); x <= maxx; ++x)
+        for (int x = min.XCoord(); x <= maxx; ++x)
         {
             BinID xthBinId= new BinID(x);
 
@@ -291,14 +292,14 @@ public class DensityLine
             {
                 xthValue = data[xthBinId];
             }
-            line = line + xthValue;
+            line += xthValue;
             if (x != maxx)
             {
-                line = line + ",";
+                line += ",";
             }
 
         }
-        line = line + "}";
+        line += "}";
         stream.Write(line);
     }
     
@@ -312,7 +313,7 @@ public class DensityLine
         binIds.Sort();
         foreach (BinID binId in binIds)
         {
-            int x = binId.xCoord();
+            int x = binId.XCoord();
             if (!first)
             {
                 minx = Math.Min(x, minx);
@@ -329,7 +330,7 @@ public class DensityLine
         }
     }
     
-    public void writeToFile(string outputFilename)
+    public void WriteToFile(string outputFilename)
     {   
         string docPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         using (StreamWriter outputFile = new StreamWriter(outputFilename))
@@ -338,7 +339,7 @@ public class DensityLine
         }
     }
 
-    public float valueAtBin(BinID binId)
+    public float ValueAtBin(BinID binId)
     {
         float binValue;
         if (data.TryGetValue(binId, out binValue))

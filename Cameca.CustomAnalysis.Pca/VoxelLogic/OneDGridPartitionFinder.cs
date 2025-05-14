@@ -6,16 +6,17 @@ using PcaExtensionMethods;
 using Cameca.CustomAnalysis.Pca;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Collections.ObjectModel;
 
 
 public class OneDGridPartitionFinder
 {
-    DensityLine line;
+    readonly DensityLine line;
     List<BinID> unplacedBinIds;
-    List<BinID> rejectedBinIds;
-    List<BinID> foundIncreaseBinIds;
+    readonly List<BinID> rejectedBinIds;
+    readonly List<BinID> foundIncreaseBinIds;
     List<BinID> longTailBinList;
-    Dictionary<RangeID, OneDPeak> peaks;
+    readonly Dictionary<RangeID, OneDPeak> peaks;
     PcaPhaseIdentificationProperties properties;
 
     public OneDGridPartitionFinder(DensityLine densityLine, PcaPhaseIdentificationProperties props)
@@ -79,9 +80,9 @@ public class OneDGridPartitionFinder
 
         if (maybeMaximumBinId != null)
         {
-            float firstMaximum = line.valueAtBin(maybeMaximumBinId.Value);
+            float firstMaximum = line.ValueAtBin(maybeMaximumBinId.Value);
             float noiseLevel = firstMaximum * 0.05f;
-            while ((maybeMaximumBinId != null) && (line.valueAtBin(maybeMaximumBinId.Value) > noiseLevel))
+            while ((maybeMaximumBinId != null) && (line.ValueAtBin(maybeMaximumBinId.Value) > noiseLevel))
             {
                 BinID binId = maybeMaximumBinId.Value;
                 OneDPeak peak = new OneDPeak(this, line, binId);
@@ -106,12 +107,12 @@ public class OneDGridPartitionFinder
             if (borderBinIds.Count == 2)
             {
                 List<BinID> binList = new List<BinID>();
-                float border1 = line.xValueFor(borderBinIds[0]); 
-                float border2 = line.xValueFor(borderBinIds[1]);
+                float border1 = line.XValueFor(borderBinIds[0]); 
+                float border2 = line.XValueFor(borderBinIds[1]);
                 float upperBar = MathF.Max(border1 + 0.5f, border2 + 0.5f);
                 unplacedBinIds.ForEach(bin =>
                 {
-                    float xVal = line.xValueFor(bin);
+                    float xVal = line.XValueFor(bin);
                     if (xVal > upperBar)
                     {
                         binList.Add(bin);
@@ -125,7 +126,7 @@ public class OneDGridPartitionFinder
         return partitions;
     }
 
-    public List<BinID> filterForAvailableIds(List<BinID> binIds)
+    public List<BinID> FilterForAvailableIds(List<BinID> binIds)
     {
         // return a list containing all the items in the
         // input list which are in the unplacedBinIds list

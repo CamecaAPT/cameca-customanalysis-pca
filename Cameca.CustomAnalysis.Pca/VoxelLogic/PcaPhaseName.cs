@@ -28,13 +28,13 @@ public struct PcaPhaseName: IComparable<PcaPhaseName>
     }
 
     // user displayable name removes "." and replaces "," with " "
-    public string UserDisplayableName()
+    public readonly string UserDisplayableName()
     {
         string shorter = pcaPhase.Replace(".", "");
         return shorter.Replace(',', ' ');
     }
     
-    public List<string> PhaseComponents()
+    public readonly List<string> PhaseComponents()
     {
         return pcaPhase.Split(",").ToList();
     }
@@ -52,25 +52,25 @@ public struct PcaPhaseName: IComparable<PcaPhaseName>
         return this;
     }
 
-    public bool Contains(string s)
+    public readonly bool Contains(string s)
     {
         return pcaPhase.Contains(s);
     }
 
-    public string[] Split(string s)
+    public readonly string[] Split(string s)
     {
         return pcaPhase.Split(s);
     }
 
-    public int CompareTo(PcaPhaseName other)
+    public readonly int CompareTo(PcaPhaseName other)
     {
         return this.pcaPhase.CompareTo(other.pcaPhase);
     }
 }
 
-public struct PcaPhaseNameList : IComparable<PcaPhaseNameList>
+public readonly struct PcaPhaseNameList : IComparable<PcaPhaseNameList>
 {
-    List<PcaPhaseName> phaseNames;
+    readonly List<PcaPhaseName> phaseNames;
     public PcaPhaseNameList(List<PcaPhaseName> names)
     {
         List<PcaPhaseName> sortedNamesList = new List<PcaPhaseName>(names);
@@ -87,7 +87,7 @@ public struct PcaPhaseNameList : IComparable<PcaPhaseNameList>
             displayableName = phaseNames[0].UserDisplayableName();
         }
 
-        int numCodes = phaseNames.Count();
+        int numCodes = phaseNames.Count;
         for (int i = 1; i < numCodes; ++i)
         {
             displayableName += "," + phaseNames[i].UserDisplayableName();
