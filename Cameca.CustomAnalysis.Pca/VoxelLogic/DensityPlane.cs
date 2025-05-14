@@ -4,6 +4,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Cameca.CustomAnalysis.Pca;
 
 
 public struct PixelID : IComparable<PixelID>
@@ -460,6 +461,34 @@ public class DensityPlane
         addValueAtCoords(xBinIndex - 1, yBinIndex + 1, xm1 * yp1);
         addValueAtCoords(xBinIndex, yBinIndex + 1, x0 * yp1);
         addValueAtCoords(xBinIndex + 1, yBinIndex + 1, xp1 * yp1);
+    }
+
+    // IdentifyTwoDPartitions use the density map from the twoDGrid to separate 
+    // voxels that belong to different peaks in the DensityPlane
+    // first, identify the peaks and their associated pixels
+    // then, for each voxel, see if it lands in on of the partitioned pixels.
+    // If it does, add it to the appropriate list
+    // return the list of lists
+    // indices not identified are not returned in any list
+    public List<List<PixelID>> IdentifyTwoDPartitions(PcaPhaseIdentificationProperties props)
+    {
+        // to identify the first maximum, just find the pixel with the highest value
+        // then, accumulate neighboring pixels, avoiding neighbors with higher values
+        // accumulate neighbors in order of their density value.
+        // stop accumulating when a slope increase is found:
+        //   this indicates there must be another maximum to look for
+        // also, stop at 10% of peak max
+        // to look for another maximum, find the remaining pixel with the maximum value.
+        // continue accumulating pixels into all peaks
+
+        // partitionFinder operates on the grid, identifying pixels
+        // associated with the different maxima
+        TwoDGridPartitionFinder partitionFinder = new TwoDGridPartitionFinder(this, props);
+
+        partitionFinder.FindPartitions(props.noiseFloorFraction);
+        var pixelLists = partitionFinder.GetPixelLists();
+        partitionFinder.Clear();
+        return pixelLists;
     }
 }
 

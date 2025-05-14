@@ -24,7 +24,7 @@ namespace Cameca.CustomAnalysis.Pca;
 public partial class ProjectionGridsView : UserControl
 {
     string currentGridId = "";
-    HashSet<string> gridsToExcludeFromPCAPhaseID = new HashSet<string>();
+    HashSet<string> gridsToIncludeForPCAPhaseID = new HashSet<string>();
     int whichGrid = 0;
     public ProjectionGridsView()
     {

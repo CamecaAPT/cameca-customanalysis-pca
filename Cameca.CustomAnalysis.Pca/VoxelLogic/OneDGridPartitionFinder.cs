@@ -14,6 +14,7 @@ public class OneDGridPartitionFinder
     List<BinID> unplacedBinIds;
     List<BinID> rejectedBinIds;
     List<BinID> foundIncreaseBinIds;
+    List<BinID> longTailBinList;
     Dictionary<RangeID, OneDPeak> peaks;
     PcaPhaseIdentificationProperties properties;
 
@@ -23,6 +24,7 @@ public class OneDGridPartitionFinder
         this.peaks = new Dictionary<RangeID, OneDPeak> ();
         this.rejectedBinIds = new List<BinID>();
         this.foundIncreaseBinIds = new List<BinID>();
+        this.longTailBinList = new List<BinID>();
         this.unplacedBinIds = densityLine.GridPointIds();
         this.properties = props;
     }
@@ -44,6 +46,10 @@ public class OneDGridPartitionFinder
             OneDPeak nthPeak = peaks[peakKey];
             List<BinID> peakBinList = nthPeak.BinList();
             binLists.Add(peakBinList);
+        }
+        if (longTailBinList.Count > 0)
+        {
+            binLists.Add(longTailBinList);
         }
         return binLists;
     }
@@ -79,10 +85,13 @@ public class OneDGridPartitionFinder
             {
                 BinID binId = maybeMaximumBinId.Value;
                 OneDPeak peak = new OneDPeak(this, line, binId);
-                peak.IdentifyBins(noiseLevel);
+                peak.IdentifyBins(noiseLevel, unplacedBinIds);
                 List<BinID> binList = peak.BinList();
                 partitions.Add(binList);
                 binList.ForEach(bin => { unplacedBinIds.Remove(bin); });
+                // also remove borderBins
+                peak.BorderBins().ForEach(bin => { unplacedBinIds.Remove(bin); });
+
                 peaks[peak.rangeId] = peak;
                 maybeMaximumBinId = line.FindMaximum(unplacedBinIds);
             }
@@ -108,6 +117,7 @@ public class OneDGridPartitionFinder
                         binList.Add(bin);
                     }
                 });
+                longTailBinList = binList;
                 partitions.Add(binList);
             }
         }

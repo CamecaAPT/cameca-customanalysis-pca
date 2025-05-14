@@ -116,7 +116,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
     public Func<double, string> AxisYLabelFormatter { get; } = (double value) => value.ToString("F3");
 
-    internal HashSet<string> gridsToExcludeFromPCA = new HashSet<string>();
+    internal HashSet<string> gridsToUseForPCA = new HashSet<string>();
     internal HashSet<string> histogramsToUseForPCA = new HashSet<string>();
     public PrincipalComponentAnalysis(
         IStandardAnalysisFilterNodeBaseServices services,
@@ -133,18 +133,18 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
     public bool UsesGridForPca(string gridID)
     {
-        return !gridsToExcludeFromPCA.Contains(gridID);
+        return gridsToUseForPCA.Contains(gridID);
     }
 
     public void UseGridForPca(string gridID, bool useIt)
     {
         if (useIt)
         {
-            gridsToExcludeFromPCA.Remove(gridID);
+            gridsToUseForPCA.Add(gridID);
         }
         else
         {
-            gridsToExcludeFromPCA.Add(gridID);
+            gridsToUseForPCA.Remove(gridID);
         }
         InvalidatePcaPhases();
     }
@@ -448,7 +448,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         if ((scoresGrid != null) && (oneDGridsResults != null) && (twoDGridsResults != null))
         {
             var pcaPhaseIdProperties = new PcaPhaseIdentificationProperties(Properties.GridProjectionBinSize, Properties.GridProjectionDelocalization, Properties.NoiseFloorFraction, Properties.PeakSummitAllowance, Properties.NumberOfComponents);
-            PcaPhaseIDResults = scoresGrid.GetPhasesStrategyF(pcaPhaseIdProperties, gridsToExcludeFromPCA, histogramsToUseForPCA);
+            PcaPhaseIDResults = scoresGrid.GetPhasesStrategyF(pcaPhaseIdProperties, gridsToUseForPCA, histogramsToUseForPCA);
         }
     }
 

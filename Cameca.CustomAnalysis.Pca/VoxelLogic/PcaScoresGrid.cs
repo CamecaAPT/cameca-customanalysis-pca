@@ -19,6 +19,7 @@ using System.Reflection;
 using System.Windows;
 using System.Reflection.Metadata.Ecma335;
 using System.Windows.Documents;
+using System.Windows.Shapes;
 
 
 // PcaScoresGrid represents a three dimensional grid containing the PCA scores for a collection of voxels
@@ -296,7 +297,7 @@ public class PcaScoresGrid
     // The reason we use a . to separate the letter from the number in PCA codes is to 
     // make it easy to identify a zero -- i.e. the algorithm here also
     // works if there are 10 peaks, because "A.10" doesn't contain ".0"
-    internal HashSet<PcaPhaseName> filterForMatchableCode(List<PcaPhaseName> nonZeroPcaCodes, PcaPhaseName pcaCode)
+    internal HashSet<PcaPhaseName> filterForMatchableCode(List<PcaPhaseName> pcaCodesToMatch, PcaPhaseName pcaCode)
     {
         // if pcaCode contains zero 0s or more than one 0, return empty List
         HashSet<PcaPhaseName> matches = new HashSet<PcaPhaseName>();
@@ -306,7 +307,7 @@ public class PcaScoresGrid
         int numTokens = tokens.Count();
         if (numTokens > 1)
         {
-            foreach (PcaPhaseName candidate in nonZeroPcaCodes)
+            foreach (PcaPhaseName candidate in pcaCodesToMatch)
             {
                 bool matchesAll = true;
                 int lastTokenIndex = numTokens - 1;
@@ -468,7 +469,7 @@ public class PcaScoresGrid
                 twoDGrids[gridId] = twoDGrid;
 
                 // this identifies the peaks --  step B) above
-                List<List<PixelID>> partitionedIndices = IdentifyTwoDPartitions(twoDGrid, i, j, properties);
+                List<List<PixelID>> partitionedIndices = twoDGrid.IdentifyTwoDPartitions(properties);
                 twoDPartitions[gridId] = partitionedIndices;
 
                 var projection = new TwoDPeakProjection(twoDGrid);
@@ -503,7 +504,7 @@ public class PcaScoresGrid
     // D) add voxels that abut any of the contiguous regions to those regions iff
     //    the code they have matches all code snippet for which they have a non-zero number
     //    i.e. A0B1C1  is a match for contiguous regions A1B1C1 and A2B1C1
-    public PhaseIdResults GetPhasesStrategyF(PcaPhaseIdentificationProperties properties, HashSet<string> twoDridsToExclude, HashSet<string> oneDGridsToInclude)
+    public PhaseIdResults GetPhasesStrategyF(PcaPhaseIdentificationProperties properties, HashSet<string> twoDGridsToInclude, HashSet<string> oneDGridsToInclude)
     {
         List<VoxelID> voxelIds = pcaVoxels.Keys.ToList();
         int numDimsToInclude = Math.Min(properties.numDimsForPCAPhaseId, this.scoreDims);
@@ -526,7 +527,7 @@ public class PcaScoresGrid
             // the PCA code dictionary
 
             TwoDGridID gridID = kvp.Key;
-            if (!twoDridsToExclude.Contains(gridID.ToString()))
+            if (twoDGridsToInclude.Contains(gridID.ToString()))
             {
                 DensityPlane twoDGrid = twoDGrids[gridID];
                 List<List<PixelID>> partitionedIndices = kvp.Value;
@@ -634,7 +635,6 @@ public class PcaScoresGrid
         // At this stage we want to identify which voxels are part of contiguous regions of phases
         // At first, assume that all PCA codes that have no zero value in them identify a particular phase
         // So, generate a list of voxels for each of these phases 
-
         List<PcaPhaseName> nonZeroPcaCodes = unassignedVoxelBuckets.Keys.Where(code => !code.Contains(".0")).ToList();
         Dictionary<PcaPhaseName, HashSet<VoxelID>> pcaCodeVoxelSets = new Dictionary<PcaPhaseName, HashSet<VoxelID>>();
         Dictionary<PcaPhaseNameList, HashSet<VoxelID>> interfaceVoxelSets = new Dictionary<PcaPhaseNameList, HashSet<VoxelID>>();
@@ -642,14 +642,54 @@ public class PcaScoresGrid
         // pcaCodes is a Dictionary<VoxelID, string>
         foreach (PcaPhaseName pcaCode in nonZeroPcaCodes)
         {
-            // just copy over the voxel List to be the base list for  that phase
+            // just copy over the voxel List to be the base list for that phase
             pcaCodeVoxelSets[pcaCode] = unassignedVoxelBuckets[pcaCode];
             unassignedVoxelBuckets.Remove(pcaCode);
         }
 
+        // Now, it is very possible that there are some identified partitions 
+        // that are not represented in the complete set of nonZeroPcaCodes
+        // that is, there is a partition identified in one of the grids that 
+        // is not part of any of the nonZeroPcaCodes.  If this is the case,
+        // we need to allow for a phase to be defined with at least one zero in it.
+        // So, get the remaining PCA codes for the voxels.
+        // identify any parts of them not in the other sets
+        List<PcaPhaseName> otherPcaCodes = unassignedVoxelBuckets.Keys.ToList();
+        HashSet<string> codeComponents = new HashSet<string>();
+        otherPcaCodes.ForEach(pcaCode =>
+        {
+            pcaCode.PhaseComponents().ForEach(component =>
+            {
+                if (!component.Contains('0'))
+                {
+                    codeComponents.Add(component);
+                }
+            });
+        });
+        // remove components represented in nonZeroPcaCodes:
+        nonZeroPcaCodes.ForEach(pcaCode =>
+        {
+            pcaCode.PhaseComponents().ForEach(component =>
+            {
+                codeComponents.Remove(component);
+            });
+        });
+        foreach(string component in codeComponents) 
+        {
+            otherPcaCodes.ForEach(code =>
+            {
+                // need to check if unassignedVoxelBuckets contains the code
+                // because we might hit the same code twice
+                if (code.Contains(component) && unassignedVoxelBuckets.ContainsKey(code))
+                {
+                    pcaCodeVoxelSets[code] = unassignedVoxelBuckets[code];
+                    unassignedVoxelBuckets.Remove(code);
+                }
+            });
+        }
         // now pcaCodeVoxelSets is filled with data for each pcaCode,
         // These are our 'core' regions
-        // now lets go through the voxels with PcaCodes that contain a single 0
+        // now lets go through the voxels with PcaCodes that contain a 0
         // and see if they might be adjacent to voxels in any of the core regions  
         // where that 0 is non-zero
         // three possibilities:
@@ -661,6 +701,7 @@ public class PcaScoresGrid
         // for case 2) add the voxels to the core regions
         // for case 3) designate the voxel as an interface voxel
 
+        List<PcaPhaseName> assignedPhaseNames = pcaCodeVoxelSets.Keys.ToList();
         int voxelAssignmentCount = 1;
         while (voxelAssignmentCount > 0)
         {
@@ -669,18 +710,18 @@ public class PcaScoresGrid
             Dictionary<PcaPhaseNameList, HashSet<VoxelID>> interfaceVoxelSetAdditions = new Dictionary<PcaPhaseNameList, HashSet<VoxelID>>();
 
             // this loop initializes the lists of voxels to add for each PCA code
-            int numNonZeroPcaCodes = nonZeroPcaCodes.Count();
-            for (int nOuter = 0; nOuter < numNonZeroPcaCodes; ++nOuter)
+            int numAssignedPhaseNames = assignedPhaseNames.Count();
+            for (int nOuter = 0; nOuter < numAssignedPhaseNames; ++nOuter)
             {
-                PcaPhaseName nonZeroPcaCode = nonZeroPcaCodes[nOuter];
+                PcaPhaseName nonZeroPcaCode = assignedPhaseNames[nOuter];
                 voxelSetAdditions[nonZeroPcaCode] = new HashSet<VoxelID>();
             }
 
             List<PcaPhaseName> unassignedPhaseNames = unassignedVoxelBuckets.Keys.ToList();
             foreach (PcaPhaseName phaseName in unassignedPhaseNames)
             {
-                HashSet<PcaPhaseName> matchableCodes = filterForMatchableCode(nonZeroPcaCodes, phaseName);
-                // matchableCodes are the nonZeroPcaCodes that are "one away" from the pcaCode under consideration
+                HashSet<PcaPhaseName> matchableCodes = filterForMatchableCode(assignedPhaseNames, phaseName);
+                // matchableCodes are the phaseNames that are "one away" from the pcaCode under consideration
 
                 HashSet<VoxelID> potentialAdditions = unassignedVoxelBuckets[phaseName];
                 HashSet<VoxelID> subtractions = new HashSet<VoxelID>();
@@ -841,45 +882,15 @@ public class PcaScoresGrid
     }
 
 
-    // IdentifyTwoDPartitions use the density map from the twoDGrid to separate 
-    // voxels that belong to different peaks in the DensityPlane
-    // first, identify the peaks and their associated pixels
-    // then, for each voxel, see if it lands in on of the partitioned pixels.
-    // If it does, add it to the appropriate list
-    // return the list of lists
-    // indices not identified are not returned in any list
-    public List<List<PixelID>> IdentifyTwoDPartitions(DensityPlane twoDGrid, int dimX, int dimy, PcaPhaseIdentificationProperties props)
+    private static double GaussianOfXWithInverseG(float x, float inverseg)
     {
-        // to identify the first maximum, just find the pixel with the highest value
-        // then, accumulate neighboring pixels, avoiding neighbors with higher values
-        // accumulate neighbors in order of their density value.
-        // stop accumulating when a slope increase is found:
-        //   this indicates there must be another maximum to look for
-        // also, stop at 10% of peak max
-        // to look for another maximum, find the remaining pixel with the maximum value.
-        // continue accumulating pixels into all peaks
-
-        // partitionFinder operates on the grid, identifying pixels
-        // associated with the different maxima
-        TwoDGridPartitionFinder partitionFinder = new TwoDGridPartitionFinder(twoDGrid, props);
-
-        partitionFinder.FindPartitions(props.noiseFloorFraction);
-        var pixelLists = partitionFinder.GetPixelLists();
-        partitionFinder.Clear();
-        return pixelLists;
+        return (inverseg * Math.Exp(-Math.PI * x * x * inverseg * inverseg));
     }
-    private double gaussianOfXWithInverseG(float x, float inverseg)
-    {
-        double dx = (double)x;
-        double dig = (double)inverseg;
-        return (dig * Math.Exp(-Math.PI * x * x * dig * dig));
-    }
-
 
     // The coefficients for positive values (i.e. all but the first one at index zero)
     // are also used for the negative values, and the area under the curve should be equal to one.
     // so, add up all the values and adjust them all so that the total is one.
-    private List<float> normalizeCoefficients(List<double> coeffs)
+    private static List<float> NormalizeCoefficients(List<double> coeffs)
     {
         int limit = coeffs.Count - 1;
         List<float> normalized = new List<float>();
@@ -903,7 +914,7 @@ public class PcaScoresGrid
     // In the case of a small extra delocalization, a gaussian doesn't capture
     // enough delocalization, because there are not enough buckets in the main part of the curve
     // In this case, boost the coefficients at -1 and 1 to produce the expected delocalization
-    List<float> adjustCoefficientsForDeloc(List<float> coefficients, float targetDelocalization, float binsize)
+    static List<float> AdjustCoefficientsForDeloc(List<float> coefficients, float targetDelocalization, float binsize)
     {
         int maxIndex = coefficients.Count - 1;
         if (maxIndex > 0)
@@ -954,7 +965,7 @@ public class PcaScoresGrid
             if (coefficients[0] < 0.0f)
             {
                 // something has gone very wrong
-                throw new Exception("adjustCoefficientsForDeloc value out of bounds");
+                throw new Exception("AdjustCoefficientsForDeloc value out of bounds");
             }
         }
         return coefficients;
@@ -986,7 +997,7 @@ public class PcaScoresGrid
         return densityPlane;
     }
 
-    internal List<float> CoefficientsForExtraDelocalization(float delocalizationDistance, float binsize)
+    internal static List<float> CoefficientsForExtraDelocalization(float delocalizationDistance, float binsize)
     {
         float delocRequested = delocalizationDistance * delocalizationDistance;
         float delocRemaining = delocRequested - (binsize * binsize * 0.25f);
@@ -1000,17 +1011,17 @@ public class PcaScoresGrid
             // for gridpoint h, calculate the strength of the 1D gaussian at that 
             // distance. The gridpoint h is at a distance h * binsize from zero 
             // so, pass in h as x, and binsizeOverGaussianSmoothParam as inverseG
-            smoothCoefficients.Add(gaussianOfXWithInverseG(h, binsizeOverGaussianSmoothParam));
+            smoothCoefficients.Add(GaussianOfXWithInverseG(h, binsizeOverGaussianSmoothParam));
         }
 
         // The sum of the coefficients should add up to one,
         // counting the non-zero values twice
-        List<float> normalizedCoefficients = normalizeCoefficients(smoothCoefficients); 
+        List<float> normalizedCoefficients = NormalizeCoefficients(smoothCoefficients); 
              
         // In the case of a small extra delocalization, a gaussian doesn't capture
         // enough delocalization, because there are not enough buckets in the main part of the curve
         // In this case, boost the coefficients at -1 and 1 to produce the expected delocalization
-        List<float> adjustedCoefficients = adjustCoefficientsForDeloc(normalizedCoefficients, delocRemaining, binsize);
+        List<float> adjustedCoefficients = AdjustCoefficientsForDeloc(normalizedCoefficients, delocRemaining, binsize);
         return adjustedCoefficients;
     }
 
