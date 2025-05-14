@@ -1,17 +1,4 @@
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System;
-using Prism.Regions;
-using System.Runtime.CompilerServices;
-using System.Windows.Documents;
-using System.Security.Cryptography;
-using System.Windows.Input;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.IO;
-using System.Xml.Schema;
-using Cameca.CustomAnalysis.Interface;
-using System.Windows.Controls;
 
 public interface IStringConvertible : IComparable<IStringConvertible>
 {

@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 public class PopulationSorter<T, U> : IComparer<T>

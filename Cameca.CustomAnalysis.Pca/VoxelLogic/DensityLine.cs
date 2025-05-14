@@ -1,16 +1,9 @@
 
 using System;
 using System.IO;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.Intrinsics.Arm;
-using System.Windows.Controls;
-using System.Text.RegularExpressions;
-using System.Security.Cryptography.X509Certificates;
-using System.Collections.ObjectModel;
 
 namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 
