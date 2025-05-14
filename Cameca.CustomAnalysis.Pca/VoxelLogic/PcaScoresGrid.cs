@@ -618,7 +618,7 @@ public class PcaScoresGrid
 
         // PcaStream writes a file with text data about the progression of the algorithm
         // uncomment it here and uncomment the calls to DumpVoxelSetStats below
-        PcaStream pcaStream = new PcaStream("GetPhasesStrategyF");
+        // PcaStream pcaStream = new PcaStream("GetPhasesStrategyF");
         PhaseIdResults phaseIdResults = new PhaseIdResults(voxelIds);
 
         // now examine the groups of voxels to identify contiguous regions
@@ -773,7 +773,7 @@ public class PcaScoresGrid
             // calls to DumpVoxelSetStats are used to follow the progression of the algorithm is assigning voxels
             // these can be enabled if the pcaStream object is created above
 
-            pcaStream.WriteTimestamp("finished voxel partitioning" );
+            // pcaStream.WriteTimestamp("finished voxel partitioning" );
             // pcaStream.DumpVoxelSetStats("start pcaCodeVoxelSets", pcaCodeVoxelSets); 
             // pcaStream.DumpVoxelSetStats("start pcaCodeVoxelSets", pcaCodeVoxelSets);
             // pcaStream.DumpVoxelSetStats("startUnassigned", unassignedVoxelBuckets);
@@ -785,9 +785,9 @@ public class PcaScoresGrid
             voxelAssignmentCount = subtractVoxelsFromHashSetDictionary(unassignedSubtractions, unassignedVoxelBuckets);
 
             // pcaStream.DumpVoxelSetStats("assignments sources", unassignedSubtractions);
-            //  pcaStream.DumpVoxelSetStats("new pcaCodeVoxelSets", pcaCodeVoxelSets);
-            //  pcaStream.DumpVoxelSetStats("stillUnassigned", unassignedVoxelBuckets);
-            pcaStream.WriteTimestamp("assigned " + voxelAssignmentCount + " voxels");
+            // pcaStream.DumpVoxelSetStats("new pcaCodeVoxelSets", pcaCodeVoxelSets);
+            // pcaStream.DumpVoxelSetStats("stillUnassigned", unassignedVoxelBuckets);
+            // pcaStream.WriteTimestamp("assigned " + voxelAssignmentCount + " voxels");
         }
 
         // now, pcaCodeVoxelSets is ready to be used for define a per-voxel component mapping
@@ -845,7 +845,7 @@ public class PcaScoresGrid
             }
         }
 
-        pcaStream.Close();
+        // pcaStream.Close();
         return phaseIdResults;
     }
 
