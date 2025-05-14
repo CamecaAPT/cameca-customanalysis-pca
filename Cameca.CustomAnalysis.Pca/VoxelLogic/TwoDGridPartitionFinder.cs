@@ -3,7 +3,8 @@ using System.Diagnostics;
 using System.Linq;
 using System;
 using PcaExtensionMethods;
-using Cameca.CustomAnalysis.Pca;
+
+namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 
 public class TwoDGridPartitionFinder
 {
@@ -60,7 +61,7 @@ public class TwoDGridPartitionFinder
         ReturnCode returnCode = ReturnCode.noStatus;
         while (keepGoing)
         {
-            CandidateRanker candidateRanker = new CandidateRanker();
+            CandidateRanker candidateRanker = new();
 
             //step 1
             foreach (PeakID peakKey in peaks.Keys.ToList())
@@ -94,7 +95,7 @@ public class TwoDGridPartitionFinder
 
             // step 4
             // count all the instances of each ID
-            Dictionary<PixelID, int> pixelIdCounts = new Dictionary<PixelID, int>();
+            Dictionary<PixelID, int> pixelIdCounts = new();
             foreach (PixelSuggestion suggestion in bestCandidates)
             {
                 if (pixelIdCounts.ContainsKey(suggestion.pixelId))
@@ -109,7 +110,7 @@ public class TwoDGridPartitionFinder
             // if there are any elements of the pixelIdCounts dictionary with value more than 1,
             // that's a collision
 
-            List<PixelID> collisions = new List<PixelID>();
+            List<PixelID> collisions = new();
             List<PixelID> pixelIdCountsKeys = pixelIdCounts.Keys.ToList();
             foreach (PixelID pixelId in pixelIdCountsKeys)
             {
@@ -181,7 +182,7 @@ public class TwoDGridPartitionFinder
 
     public List<List<PixelID>> GetPixelLists()
     {
-        List<List<PixelID>> pixelLists = new List<List<PixelID>>();
+        List<List<PixelID>> pixelLists = new();
         foreach (PeakID peakKey in peaks.Keys.ToList())
         {
             TwoDPeak nthPeak = peaks[peakKey];
@@ -213,7 +214,7 @@ public class TwoDGridPartitionFinder
             if (!shouldContinueWithLowerSearchFloor && maybeMaximumPixelId.HasValue)
             {
                 PixelID maximumPixelId = maybeMaximumPixelId.Value;
-                TwoDPeak nextPeak = new TwoDPeak(this, grid, maximumPixelId);
+                TwoDPeak nextPeak = new(this, grid, maximumPixelId);
                 peaks[nextPeak.peakId] = nextPeak;
             }
 

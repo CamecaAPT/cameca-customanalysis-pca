@@ -2,8 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System;
 
-
-
+namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 
 public struct PcaPhaseName: IComparable<PcaPhaseName>
 {
@@ -73,7 +72,7 @@ public readonly struct PcaPhaseNameList : IComparable<PcaPhaseNameList>
     readonly List<PcaPhaseName> phaseNames;
     public PcaPhaseNameList(List<PcaPhaseName> names)
     {
-        List<PcaPhaseName> sortedNamesList = new List<PcaPhaseName>(names);
+        List<PcaPhaseName> sortedNamesList = new(names);
         sortedNamesList.Sort();
         this.phaseNames = sortedNamesList;
     }

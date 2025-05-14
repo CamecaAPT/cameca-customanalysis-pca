@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System;
 
+namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 public struct VoxelID : IComparable<VoxelID>
 {
 
@@ -26,7 +27,7 @@ public struct VoxelID : IComparable<VoxelID>
     }
     static public List<VoxelID> ListFromIntArray(int[] integerIds)
     {
-        List<VoxelID> newList = new List<VoxelID>();
+        List<VoxelID> newList = new();
         foreach(int n in integerIds)
         {
             newList.Add(new VoxelID(n));
@@ -71,7 +72,7 @@ public struct VoxelID : IComparable<VoxelID>
     public readonly List<VoxelID> NeighborVoxels(ThreeDGridDimensions dims)
     {
         (int x, int y, int z) = this.XYZCoordsFor(dims);
-        List<VoxelID> neighbors = new List<VoxelID>();
+        List<VoxelID> neighbors = new();
         AddIfPossible(x - 1, y, z, dims, neighbors);
         AddIfPossible(x + 1, y, z, dims, neighbors);
         AddIfPossible(x, y - 1, z, dims, neighbors);

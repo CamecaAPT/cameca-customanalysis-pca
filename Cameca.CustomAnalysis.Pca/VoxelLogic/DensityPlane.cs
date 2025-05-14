@@ -4,9 +4,8 @@ using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Cameca.CustomAnalysis.Pca;
-using System.Collections.ObjectModel;
 
+namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 
 public struct PixelID : IComparable<PixelID>
 {
@@ -136,7 +135,7 @@ public class DensityPlane
 
     public DensityPlane Convolve(List<float> normalizedCoefficients)
     {
-        DensityPlane newDP = new DensityPlane(this.binsize);
+        DensityPlane newDP = new(this.binsize);
         if (normalizedCoefficients.Count > 0)
         {
             int maxx = normalizedCoefficients.Count - 1;
@@ -195,7 +194,7 @@ public class DensityPlane
     public List<PixelID> PixelIdsNeighboring(PixelID pixelId)
     {
         (int x, int y) = pixelId.XYCoords();
-        List<PixelID> neighbors = new List<PixelID>();
+        List<PixelID> neighbors = new();
         AddIfNonZero(x - 1, y - 1, neighbors);
         AddIfNonZero(x - 1, y, neighbors);
         AddIfNonZero(x - 1, y + 1, neighbors);
@@ -359,7 +358,7 @@ public class DensityPlane
     public void WriteToFile(string outputFilename)
     {   
         string docPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        using (StreamWriter outputFile = new StreamWriter(outputFilename))
+        using (StreamWriter outputFile = new(outputFilename))
         {
             this.WriteToStream(outputFile);
         }
@@ -476,7 +475,7 @@ public class DensityPlane
 
         // partitionFinder operates on the grid, identifying pixels
         // associated with the different maxima
-        TwoDGridPartitionFinder partitionFinder = new TwoDGridPartitionFinder(this, props);
+        TwoDGridPartitionFinder partitionFinder = new(this, props);
 
         partitionFinder.FindPartitions(props.noiseFloorFraction);
         var pixelLists = partitionFinder.GetPixelLists();

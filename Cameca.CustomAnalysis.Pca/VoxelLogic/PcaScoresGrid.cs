@@ -1,26 +1,12 @@
 
 using PcaExtensionMethods;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System;
 using System.IO;
-using System.Windows.Controls;
-using System.Collections;
-using System.Windows.Input;
-using System.Text;
-using System.Windows.Media.Animation;
-using System.Reflection.PortableExecutable;
-using Cameca.CustomAnalysis.Pca;
-using System.Runtime.Intrinsics.Arm;
-using System.Net.Http;
-using System.Data.SqlTypes;
-using System.Reflection;
-using System.Windows;
-using System.Reflection.Metadata.Ecma335;
-using System.Windows.Documents;
-using System.Windows.Shapes;
 
+using Cameca.CustomAnalysis.Pca.Models;
+namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 
 // PcaScoresGrid represents a three dimensional grid containing the PCA scores for a collection of voxels
 // PcaScoresGrid is initialized with the size of the grid in x y and z, so that it can then map 
@@ -77,7 +63,7 @@ public class PcaScoresGrid
     // note: also includes self
     List<VoxelID> NeighborIDsFor(ThreeDGridCoord gridCoord)
     {
-        List<VoxelID> neighborIndices = new List<VoxelID>();
+        List<VoxelID> neighborIndices = new();
 
         int minx = Math.Max(0, gridCoord.x - 1);
         int maxx = Math.Min(gridDims.x - 1, gridCoord.x + 1);
@@ -91,7 +77,7 @@ public class PcaScoresGrid
             {
                 for (int x = minx; x <= maxx; ++x)
                 {
-                    VoxelID voxelId = new VoxelID(x + (y * gridDims.x) + (z * gridDims.xy));
+                    VoxelID voxelId = new(x + (y * gridDims.x) + (z * gridDims.xy));
                     neighborIndices.Add(voxelId);
                 }
             }
@@ -138,7 +124,7 @@ public class PcaScoresGrid
     Dictionary<PixelID, List<VoxelID>> AggregateVoxelsIntoListsPerPixel(List<VoxelID> voxelIds, DensityPlane grid, Dictionary<VoxelID, PcaVoxel> pcaVoxels, int firstDim, int secondDim)
     {
         // For each voxel, assign the voxel to the List corresponding with its pixel
-        Dictionary<PixelID, List<VoxelID>> voxelLists = new Dictionary<PixelID, List<VoxelID>>();
+        Dictionary<PixelID, List<VoxelID>> voxelLists = new();
         foreach (VoxelID voxelId in voxelIds)
         {
             PcaVoxel voxel = pcaVoxels[voxelId];
@@ -165,7 +151,7 @@ public class PcaScoresGrid
     Dictionary<BinID, List<VoxelID>> AggregateVoxelsIntoListsPerBin(List<VoxelID> voxelIds, DensityLine line, Dictionary<VoxelID, PcaVoxel> pcaVoxels, int pcaDimension)
     {
         // For each voxel, assign the voxel to the List corresponding with its bin
-        Dictionary<BinID, List<VoxelID>> voxelLists = new Dictionary<BinID, List<VoxelID>>();
+        Dictionary<BinID, List<VoxelID>> voxelLists = new();
         foreach (VoxelID voxelId in voxelIds)
         {
             PcaVoxel voxel = pcaVoxels[voxelId];
@@ -193,7 +179,7 @@ public class PcaScoresGrid
     // and the value is a HashSet of VoxelIDs with that pcaCode
     internal Dictionary<PcaPhaseName, HashSet<VoxelID>> VoxelBuckets(Dictionary<VoxelID, PcaPhaseName> pcaCodes)
     {
-        Dictionary<PcaPhaseName, HashSet<VoxelID>> buckets = new Dictionary<PcaPhaseName, HashSet<VoxelID>>();
+        Dictionary<PcaPhaseName, HashSet<VoxelID>> buckets = new();
         foreach (KeyValuePair<VoxelID, PcaPhaseName> kvp in pcaCodes)
         {
             if (buckets.ContainsKey(kvp.Value))
@@ -202,7 +188,7 @@ public class PcaScoresGrid
             }
             else
             {
-                HashSet<VoxelID> newSet = new HashSet<VoxelID>();
+                HashSet<VoxelID> newSet = new();
                 newSet.Add(kvp.Key);
                 buckets[kvp.Value] = newSet;
             }
@@ -211,7 +197,7 @@ public class PcaScoresGrid
     }
     internal Dictionary<PcaPhaseName, int> PcaCodeCounts(Dictionary<PcaPhaseName, HashSet<VoxelID>> voxelBuckets)
     {
-        Dictionary<PcaPhaseName, int> pcaCodeCounts = new Dictionary<PcaPhaseName, int>();
+        Dictionary<PcaPhaseName, int> pcaCodeCounts = new();
         foreach (KeyValuePair<PcaPhaseName, HashSet<VoxelID>> kvp in voxelBuckets)
         {
             pcaCodeCounts[kvp.Key] = kvp.Value.Count;
@@ -223,7 +209,7 @@ public class PcaScoresGrid
         string docPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         string outputFilename = System.IO.Path.Combine(docPath, "PcaCodeStats.txt");
 
-        using (StreamWriter outputFile = new StreamWriter(outputFilename))
+        using (StreamWriter outputFile = new(outputFilename))
         {
             List<string> sortedCodes = pcaCodeCounts.Keys.ToList();
             sortedCodes.Sort();
@@ -242,7 +228,7 @@ public class PcaScoresGrid
         string docPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         string outputFilename = System.IO.Path.Combine(docPath, "PcaPeakPartitions" + gridId + ".txt");
         // int peakIndex = 1;
-        using (StreamWriter outputFile = new StreamWriter(outputFilename))
+        using (StreamWriter outputFile = new(outputFilename))
         {
             outputFile.Write("peakCoords = {");
             bool firstPeak = true;
@@ -281,7 +267,7 @@ public class PcaScoresGrid
 
     internal List<VoxelID> FindMatchingSets(VoxelID neighborID, Dictionary<VoxelID, HashSet<VoxelID>> voxelSets)
     {
-        List<VoxelID> matchingSets = new List<VoxelID>();
+        List<VoxelID> matchingSets = new();
         foreach (KeyValuePair<VoxelID, HashSet<VoxelID>> kvp in voxelSets)
         {
             if (kvp.Value.Contains(neighborID))
@@ -300,7 +286,7 @@ public class PcaScoresGrid
     internal HashSet<PcaPhaseName> FilterForMatchableCode(List<PcaPhaseName> pcaCodesToMatch, PcaPhaseName pcaCode)
     {
         // if pcaCode contains zero 0s or more than one 0, return empty List
-        HashSet<PcaPhaseName> matches = new HashSet<PcaPhaseName>();
+        HashSet<PcaPhaseName> matches = new();
 
         // tokens here means 'substrings' -- parts of the PCA code that should be matched
         string[] tokens = pcaCode.Split(".0");
@@ -415,7 +401,7 @@ public class PcaScoresGrid
 
     public OneDGridsResults CalculateOneDGrids(PcaPhaseIdentificationProperties properties)
     {
-        OneDGridsResults gridsResults = new OneDGridsResults();
+        OneDGridsResults gridsResults = new();
         oneDGrids.Clear();
         oneDPartitions.Clear();
 
@@ -428,7 +414,7 @@ public class PcaScoresGrid
         // now, make a oneD grid for each dimensions
         for (int i = 0; i < numDimsToInclude; ++i)
         {
-            OneDGridID gridId = new OneDGridID(i);
+            OneDGridID gridId = new(i);
 
             var oneDGrid = CalculateOneDDensity(voxelIds, i, binSeparation, delocalization);
             oneDGrids[gridId] = oneDGrid;
@@ -446,7 +432,7 @@ public class PcaScoresGrid
 
     public TwoDGridsResults CalculateTwoDGrids(PcaPhaseIdentificationProperties properties)
     {
-        TwoDGridsResults gridsResults = new TwoDGridsResults();
+        TwoDGridsResults gridsResults = new();
         twoDGrids.Clear();
         twoDPartitions.Clear();
 
@@ -462,7 +448,7 @@ public class PcaScoresGrid
         {
             for (int j = i + 1; j < numDimsToInclude; ++j)
             {
-                TwoDGridID gridId = new TwoDGridID(i, j);
+                TwoDGridID gridId = new(i, j);
 
                 // this makes the 2D grid  --  step A) above
                 var twoDGrid = CalculateTwoDDensity(voxelIds, i, j, binSeparation, delocalization);
@@ -510,7 +496,7 @@ public class PcaScoresGrid
         int numDimsToInclude = Math.Min(properties.numDimsForPCAPhaseId, this.scoreDims);
 
         // make a dictionary for the pcaCodes and fill with empty Strings
-        Dictionary<VoxelID, PcaPhaseName> pcaCodes = new Dictionary<VoxelID, PcaPhaseName>();
+        Dictionary<VoxelID, PcaPhaseName> pcaCodes = new();
         foreach (VoxelID voxelId in voxelIds)
         {
             pcaCodes[voxelId] = new PcaPhaseName();
@@ -574,7 +560,7 @@ public class PcaScoresGrid
         // now, add the oneD grids
         foreach (string s in oneDGridsToInclude)
         {
-            OneDGridID gridId = new OneDGridID(s);
+            OneDGridID gridId = new(s);
             DensityLine oneDGrid = oneDGrids[gridId];
             List<List<BinID>> partitionedIndices = oneDPartitions[gridId];
             int pcaDimension = gridId.PCAIndex();
@@ -619,7 +605,7 @@ public class PcaScoresGrid
         // PcaStream writes a file with text data about the progression of the algorithm
         // uncomment it here and uncomment the calls to DumpVoxelSetStats below
         // PcaStream pcaStream = new PcaStream("GetPhasesStrategyF");
-        PhaseIdResults phaseIdResults = new PhaseIdResults(voxelIds);
+        PhaseIdResults phaseIdResults = new(voxelIds);
 
         // now examine the groups of voxels to identify contiguous regions
         // in this case, 'unassigned' means voxels not yet associated with a list of voxels in a pcaPhase
@@ -636,8 +622,8 @@ public class PcaScoresGrid
         // At first, assume that all PCA codes that have no zero value in them identify a particular phase
         // So, generate a list of voxels for each of these phases 
         List<PcaPhaseName> nonZeroPcaCodes = unassignedVoxelBuckets.Keys.Where(code => !code.Contains(".0")).ToList();
-        Dictionary<PcaPhaseName, HashSet<VoxelID>> pcaCodeVoxelSets = new Dictionary<PcaPhaseName, HashSet<VoxelID>>();
-        Dictionary<PcaPhaseNameList, HashSet<VoxelID>> interfaceVoxelSets = new Dictionary<PcaPhaseNameList, HashSet<VoxelID>>();
+        Dictionary<PcaPhaseName, HashSet<VoxelID>> pcaCodeVoxelSets = new();
+        Dictionary<PcaPhaseNameList, HashSet<VoxelID>> interfaceVoxelSets = new();
 
         // pcaCodes is a Dictionary<VoxelID, string>
         foreach (PcaPhaseName pcaCode in nonZeroPcaCodes)
@@ -655,7 +641,7 @@ public class PcaScoresGrid
         // So, get the remaining PCA codes for the voxels.
         // identify any parts of them not in the other sets
         List<PcaPhaseName> otherPcaCodes = unassignedVoxelBuckets.Keys.ToList();
-        HashSet<string> codeComponents = new HashSet<string>();
+        HashSet<string> codeComponents = new();
         otherPcaCodes.ForEach(pcaCode =>
         {
             pcaCode.PhaseComponents().ForEach(component =>
@@ -705,9 +691,9 @@ public class PcaScoresGrid
         int voxelAssignmentCount = 1;
         while (voxelAssignmentCount > 0)
         {
-            Dictionary<PcaPhaseName, HashSet<VoxelID>> unassignedSubtractions = new Dictionary<PcaPhaseName, HashSet<VoxelID>>();
-            Dictionary<PcaPhaseName, HashSet<VoxelID>> voxelSetAdditions = new Dictionary<PcaPhaseName, HashSet<VoxelID>>();
-            Dictionary<PcaPhaseNameList, HashSet<VoxelID>> interfaceVoxelSetAdditions = new Dictionary<PcaPhaseNameList, HashSet<VoxelID>>();
+            Dictionary<PcaPhaseName, HashSet<VoxelID>> unassignedSubtractions = new();
+            Dictionary<PcaPhaseName, HashSet<VoxelID>> voxelSetAdditions = new();
+            Dictionary<PcaPhaseNameList, HashSet<VoxelID>> interfaceVoxelSetAdditions = new();
 
             // this loop initializes the lists of voxels to add for each PCA code
             int numAssignedPhaseNames = assignedPhaseNames.Count;
@@ -724,8 +710,8 @@ public class PcaScoresGrid
                 // matchableCodes are the phaseNames that are "one away" from the pcaCode under consideration
 
                 HashSet<VoxelID> potentialAdditions = unassignedVoxelBuckets[phaseName];
-                HashSet<VoxelID> subtractions = new HashSet<VoxelID>();
-                List<PcaPhaseName> matches = new List<PcaPhaseName>();
+                HashSet<VoxelID> subtractions = new();
+                List<PcaPhaseName> matches = new();
                 foreach (VoxelID voxelId in potentialAdditions)
                 {
                     List<VoxelID> neighbors = voxelId.NeighborVoxels(gridDims);
@@ -749,14 +735,14 @@ public class PcaScoresGrid
                         }
                         else
                         {
-                            PcaPhaseNameList interfaceId = new PcaPhaseNameList(matches);
+                            PcaPhaseNameList interfaceId = new(matches);
                             if (interfaceVoxelSetAdditions.ContainsKey(interfaceId))
                             {
                                 interfaceVoxelSetAdditions[interfaceId].Add(voxelId);
                             }
                             else
                             {
-                                HashSet<VoxelID> newSet = new HashSet<VoxelID>();
+                                HashSet<VoxelID> newSet = new();
                                 newSet.Add(voxelId);
                                 interfaceVoxelSetAdditions[interfaceId] = newSet;
                             }
@@ -793,13 +779,13 @@ public class PcaScoresGrid
         // now, pcaCodeVoxelSets is ready to be used for define a per-voxel component mapping
         // lets order the pcaCodeVoxelSets by population
         List<PcaPhaseName> pcaCodesByPopulation = pcaCodeVoxelSets.Keys.ToList();
-        PopulationSorter<PcaPhaseName, VoxelID> comparator = new PopulationSorter<PcaPhaseName, VoxelID>(pcaCodeVoxelSets);
+        PopulationSorter<PcaPhaseName, VoxelID> comparator = new(pcaCodeVoxelSets);
         pcaCodesByPopulation.Sort(comparator);
 
         // now pcaCodesByPopulation is sorted?
         // make a pcaCode to phaseIndex map:
         // 
-        Dictionary<PcaPhaseName, int> phaseIndexMap = new Dictionary<PcaPhaseName, int>();
+        Dictionary<PcaPhaseName, int> phaseIndexMap = new();
         PcaPhaseName unassignedVoxelsPhaseName = PcaPhaseName.UnassignedVoxelsPhaseName();
         PcaPhaseName interfaceVoxelsPhaseName = PcaPhaseName.InterfaceVoxelsPhaseName();
         phaseIndexMap[unassignedVoxelsPhaseName] = 0;
@@ -873,7 +859,7 @@ public class PcaScoresGrid
 
         // partitionFinder operates on the grid, identifying pixels
         // associated with the different maxima
-        OneDGridPartitionFinder partitionFinder = new OneDGridPartitionFinder(oneDGrid, props);
+        OneDGridPartitionFinder partitionFinder = new(oneDGrid, props);
 
         partitionFinder.FindPartitions();
         var binLists = partitionFinder.GetBinLists();
@@ -893,7 +879,7 @@ public class PcaScoresGrid
     private static List<float> NormalizeCoefficients(List<double> coeffs)
     {
         int limit = coeffs.Count - 1;
-        List<float> normalized = new List<float>();
+        List<float> normalized = new();
         if (limit >= 0)
         {
             double sum = 0.0;
@@ -973,7 +959,7 @@ public class PcaScoresGrid
 
     public DensityPlane CalculateTwoDDensity(List<VoxelID> voxelIds, int dimx, int dimy, float binsize, float delocalizationDistance)
     {
-        DensityPlane densityPlane = new DensityPlane(binsize);
+        DensityPlane densityPlane = new(binsize);
         for (int v = 0; v < voxelIds.Count; ++v)
         {
             VoxelID voxelId = voxelIds[v];
@@ -1005,7 +991,7 @@ public class PcaScoresGrid
         float gaussianSmoothParam = (float)MathF.Sqrt(2.0f * MathF.PI * delocRemaining);
         float binsizeOverGaussianSmoothParam = binsize / gaussianSmoothParam;
         int smoothingCutoffLimit = (int)MathF.Ceiling((1.0f / binsizeOverGaussianSmoothParam) * 1.5f);
-        List<double> smoothCoefficients = new List<double>();
+        List<double> smoothCoefficients = new();
         for (int h = 0; h <= smoothingCutoffLimit; ++h)
         {
             // for gridpoint h, calculate the strength of the 1D gaussian at that 
@@ -1028,7 +1014,7 @@ public class PcaScoresGrid
 
     public DensityLine CalculateOneDDensity(List<VoxelID> voxelIds, int pcaDim, float binsize, float delocalizationDistance)
     {
-        DensityLine densityLine = new DensityLine(binsize);
+        DensityLine densityLine = new(binsize);
         for (int v = 0; v < voxelIds.Count; ++v)
         {
             VoxelID voxelId = voxelIds[v];
@@ -1069,7 +1055,7 @@ public class PcaScoresGrid
 
     public List<DensityProfile> CalculateOneDDensities(List<VoxelID> voxelIds, float binsize)
     {
-        List<DensityProfile> densities = new List<DensityProfile>();
+        List<DensityProfile> densities = new();
         for (int i = 0; i < this.scoreDims; ++i)
         {
             var nthDensityList = new DensityProfile(binsize);
@@ -1091,7 +1077,7 @@ public class PcaScoresGrid
     public string HistogramInfo(string histogramString)
     {
         string info = "";
-        OneDGridID gridId = new OneDGridID(histogramString);
+        OneDGridID gridId = new(histogramString);
         if (oneDPartitions.ContainsKey(gridId))
         {
             List<List<BinID>> lists = oneDPartitions[gridId]; 

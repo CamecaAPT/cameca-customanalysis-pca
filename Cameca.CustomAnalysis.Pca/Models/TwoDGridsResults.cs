@@ -1,5 +1,7 @@
 using System.Collections.Generic;
-using Cameca.CustomAnalysis.Pca;
+
+using Cameca.CustomAnalysis.Pca.VoxelLogic; 
+namespace Cameca.CustomAnalysis.Pca.Models;
 // TwoDGridsResults represents the projection of the PCA Components results
 // onto two dimensional grids for different pairs of axes
 public class TwoDGridsResults

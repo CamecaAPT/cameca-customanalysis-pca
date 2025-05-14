@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System;
 using PcaExtensionMethods;
 
+namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
+
 // PixelSuggestion represents a pixel that could be added to a TwoDPeak as part of the PartitionFinder
 // peak partitioning algorithm
 public struct PixelSuggestion : IComparable<PixelSuggestion>
@@ -107,7 +109,7 @@ public class TwoDPeak
         this.summitAllowance = partitionFinder.PeakSummitAllowance(); // hard code this value
 
         this.peakValue = grid.ValueAtPixel(peakMaxPixelId);
-        PixelSuggestion firstSuggestion = new PixelSuggestion(peakId, peakMaxPixelId, this.peakValue);
+        PixelSuggestion firstSuggestion = new(peakId, peakMaxPixelId, this.peakValue);
 
         nextCandidates.Add(firstSuggestion);
     }
@@ -154,7 +156,7 @@ public class TwoDPeak
                 }
                 else
                 {
-                    PixelSuggestion newSuggestion = new PixelSuggestion(peakId, availableId, neighborScore);
+                    PixelSuggestion newSuggestion = new(peakId, availableId, neighborScore);
                     this.InsertCandidate(newSuggestion);
                 }
             }

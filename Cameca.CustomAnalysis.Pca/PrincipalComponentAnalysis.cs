@@ -18,13 +18,11 @@ using LiveCharts.Wpf;
 using System.Collections.ObjectModel;
 using static Cameca.CustomAnalysis.Interface.IonFormula;
 using CommunityToolkit.HighPerformance;
-using System.Windows.Markup;
-using System.Runtime.Intrinsics.Arm;
-using Cameca.Extensions.Controls;
 using Cameca.CustomAnalysis.Pca;
-using System.Xaml;
-using System.Diagnostics.Metrics;
-using System.Resources;
+using Cameca.CustomAnalysis.Pca.Utils;
+using Cameca.CustomAnalysis.Pca.Models;
+using Cameca.CustomAnalysis.Pca.VoxelLogic;
+
 
 namespace Cameca.CustomAnalysis.Pca;
 
@@ -116,8 +114,8 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
     public Func<double, string> AxisYLabelFormatter { get; } = (double value) => value.ToString("F3");
 
-    internal HashSet<string> gridsToUseForPCA = new HashSet<string>();
-    internal HashSet<string> histogramsToUseForPCA = new HashSet<string>();
+    internal HashSet<string> gridsToUseForPCA = new();
+    internal HashSet<string> histogramsToUseForPCA = new();
     public PrincipalComponentAnalysis(
         IStandardAnalysisFilterNodeBaseServices services,
         ResourceFactory resourceFactory,
@@ -322,7 +320,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             return;
         }
         // Scores Histogram
-        List<IRenderData> newHistogramsData = new List<IRenderData>();
+        List<IRenderData> newHistogramsData = new();
         int componentIndex = 0;
 
         foreach (ComponentResults componentResults in componentsResults.Components)
@@ -781,9 +779,9 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
                 dat[arrayIndex] = dp.ValueAtGridCoords(gridp, gridq);
             }
         }
-        ReadOnlyMemory2D<float> rom = new ReadOnlyMemory2D<float>(dat, span, span);
-        Vector2 binsize = new Vector2(dp.binsize, dp.binsize);
-        Vector2 origin = new Vector2(minCoord.y * dp.binsize, minCoord.x * dp.binsize);
+        ReadOnlyMemory2D<float> rom = new(dat, span, span);
+        Vector2 binsize = new(dp.binsize, dp.binsize);
+        Vector2 origin = new(minCoord.y * dp.binsize, minCoord.x * dp.binsize);
         renderData.Update(rom, binsize, origin);
     }
     // Updates readonly Min/Max properties so the bounds are displayed in the Properties panel 

@@ -1,5 +1,7 @@
 ﻿
-namespace Cameca.CustomAnalysis.Pca;
+using Cameca.CustomAnalysis.Pca.VoxelLogic;
+
+namespace Cameca.CustomAnalysis.Pca.Models;
 
 public sealed class OneDPeakProjection
 {

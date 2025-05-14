@@ -12,6 +12,8 @@ using System.Text.RegularExpressions;
 using System.Security.Cryptography.X509Certificates;
 using System.Collections.ObjectModel;
 
+namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
+
 public readonly struct BinID : IComparable<BinID>
 {
     public readonly int binId;
@@ -145,7 +147,7 @@ public class DensityLine
 
     public DensityLine Convolve(List<float> normalizedCoefficients)
     {
-        DensityLine newDL = new DensityLine(this.binsize);
+        DensityLine newDL = new(this.binsize);
         if (normalizedCoefficients.Count > 0)
         {
             int maxx = normalizedCoefficients.Count - 1;
@@ -159,10 +161,7 @@ public class DensityLine
                 {
                     int xCoefficientIndex = (int)Math.Abs(x);
                     float xCoeff = normalizedCoefficients[xCoefficientIndex];
-
-                    BinID nthBinID = new BinID(p + x);
-  
-                    newDL.AddValueAtBin(nthBinID, value * xCoeff);
+                    newDL.AddValueAtBin(new BinID(p + x), value * xCoeff);
                 }
             }
             ForEachBin(convolutionFunction);
@@ -209,7 +208,7 @@ public class DensityLine
         //int x;
         //int y;
         int x = binId.XCoord();
-        List<BinID> neighbors = new List<BinID>();
+        List<BinID> neighbors = new();
         if (x > int.MinValue)
         {
             neighbors.Add(new BinID(x - 1));
@@ -260,7 +259,7 @@ public class DensityLine
     {
         if (data.Count == 0)
         {
-            BinID zeroBin = new BinID(0);
+            BinID zeroBin = new(0);
             return (zeroBin, zeroBin);
         }
         
@@ -285,7 +284,7 @@ public class DensityLine
 		// now csv data for the grid from min to max
         for (int x = min.XCoord(); x <= maxx; ++x)
         {
-            BinID xthBinId= new BinID(x);
+            BinID xthBinId= new(x);
 
             float xthValue = 0;
             if (data.ContainsKey(xthBinId))
@@ -333,7 +332,7 @@ public class DensityLine
     public void WriteToFile(string outputFilename)
     {   
         string docPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        using (StreamWriter outputFile = new StreamWriter(outputFilename))
+        using (StreamWriter outputFile = new(outputFilename))
         {
             this.WriteToStream(outputFile);
         }
@@ -368,8 +367,7 @@ public class DensityLine
 
         void addValueAtCoord(int x, float val)
         {
-            BinID binId = new BinID(x);
-            AddValueAtBin(binId, val);
+            AddValueAtBin(new BinID(x), val);
         }
 
         if (Math.Abs(x) > maxval) {

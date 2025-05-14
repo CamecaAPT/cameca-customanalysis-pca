@@ -1,5 +1,5 @@
 using System;
-
+namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 public struct TwoDGridID : IStringConvertible
 {
     string stringValue;

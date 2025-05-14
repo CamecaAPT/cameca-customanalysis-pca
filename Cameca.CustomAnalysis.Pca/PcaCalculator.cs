@@ -2,8 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Cameca.CustomAnalysis.Pca.Models;
+using Cameca.CustomAnalysis.Pca.VoxelLogic;
 
 namespace Cameca.CustomAnalysis.Pca;
+
 
 public delegate float[] GetScoresDelegate(int voxelIndex);
 
@@ -53,7 +56,7 @@ public class PcaScoresGridProducer: IScoresProvider {
         {
             scores[i] = compResults.Components[i].Scores[voxelIndex];
         }
-        VoxelID voxelId = new VoxelID(compResults.VoxelIndices[voxelIndex]);
+        VoxelID voxelId = new(compResults.VoxelIndices[voxelIndex]);
         return (voxelId, scores);
     }
 
@@ -65,7 +68,7 @@ public class PcaScoresGridProducer: IScoresProvider {
         int y = compResults.Grid3DData.NumVoxels[1];
         int z = compResults.Grid3DData.NumVoxels[2];
 
-        ThreeDGridDimensions gridDimensions = new ThreeDGridDimensions(x, y, z);
+        ThreeDGridDimensions gridDimensions = new(x, y, z);
         return new PcaScoresGrid(this, compResults.VoxelIndices.Length, nComponents, gridDimensions);
     }
 }
@@ -141,7 +144,7 @@ internal static class PcaCalculator
  
     public static PcaScoresGrid GenerateScoresGrid(IIonData ionData, ComponentsResults compResults, PcaPhaseIdentificationProperties properties)
     {
-        PcaScoresGridProducer producer = new PcaScoresGridProducer(compResults, properties);
+        PcaScoresGridProducer producer = new(compResults, properties);
 
         return producer.GenerateScoresGrid();
     }

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
-using System.Windows.Navigation;
-using Cameca.CustomAnalysis.Pca;
+
+namespace Cameca.CustomAnalysis.Pca.Models;
 // OneDGridsResults represents the projection of the PCA Components results
 // onto a single dimension's line
 public class OneDGridsResults

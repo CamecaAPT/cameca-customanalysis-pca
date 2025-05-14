@@ -2,12 +2,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System;
-using PcaExtensionMethods;
-using Cameca.CustomAnalysis.Pca;
-using System.Windows.Controls;
-using System.Windows.Input;
-using System.Collections.ObjectModel;
 
+namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 
 public class OneDGridPartitionFinder
 {
@@ -41,7 +37,7 @@ public class OneDGridPartitionFinder
 
     public List<List<BinID>> GetBinLists()
     {
-        List<List<BinID>> binLists = new List<List<BinID>>();
+        List<List<BinID>> binLists = new();
         foreach (RangeID peakKey in peaks.Keys.ToList())
         {
             OneDPeak nthPeak = peaks[peakKey];
@@ -75,7 +71,7 @@ public class OneDGridPartitionFinder
     // to cut off the peak region, and also how wide a border region should be defined.
     public List<List<BinID>> FindPartitions()
     {
-        List<List<BinID>> partitions = new List<List<BinID>> ();
+        List<List<BinID>> partitions = new();
         BinID? maybeMaximumBinId = line.FindMaximum(unplacedBinIds);
 
         if (maybeMaximumBinId != null)
@@ -85,7 +81,7 @@ public class OneDGridPartitionFinder
             while ((maybeMaximumBinId != null) && (line.ValueAtBin(maybeMaximumBinId.Value) > noiseLevel))
             {
                 BinID binId = maybeMaximumBinId.Value;
-                OneDPeak peak = new OneDPeak(this, line, binId);
+                OneDPeak peak = new(this, line, binId);
                 peak.IdentifyBins(noiseLevel, unplacedBinIds);
                 List<BinID> binList = peak.BinList();
                 partitions.Add(binList);
@@ -106,7 +102,7 @@ public class OneDGridPartitionFinder
             List<BinID> borderBinIds = peak.BorderBins();
             if (borderBinIds.Count == 2)
             {
-                List<BinID> binList = new List<BinID>();
+                List<BinID> binList = new();
                 float border1 = line.XValueFor(borderBinIds[0]); 
                 float border2 = line.XValueFor(borderBinIds[1]);
                 float upperBar = MathF.Max(border1 + 0.5f, border2 + 0.5f);

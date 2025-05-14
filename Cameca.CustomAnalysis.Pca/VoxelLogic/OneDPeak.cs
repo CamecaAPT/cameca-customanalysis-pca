@@ -1,8 +1,6 @@
 using System.Collections.Generic;
-using System;
-using PcaExtensionMethods;
-using System.Windows;
-using System.Windows.Shapes;
+
+namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 
 // OneDPeak represents a maximum in a DensityLine grid and its surrounding bins, as part of
 // the Partitioning algorithm implemented in OneDGridPartitionFinder
