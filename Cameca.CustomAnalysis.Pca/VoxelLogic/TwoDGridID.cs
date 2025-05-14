@@ -1,15 +1,15 @@
 using System;
 namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
-public struct TwoDGridID : IStringConvertible
+public readonly struct TwoDGridID : IStringConvertible
 {
-    string stringValue;
+    readonly string stringValue;
 
     public TwoDGridID(int firstDim, int secondDim)  
     {
         stringValue = GridID.GridLetterForIndex(firstDim) + GridID.GridLetterForIndex(secondDim);
     }
 
-    public (int, int) AsIndexPair()
+    public readonly (int, int) AsIndexPair()
     {
         int firstIndex = GridID.IndexForGridLetter((char)stringValue[0]);
         int secondIndex = GridID.IndexForGridLetter((char)stringValue[1]);
@@ -20,7 +20,7 @@ public struct TwoDGridID : IStringConvertible
     {
         return stringValue;
     }
-    public int CompareTo(IStringConvertible other)
+    public readonly int CompareTo(IStringConvertible other)
     {
         return stringValue.CompareTo(other.ToString());
     }

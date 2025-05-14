@@ -1,9 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
 
+namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 public class PopulationSorter<T, U> : IComparer<T>
 {
-    Dictionary<T, HashSet<U>> dict;
+    readonly Dictionary<T, HashSet<U>> dict;
     public PopulationSorter(Dictionary<T, HashSet<U>> d)
     {
         dict = d;
@@ -15,11 +16,11 @@ public class PopulationSorter<T, U> : IComparer<T>
         int popY = 0;
         if (x != null && dict.ContainsKey(x))
         {
-            popX = dict[x].Count();
+            popX = dict[x].Count;
         }
         if (y != null && dict.ContainsKey(y))
         {
-            popY = dict[y].Count();
+            popY = dict[y].Count;
         }
         return (popX > popY) ? -1 : (popY > popX) ? 1 : 0;
     }
