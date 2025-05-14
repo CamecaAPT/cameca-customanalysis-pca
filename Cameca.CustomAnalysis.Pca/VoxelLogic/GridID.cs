@@ -1,5 +1,7 @@
 using System;
 
+namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
+
 public interface IStringConvertible : IComparable<IStringConvertible>
 {
     public string ToString();

@@ -324,7 +324,6 @@ public class DensityLine
     
     public void WriteToFile(string outputFilename)
     {   
-        string docPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         using (StreamWriter outputFile = new(outputFilename))
         {
             this.WriteToStream(outputFile);
