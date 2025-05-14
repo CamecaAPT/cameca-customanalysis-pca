@@ -37,10 +37,3 @@ public struct OneDGridID : IStringConvertible
         return stringValue.CompareTo(other.ToString());
     }
 }
- 
- 
-
-
-
-
-

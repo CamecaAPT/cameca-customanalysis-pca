@@ -84,9 +84,6 @@ public class OneDPeak
         }
         borderBinIds.Add(nextBin);
     }
-
-
-
 }
 
 

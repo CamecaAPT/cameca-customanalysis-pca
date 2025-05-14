@@ -140,8 +140,3 @@ public class OneDGridPartitionFinder
         return properties.noiseFloorFraction;
     }
 }   
-
-
-
-
-

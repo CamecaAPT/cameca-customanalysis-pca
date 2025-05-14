@@ -33,6 +33,7 @@ public struct PcaPhaseName: IComparable<PcaPhaseName>
         string shorter = pcaPhase.Replace(".", "");
         return shorter.Replace(',', ' ');
     }
+    
     public List<string> PhaseComponents()
     {
         return pcaPhase.Split(",").ToList();
