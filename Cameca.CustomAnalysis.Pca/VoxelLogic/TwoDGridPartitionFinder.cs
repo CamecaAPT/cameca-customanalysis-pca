@@ -3,15 +3,16 @@ using System.Diagnostics;
 using System.Linq;
 using System;
 using PcaExtensionMethods;
-using Cameca.CustomAnalysis.Pca;
+
+namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 
 public class TwoDGridPartitionFinder
 {
-    DensityPlane grid;
+    readonly DensityPlane grid;
     List<PixelID> unplacedPixelIds;
-    List<PixelID> rejectedPixelIds;
+    readonly List<PixelID> rejectedPixelIds;
     List<PixelID> foundIncreasePixelIds; // when a peak finds an increase, remember it here
-    Dictionary<PeakID, TwoDPeak> peaks;
+    readonly Dictionary<PeakID, TwoDPeak> peaks;
     PcaPhaseIdentificationProperties properties;
 
     // These are the return codes returned by IterateIdentifyingPeaks()
@@ -60,7 +61,7 @@ public class TwoDGridPartitionFinder
         ReturnCode returnCode = ReturnCode.noStatus;
         while (keepGoing)
         {
-            CandidateRanker candidateRanker = new CandidateRanker();
+            CandidateRanker candidateRanker = new();
 
             //step 1
             foreach (PeakID peakKey in peaks.Keys.ToList())
@@ -94,7 +95,7 @@ public class TwoDGridPartitionFinder
 
             // step 4
             // count all the instances of each ID
-            Dictionary<PixelID, int> pixelIdCounts = new Dictionary<PixelID, int>();
+            Dictionary<PixelID, int> pixelIdCounts = new();
             foreach (PixelSuggestion suggestion in bestCandidates)
             {
                 if (pixelIdCounts.ContainsKey(suggestion.pixelId))
@@ -109,7 +110,7 @@ public class TwoDGridPartitionFinder
             // if there are any elements of the pixelIdCounts dictionary with value more than 1,
             // that's a collision
 
-            List<PixelID> collisions = new List<PixelID>();
+            List<PixelID> collisions = new();
             List<PixelID> pixelIdCountsKeys = pixelIdCounts.Keys.ToList();
             foreach (PixelID pixelId in pixelIdCountsKeys)
             {
@@ -181,7 +182,7 @@ public class TwoDGridPartitionFinder
 
     public List<List<PixelID>> GetPixelLists()
     {
-        List<List<PixelID>> pixelLists = new List<List<PixelID>>();
+        List<List<PixelID>> pixelLists = new();
         foreach (PeakID peakKey in peaks.Keys.ToList())
         {
             TwoDPeak nthPeak = peaks[peakKey];
@@ -213,7 +214,7 @@ public class TwoDGridPartitionFinder
             if (!shouldContinueWithLowerSearchFloor && maybeMaximumPixelId.HasValue)
             {
                 PixelID maximumPixelId = maybeMaximumPixelId.Value;
-                TwoDPeak nextPeak = new TwoDPeak(this, grid, maximumPixelId);
+                TwoDPeak nextPeak = new(this, grid, maximumPixelId);
                 peaks[nextPeak.peakId] = nextPeak;
             }
 
@@ -221,7 +222,7 @@ public class TwoDGridPartitionFinder
             float higherPixelVal = 0.0f;
             if (foundIncreasePixelIds.Count > 0)
             {
-                higherPixelVal = grid.valueAtPixel(foundIncreasePixelIds[0]);
+                higherPixelVal = grid.ValueAtPixel(foundIncreasePixelIds[0]);
             }
             float searchFloor = Math.Max(higherPixelVal, noiseFloor);
             ReturnCode returnCode = IterateIdentifyingPeaks(searchFloor);
@@ -252,7 +253,7 @@ public class TwoDGridPartitionFinder
                     {
                         // its possible we have another peak to find
                         // first. filter any previous identified higherPixels to see if they are now part of a new peak:
-                        foundIncreasePixelIds = filterForAvailableIds(foundIncreasePixelIds);
+                        foundIncreasePixelIds = FilterForAvailableIds(foundIncreasePixelIds);
                         if (foundIncreasePixelIds.Count > 0)
                         {
                             // it is a certainty we still have a peak to find
@@ -277,7 +278,7 @@ public class TwoDGridPartitionFinder
         }
     }
 
-    public List<PixelID> filterForAvailableIds(List<PixelID> pixelIds)
+    public List<PixelID> FilterForAvailableIds(List<PixelID> pixelIds)
     {
         // return a list containing all the items in the
         // input list which are in the unplacedPixelIds list

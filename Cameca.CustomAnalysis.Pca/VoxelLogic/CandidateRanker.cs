@@ -1,5 +1,7 @@
 using System.Collections.Generic;
- 
+
+namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
+
 // CandidateRanker is used to identify the 'best' candidates from all the PixelSuggestion 
 // objects it is asked to consider. Items added to the list of candidates are the 'best'
 // until a better candidate is nominated.

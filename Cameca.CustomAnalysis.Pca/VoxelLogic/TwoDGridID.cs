@@ -1,44 +1,28 @@
 using System;
-
-public struct TwoDGridID : IComparable<TwoDGridID>
+namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
+public readonly struct TwoDGridID : IStringConvertible
 {
-    string stringValue;
+    readonly string stringValue;
 
-
-    public TwoDGridID(int firstDim, int secondDim)
+    public TwoDGridID(int firstDim, int secondDim)  
     {
-        string firstLetter = GridLetterForIndex(firstDim);
-        string secondLetter = GridLetterForIndex(secondDim);
-        this.stringValue = firstLetter + secondLetter;
+        stringValue = GridID.GridLetterForIndex(firstDim) + GridID.GridLetterForIndex(secondDim);
     }
 
-    public static string GridLetterForIndex(int index)
+    public readonly (int, int) AsIndexPair()
     {
-        int AAsciiValue = (int)'A';
-        char cha = (char)(AAsciiValue + index);
-        return cha.ToString();
-    }
-    public static int IndexForGridLetter(char letter)
-    {
-        int AAsciiValue = (int)'A'; 
-        int gridLetterAsciiValue = (int)letter;
-        return gridLetterAsciiValue - AAsciiValue;
-    }
-    public string ToString()
-    {
-        return stringValue;
-    }
-
-    public (int, int) AsIndexPair()
-    {
-        int firstIndex = IndexForGridLetter((char)stringValue[0]);
-        int secondIndex = IndexForGridLetter((char)stringValue[1]);
+        int firstIndex = GridID.IndexForGridLetter((char)stringValue[0]);
+        int secondIndex = GridID.IndexForGridLetter((char)stringValue[1]);
         return (firstIndex, secondIndex);
     }
 
-    public int CompareTo(TwoDGridID other)
+    public override string ToString() 
     {
-        return stringValue.CompareTo(other.stringValue) ;
+        return stringValue;
+    }
+    public readonly int CompareTo(IStringConvertible other)
+    {
+        return stringValue.CompareTo(other.ToString());
     }
 }
  

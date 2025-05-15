@@ -24,7 +24,7 @@ namespace Cameca.CustomAnalysis.Pca;
 public partial class ProjectionGridsView : UserControl
 {
     string currentGridId = "";
-    HashSet<string> gridsToExcludeFromPCAPhaseID = new HashSet<string>();
+    readonly HashSet<string> gridsToIncludeForPCAPhaseID = new();
     int whichGrid = 0;
     public ProjectionGridsView()
     {
@@ -65,12 +65,12 @@ public partial class ProjectionGridsView : UserControl
 
     internal string AxisLabelForGridLetter(char gridLetter)
     { 
-        return "PCA Component " + TwoDGridID.IndexForGridLetter(gridLetter);
+        return "PCA Component " + GridID.IndexForGridLetter(gridLetter);
     }
 
     internal string AxisYLabelForGridID(string gridID)
     {
-        if (gridID.Count() != 2)
+        if (gridID.Length != 2)
         {
             return "Unknown Pca Axis";
         }
@@ -80,7 +80,7 @@ public partial class ProjectionGridsView : UserControl
     // 
     internal string AxisXLabelForGridID(string gridID)
     {
-        if ( gridID.Count() != 2 )
+        if (gridID.Length != 2 )
         {
             return "Unknown Pca Axis";
         }
@@ -155,8 +155,7 @@ public partial class ProjectionGridsView : UserControl
     private void UseGridForPCAPhaseID_Click(object sender, RoutedEventArgs e)
     {
         CheckBox checkBox = (CheckBox)sender;
-        bool? checkBoxChecked = checkBox.IsChecked;
-        bool isChecked = checkBoxChecked.HasValue ? checkBoxChecked.Value : true; 
+        bool isChecked = checkBox.IsChecked ?? true; 
         GridsUsageDelegate.UseGridForPca(currentGridId, isChecked);
     }
 

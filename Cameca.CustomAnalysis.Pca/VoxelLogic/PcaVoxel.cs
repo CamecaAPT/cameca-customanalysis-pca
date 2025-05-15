@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System;
 
+namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 public struct VoxelID : IComparable<VoxelID>
 {
 
@@ -26,7 +27,7 @@ public struct VoxelID : IComparable<VoxelID>
     }
     static public List<VoxelID> ListFromIntArray(int[] integerIds)
     {
-        List<VoxelID> newList = new List<VoxelID>();
+        List<VoxelID> newList = new();
         foreach(int n in integerIds)
         {
             newList.Add(new VoxelID(n));
@@ -34,33 +35,33 @@ public struct VoxelID : IComparable<VoxelID>
         return newList;
     }
 
-    public (int, int, int) xyzCoordsFor(ThreeDGridDimensions dims)
+    public readonly (int, int, int) XYZCoordsFor(ThreeDGridDimensions dims)
     {
         int zOffset = dims.xy;
         int yOffset = dims.x;
         int zCoord = this.intValue / zOffset;
         int rem = this.intValue % zOffset;
         int yCoord = rem / yOffset;
-        rem = rem % yOffset;
+        rem %= yOffset;
         int xCoord = rem;
         return (xCoord, yCoord, zCoord);
     }
 
-    public ThreeDGridCoord GridCoordFor(ThreeDGridDimensions dims)
+    public readonly ThreeDGridCoord GridCoordFor(ThreeDGridDimensions dims)
     {
         int z = 0;
         int y = 0;
         int x = 0;
-        (x, y, z) = xyzCoordsFor(dims);
+        (x, y, z) = XYZCoordsFor(dims);
         return new ThreeDGridCoord(x, y, z);
     }
 
-    public int CompareTo(VoxelID other)
+    public readonly int CompareTo(VoxelID other)
     {
         return other.intValue > intValue ? -1 : other.intValue < intValue ? 1 : 0;
     }
 
-    internal void AddIfPossible(int x, int y, int z, ThreeDGridDimensions dims, List<VoxelID> neighbors)
+    internal readonly void AddIfPossible(int x, int y, int z, ThreeDGridDimensions dims, List<VoxelID> neighbors)
     {
         VoxelID? voxelId = VoxelID.VoxelIDIfPossible(dims, x, y, z);
         if (voxelId != null)
@@ -68,10 +69,10 @@ public struct VoxelID : IComparable<VoxelID>
             neighbors.Add(voxelId.Value);
         }
     }
-    public List<VoxelID> NeighborVoxels(ThreeDGridDimensions dims)
+    public readonly List<VoxelID> NeighborVoxels(ThreeDGridDimensions dims)
     {
-        (int x, int y, int z) = this.xyzCoordsFor(dims);
-        List<VoxelID> neighbors = new List<VoxelID>();
+        (int x, int y, int z) = this.XYZCoordsFor(dims);
+        List<VoxelID> neighbors = new();
         AddIfPossible(x - 1, y, z, dims, neighbors);
         AddIfPossible(x + 1, y, z, dims, neighbors);
         AddIfPossible(x, y - 1, z, dims, neighbors);
@@ -81,12 +82,12 @@ public struct VoxelID : IComparable<VoxelID>
         return neighbors;
     }
 
-    public string DebugStr(ThreeDGridDimensions dims)
+    public readonly string DebugStr(ThreeDGridDimensions dims)
     {
         int z;
         int y;
         int x;
-        (x, y, z) = xyzCoordsFor(dims);
+        (x, y, z) = XYZCoordsFor(dims);
         return intValue.ToString() + ":{" + x + "," + y + " + " + z + "}";
     }
 }

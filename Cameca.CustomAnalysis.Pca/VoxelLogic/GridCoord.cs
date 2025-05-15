@@ -1,6 +1,6 @@
-using System.Collections.Generic;
 using System;
 
+namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 
 // TwoDGridCoord is a pair of integers identifying a point on a Two Dimensional grid
 public struct TwoDGridCoord

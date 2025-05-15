@@ -2,13 +2,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Cameca.CustomAnalysis.Pca.Models;
+using Cameca.CustomAnalysis.Pca.VoxelLogic;
 
 namespace Cameca.CustomAnalysis.Pca;
+
 
 public delegate float[] GetScoresDelegate(int voxelIndex);
 
 public struct PcaPhaseIdentificationProperties
 {
+    public float oneDProjectionBinSize;
+    public float oneDProjectionDelocalization; 
     public float gridProjectionBinSize;
     public float gridProjectionDelocalization;
     public float noiseFloorFraction;
@@ -21,6 +26,8 @@ public struct PcaPhaseIdentificationProperties
           float peakSummitAllowance, 
           int numDimsForPCAPhaseId)
     {
+        this.oneDProjectionBinSize = 0.1f;
+        this.oneDProjectionDelocalization = 0.1f; 
         this.gridProjectionBinSize = gridProjectionBinSize;
         this.gridProjectionDelocalization = gridProjectionDelocalization;
         this.noiseFloorFraction = noiseFloor;
@@ -31,9 +38,9 @@ public struct PcaPhaseIdentificationProperties
 
 public class PcaScoresGridProducer: IScoresProvider {
 
-    ComponentsResults compResults;
-    PcaPhaseIdentificationProperties properties;
-    int nComponents;
+    readonly ComponentsResults compResults;
+    readonly PcaPhaseIdentificationProperties properties;
+    readonly int nComponents;
 
     public PcaScoresGridProducer(ComponentsResults results, PcaPhaseIdentificationProperties props)
     {
@@ -49,7 +56,7 @@ public class PcaScoresGridProducer: IScoresProvider {
         {
             scores[i] = compResults.Components[i].Scores[voxelIndex];
         }
-        VoxelID voxelId = new VoxelID(compResults.VoxelIndices[voxelIndex]);
+        VoxelID voxelId = new(compResults.VoxelIndices[voxelIndex]);
         return (voxelId, scores);
     }
 
@@ -61,8 +68,8 @@ public class PcaScoresGridProducer: IScoresProvider {
         int y = compResults.Grid3DData.NumVoxels[1];
         int z = compResults.Grid3DData.NumVoxels[2];
 
-        ThreeDGridDimensions gridDimensions = new ThreeDGridDimensions(x, y, z);
-        return new PcaScoresGrid(this, compResults.VoxelIndices.Count(), nComponents, gridDimensions);
+        ThreeDGridDimensions gridDimensions = new(x, y, z);
+        return new PcaScoresGrid(this, compResults.VoxelIndices.Length, nComponents, gridDimensions);
     }
 }
 
@@ -134,18 +141,21 @@ internal static class PcaCalculator
         }
         return ionCounts;
     }
-
-    // manipulate the results of PCA to identify phases per voxel
+ 
     public static PcaScoresGrid GenerateScoresGrid(IIonData ionData, ComponentsResults compResults, PcaPhaseIdentificationProperties properties)
     {
-        PcaScoresGridProducer producer = new PcaScoresGridProducer(compResults, properties);
+        PcaScoresGridProducer producer = new(compResults, properties);
 
         return producer.GenerateScoresGrid();
-    }     // manipulate the results of PCA to identify phases per voxel
+    }
     public static TwoDGridsResults CalculateTwoDGrids(PcaScoresGrid scoresGrid, PcaPhaseIdentificationProperties properties)
     {
         return scoresGrid.CalculateTwoDGrids(properties);
-    }    // manipulate the results of PCA to identify phases per voxel
+    }
+    public static OneDGridsResults CalculateOneDGrids(PcaScoresGrid scoresGrid, PcaPhaseIdentificationProperties properties)
+    {
+        return scoresGrid.CalculateOneDGrids(properties);
+    }
 
     public static NoiseEigenvalueResults GetNoiseEigenvalues(float[] evals, int gaps, int significance, bool refine)
     {

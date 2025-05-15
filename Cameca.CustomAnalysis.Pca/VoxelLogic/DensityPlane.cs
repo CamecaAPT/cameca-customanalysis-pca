@@ -5,10 +5,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 
+namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 
 public struct PixelID : IComparable<PixelID>
 {
-    public int pixelId;
+    public readonly int pixelId;
     
     // Here are some hardcoded constants for maintaining the grid data
     // each grid row has potentially 2^10 pixelIDs per row (i.e. 1024 -- not all actually used)
@@ -35,31 +36,29 @@ public struct PixelID : IComparable<PixelID>
         return new PixelID(newId);
     }
 
-    public (int, int) xyCoords()
+    public readonly (int, int) XYCoords()
     {
         int y = (HalfGridStride + pixelId) >> GridStrideExp;
         int x = pixelId - (y * GridStride);
         return (x, y);
     }
 
-    public int CompareTo(PixelID other)
+    public readonly int CompareTo(PixelID other)
     {
         return other.pixelId > pixelId ? -1 : other.pixelId < pixelId ? 1 : 0;
     }
 
-    public string DebugStr()
+    public readonly string DebugStr()
     {
-        int x;
-        int y;
-        (x, y) = this.xyCoords();
+        (int x, int y) = this.XYCoords();
         return pixelId.ToString() + ":{" + x + "," + y + "}";
     }
 }
 
 
-public struct PeakID
+public readonly struct PeakID
 {
-    PixelID peakMax;
+    readonly PixelID peakMax;
     public PeakID(PixelID pixelId)
     {
         peakMax = pixelId;
@@ -107,12 +106,12 @@ public struct PeakID
 // efficient, as the PixelID is really represented by an integer
 public class DensityPlane
 {
-    float halfBinsize;
+    readonly float halfBinsize;
     public float binsize;
-    float oneOverBinsize;
+    readonly float oneOverBinsize;
     int oobPoints;
-    float maxval;
-    Dictionary<PixelID, float> data;
+    readonly float maxval;
+    readonly Dictionary<PixelID, float> data;
     
     public DensityPlane(float binSep)
     {
@@ -136,7 +135,7 @@ public class DensityPlane
 
     public DensityPlane Convolve(List<float> normalizedCoefficients)
     {
-        DensityPlane newDP = new DensityPlane(this.binsize);
+        DensityPlane newDP = new(this.binsize);
         if (normalizedCoefficients.Count > 0)
         {
             int maxx = normalizedCoefficients.Count - 1;
@@ -145,7 +144,7 @@ public class DensityPlane
             int miny = minx;
             void convolutionFunction(PixelID pixelId, float value)
             {
-                (int p, int q) = pixelId.xyCoords();
+                (int p, int q) = pixelId.XYCoords();
                 for (int x = minx; x <= maxx; x+=1)
                 {
                     int xCoefficientIndex = (int)Math.Abs(x);
@@ -169,7 +168,7 @@ public class DensityPlane
 
     public void AddValueAtPixel(PixelID pixelId, float value)
     {
-        data[pixelId] = valueAtPixel(pixelId) + value;
+        data[pixelId] = ValueAtPixel(pixelId) + value;
     }
 
     public List<PixelID> GridPointIds()
@@ -194,10 +193,8 @@ public class DensityPlane
     // check for the 8 neighboring pixels and add them if they have a non-zero value
     public List<PixelID> PixelIdsNeighboring(PixelID pixelId)
     {
-        //int x;
-        //int y;
-        (int x, int y) = pixelId.xyCoords();
-        List<PixelID> neighbors = new List<PixelID>();
+        (int x, int y) = pixelId.XYCoords();
+        List<PixelID> neighbors = new();
         AddIfNonZero(x - 1, y - 1, neighbors);
         AddIfNonZero(x - 1, y, neighbors);
         AddIfNonZero(x - 1, y + 1, neighbors);
@@ -216,7 +213,7 @@ public class DensityPlane
 
         foreach (PixelID candidate in candidates)
         {
-            float nthScore = valueAtPixel(candidate);
+            float nthScore = ValueAtPixel(candidate);
             if (nthScore > maxScore)
             {
                 maxScore = nthScore;
@@ -232,10 +229,10 @@ public class DensityPlane
             return null;
         }
         PixelID bestCandidate = candidates[0];
-        float currMax = valueAtPixel(bestCandidate);
+        float currMax = ValueAtPixel(bestCandidate);
         foreach (PixelID candidate in candidates)
         {
-            float nthPopulation = valueAtPixel(candidate);
+            float nthPopulation = ValueAtPixel(candidate);
             if (nthPopulation > currMax)
             {
                 currMax = nthPopulation;
@@ -257,9 +254,7 @@ public class DensityPlane
         pixelIds.Sort();
         foreach (PixelID pixelId in pixelIds)
         {
-            int x;
-            int y;
-            (x, y) = pixelId.xyCoords();
+            (int x, int y) = pixelId.XYCoords();
             if (!first)
             {
                 miny = Math.Min(y, miny);
@@ -309,14 +304,14 @@ public class DensityPlane
                     {
                         xthValue = data[xthPixelId];
                     }
-                    l = l + xthValue;
+                    l += xthValue;
                     if (x != max.x)
                     {
-                        l = l + ",";
+                        l += ",";
                     }
                 }
 			}
-			l = l + "}";
+			l += "}";
 			stream.Write(l);
 			if (y != max.y)
 			{
@@ -338,9 +333,7 @@ public class DensityPlane
         pixelIds.Sort();
         foreach (PixelID pixelId in pixelIds)
         {
-            int x;
-            int y;
-            (x, y) = pixelId.xyCoords();
+            (int x, int y) = pixelId.XYCoords();
             if (!first)
             {
                 miny = Math.Min(y, miny);
@@ -362,26 +355,26 @@ public class DensityPlane
         }
     }
     
-    public void writeToFile(string outputFilename)
+    public void WriteToFile(string outputFilename)
     {   
         string docPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        using (StreamWriter outputFile = new StreamWriter(outputFilename))
+        using (StreamWriter outputFile = new(outputFilename))
         {
             this.WriteToStream(outputFile);
         }
     }
 
-    public float valueAtGridCoords(int x, int y)
+    public float ValueAtGridCoords(int x, int y)
     {
         PixelID? pixelId = PixelID.PixelIDFor(x, y);
         if (pixelId == null)
         {
             return 0.0f;
         }
-        return this.valueAtPixel(pixelId.Value);
+        return this.ValueAtPixel(pixelId.Value);
     }
 
-    public float valueAtPixel(PixelID pixelId)
+    public float ValueAtPixel(PixelID pixelId)
     {
         float binValue;
         if (data.TryGetValue(pixelId, out binValue))
@@ -460,6 +453,34 @@ public class DensityPlane
         addValueAtCoords(xBinIndex - 1, yBinIndex + 1, xm1 * yp1);
         addValueAtCoords(xBinIndex, yBinIndex + 1, x0 * yp1);
         addValueAtCoords(xBinIndex + 1, yBinIndex + 1, xp1 * yp1);
+    }
+
+    // IdentifyTwoDPartitions use the density map from the twoDGrid to separate 
+    // voxels that belong to different peaks in the DensityPlane
+    // first, identify the peaks and their associated pixels
+    // then, for each voxel, see if it lands in on of the partitioned pixels.
+    // If it does, add it to the appropriate list
+    // return the list of lists
+    // indices not identified are not returned in any list
+    public List<List<PixelID>> IdentifyTwoDPartitions(PcaPhaseIdentificationProperties props)
+    {
+        // to identify the first maximum, just find the pixel with the highest value
+        // then, accumulate neighboring pixels, avoiding neighbors with higher values
+        // accumulate neighbors in order of their density value.
+        // stop accumulating when a slope increase is found:
+        //   this indicates there must be another maximum to look for
+        // also, stop at 10% of peak max
+        // to look for another maximum, find the remaining pixel with the maximum value.
+        // continue accumulating pixels into all peaks
+
+        // partitionFinder operates on the grid, identifying pixels
+        // associated with the different maxima
+        TwoDGridPartitionFinder partitionFinder = new(this, props);
+
+        partitionFinder.FindPartitions(props.noiseFloorFraction);
+        var pixelLists = partitionFinder.GetPixelLists();
+        partitionFinder.Clear();
+        return pixelLists;
     }
 }
 

@@ -3,6 +3,8 @@ using System.Linq;
 using System;
 using System.IO;
 
+namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
+
 // PcaStream is a utility class for writing information to a file during a run of the 
 // Pca code in APSuite
 // On creation of the object, a unique name is chosen based on timestamp.
@@ -10,15 +12,15 @@ using System.IO;
 
 public class PcaStream  
 {
-    StreamWriter outputFile;
-    DateTime creationTime;
+    readonly StreamWriter outputFile;
+    readonly DateTime creationTime;
 
     public void DumpVoxelSetStats(string prefix, Dictionary<string, HashSet<VoxelID>> voxelSets)
     {
         outputFile.WriteLine(prefix);
         foreach(KeyValuePair<string, HashSet<VoxelID>> kvp in voxelSets)
         {
-            outputFile.WriteLine(kvp.Key + ": " + kvp.Value.Count());
+            outputFile.WriteLine(kvp.Key + ": " + kvp.Value.Count);
         }
         outputFile.WriteLine("!");
     }

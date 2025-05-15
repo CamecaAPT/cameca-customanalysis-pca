@@ -1,7 +1,8 @@
 ﻿using Cameca.CustomAnalysis.Interface;
 using System.Collections.Generic;
+using Cameca.CustomAnalysis.Pca.VoxelLogic;
 
-namespace Cameca.CustomAnalysis.Pca;
+namespace Cameca.CustomAnalysis.Pca.Models;
 
 public sealed class ComponentsResults
 {

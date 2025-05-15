@@ -2,7 +2,7 @@
 using System;
 using System.Numerics;
 
-namespace Cameca.CustomAnalysis.Pca;
+namespace Cameca.CustomAnalysis.Pca.Utils;
 
 internal static class PositionScores
 {
