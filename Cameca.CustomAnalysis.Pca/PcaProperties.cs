@@ -67,7 +67,7 @@ public partial class PcaProperties : ObservableObject
 
     [ObservableProperty]
     [field: Display(Name = "Peak ID Noise Floor")]
-    private float noiseFloorFraction = 0.1f;
+    private float noiseFloorFraction = 0.05f;
 
     [ObservableProperty]
     [field: Display(Name = "Peak Summit Allowance")]
