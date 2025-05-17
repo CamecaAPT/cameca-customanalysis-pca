@@ -384,7 +384,6 @@ public class DensityPlane
         return 0.0f;
     }
 
-
     public (int, int) PixelIndicesFor(float x, float y)
     {
         int xBinIndex = (int)MathF.Floor((x + halfBinsize) * oneOverBinsize);

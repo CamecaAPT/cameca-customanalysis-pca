@@ -146,6 +146,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
         InvalidatePcaPhases();
     }
+    
     public string GridInfo(string gridID)
     {
         string info = "";
@@ -155,6 +156,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
         return info;
     }
+
     public bool UsesHistogramForPca(string gridID)
     {
         return histogramsToUseForPCA.Contains(gridID);
