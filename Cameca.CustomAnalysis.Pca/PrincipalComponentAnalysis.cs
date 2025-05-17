@@ -614,7 +614,12 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
                     binnedScores[i] = line.ValueAtBin(bin);
                     bin = bin.NextHigherBin();
                 }
-                var scoreData = binnedScores.Select((y, i) => new Vector2((min + i) * binSize, y * invBinSize)).ToArray();
+
+                // when defining scoreData, multiply the y by invBinSize to get the units right
+                //  subtract halfBinsize from the x to get the rendering of the x coordinate right, because LiveCharts
+                //  doesn't draw the bin at the center, but instead draws it at the low side of the bin 
+                float halfBinsize = binSize * 0.5f;
+                var scoreData = binnedScores.Select((y, i) => new Vector2((min + i) * binSize - halfBinsize, y * invBinSize)).ToArray();
                 var scoresHistogram = Resources.ChartObjects.CreateHistogram(scoreData, color: Colors.Blue);
                 scoresHistogram.Name = gridId.ToString();
                 newHistogramsData.Add(scoresHistogram);
@@ -791,7 +796,10 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
         ReadOnlyMemory2D<float> rom = new(dat, span, span);
         Vector2 binsize = new(dp.binsize, dp.binsize);
-        Vector2 origin = new(minCoord.y * dp.binsize, minCoord.x * dp.binsize);
+        // LiveCharts doesn't draw the bin at the bin center, but rather at the low coordinate of the bin
+        //  so, we need to subtract half the binsize from the x y coordinates to get it to render correctly
+        float halfBinsize = dp.binsize * 0.5f;
+        Vector2 origin = new((minCoord.y * dp.binsize) - halfBinsize, (minCoord.x * dp.binsize) - halfBinsize);
         renderData.Update(rom, binsize, origin);
     }
     // Updates readonly Min/Max properties so the bounds are displayed in the Properties panel 
