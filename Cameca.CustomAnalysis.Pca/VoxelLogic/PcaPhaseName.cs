@@ -4,17 +4,17 @@ using System;
 
 namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 
-public struct PcaPhaseName: IComparable<PcaPhaseName>
+public readonly struct PcaPhaseName: IComparable<PcaPhaseName>, IEquatable<PcaPhaseName>
 {
-    string pcaPhase; // this string in the format A.1,B.2,C.0
+    readonly string pcaPhase; // this string in the format A.1,B.2,C.0
     public PcaPhaseName()
     {
-        this.pcaPhase = "";
+        pcaPhase = "";
     }
 
     public PcaPhaseName(string s)
     {
-        this.pcaPhase = s;
+        pcaPhase = s;
     }
 
     public static PcaPhaseName InterfaceVoxelsPhaseName()
@@ -40,15 +40,16 @@ public struct PcaPhaseName: IComparable<PcaPhaseName>
 
     public PcaPhaseName AppendCode(string code)
     {
+        string pca;
         if (pcaPhase.Length == 0)
         {
-            pcaPhase = code;
+            pca = code;
         }
         else
         {
-            pcaPhase = pcaPhase + "," + code;
+            pca = pcaPhase + "," + code;
         }
-        return this;
+        return new PcaPhaseName(pca);
     }
 
     public readonly bool Contains(string s)
@@ -64,6 +65,11 @@ public struct PcaPhaseName: IComparable<PcaPhaseName>
     public readonly int CompareTo(PcaPhaseName other)
     {
         return this.pcaPhase.CompareTo(other.pcaPhase);
+    }
+
+    public readonly bool Equals(PcaPhaseName other)
+    {
+        return pcaPhase == other.pcaPhase;
     }
 }
 

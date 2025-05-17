@@ -9,9 +9,10 @@ public interface IGridsUsageDelegate
 {
     void UseGridForPca(string gridID, bool useIt);
     bool UsesGridForPca(string gridID);
+    string GridInfo(string gridID);
 }
 
-public class DoNothingGridsUsageDelegate : IGridsUsageDelegate 
+public class DoNothingGridsUsageDelegate : IGridsUsageDelegate
 {
     public DoNothingGridsUsageDelegate()
     {
@@ -25,5 +26,10 @@ public class DoNothingGridsUsageDelegate : IGridsUsageDelegate
     public bool UsesGridForPca(string gridID)
     {
         return true;
+    }
+
+    public string GridInfo(string gridID)
+    {
+        return "No info about grid: " + gridID;
     }
 }

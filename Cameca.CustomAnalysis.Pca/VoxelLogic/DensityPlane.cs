@@ -384,11 +384,18 @@ public class DensityPlane
         return 0.0f;
     }
 
+
     public (int, int) PixelIndicesFor(float x, float y)
     {
         int xBinIndex = (int)MathF.Floor((x + halfBinsize) * oneOverBinsize);
         int yBinIndex = (int)MathF.Floor((y + halfBinsize) * oneOverBinsize);
         return (xBinIndex, yBinIndex);
+    }
+
+    public (float, float) XYCoordsFor(PixelID pixelId)
+    {
+        (int xBinIndex, int yBinIndex) = pixelId.XYCoords();
+        return (xBinIndex * binsize, yBinIndex * binsize);
     }
 
     public PixelID? PixelIDFor(float x, float y)

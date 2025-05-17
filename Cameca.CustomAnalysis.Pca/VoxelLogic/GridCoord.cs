@@ -13,7 +13,7 @@ public struct TwoDGridCoord
         this.x = x;
         this.y = y;
     }
-    public void ToConsole(string prefix)
+    public readonly void ToConsole(string prefix)
     {
         Console.WriteLine(prefix + this.x, ", ", + this.y);
     }
@@ -39,27 +39,27 @@ public struct ThreeDGridDimensions
         this.xyz = xy * z;
     }
 
-    public void ToConsole(string prefix)
+    public readonly void ToConsole(string prefix)
     {
         Console.WriteLine(prefix + this.x, ", ", +this.y, ", ", +this.z);
     }
-    public bool VoxelExists(int p, int q, int r)
+    public readonly bool VoxelExists(int p, int q, int r)
     {
          return p >= 0 && q >= 0 && r >= 0 && p < x && q < y && r < z;
     }
 
-    public VoxelID VoxelIdFor(int p, int q, int r)
+    public readonly VoxelID VoxelIdFor(int p, int q, int r)
     {
         int voxelIdIntValue = VoxelIdIntValueFor(p, q, r);
         return new VoxelID(voxelIdIntValue);
     }
 
-    public int VoxelIdIntValueFor(int p, int q, int r)
+    public readonly int VoxelIdIntValueFor(int p, int q, int r)
     {
         return  p + (q * x) + (r * xy);
     }
 
-    public int NumVoxels()
+    public readonly int NumVoxels()
     {
         return this.xyz; 
     }
@@ -79,12 +79,12 @@ public struct ThreeDGridCoord
         this.z = z;
     }
 
-    public VoxelID VoxelIdFor(ThreeDGridDimensions gridDims)
+    public readonly VoxelID VoxelIdFor(ThreeDGridDimensions gridDims)
     {
         return gridDims.VoxelIdFor(x, y, z);
     }
 
-    public void ToConsole(string prefix)
+    public readonly void ToConsole(string prefix)
     {
         Console.WriteLine(prefix + this.x, ", ", +this.y, ", ", +this.z);
     }

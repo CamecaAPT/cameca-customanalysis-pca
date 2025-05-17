@@ -1,20 +1,14 @@
 ﻿using Cameca.CustomAnalysis.Interface;
-using Cameca.CustomAnalysis.Utilities;
 using Cameca.Extensions.Controls;
-using CommunityToolkit.HighPerformance;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Diagnostics;
 using System.Linq;
-using System.Numerics;
-using System.Runtime.Intrinsics.Arm;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
-using System.Windows.Documents;
 using System.Windows.Media;
+
+using Cameca.CustomAnalysis.Pca.VoxelLogic; 
 
 namespace Cameca.CustomAnalysis.Pca;
 
@@ -29,7 +23,6 @@ public partial class ProjectionGridsView : UserControl
     public ProjectionGridsView()
     {
         InitializeComponent();
-        var histogram = ProjectionGrid2dHistogram;
     }
 
     public static readonly DependencyProperty GridsSourceProperty = DependencyProperty.Register(
@@ -54,7 +47,6 @@ public partial class ProjectionGridsView : UserControl
     private static void GridsSourcePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is not ProjectionGridsView projectionGridsView) { return; }
-        ICollection<IRenderData> renderData = projectionGridsView.GridsSource;
         projectionGridsView.RefreshGridData();
     }
 
@@ -63,12 +55,12 @@ public partial class ProjectionGridsView : UserControl
         RefreshGridData();
     }
 
-    internal string AxisLabelForGridLetter(char gridLetter)
+    static internal string AxisLabelForGridLetter(char gridLetter)
     { 
         return "PCA Component " + GridID.IndexForGridLetter(gridLetter);
     }
 
-    internal string AxisYLabelForGridID(string gridID)
+    static internal string AxisYLabelForGridID(string gridID)
     {
         if (gridID.Length != 2)
         {
@@ -78,7 +70,7 @@ public partial class ProjectionGridsView : UserControl
     }
 
     // 
-    internal string AxisXLabelForGridID(string gridID)
+    static internal string AxisXLabelForGridID(string gridID)
     {
         if (gridID.Length != 2 )
         {
@@ -120,6 +112,7 @@ public partial class ProjectionGridsView : UserControl
             gridLabel.Content = "Grid " + renderData.Name;
 
             UseGridForPCAPhaseID.IsChecked = GridsUsageDelegate.UsesGridForPca(currentGridId);
+            GridInfoText.Text = GridsUsageDelegate.GridInfo(currentGridId);
         }
     }
 
