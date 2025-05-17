@@ -391,6 +391,12 @@ public class DensityPlane
         return (xBinIndex, yBinIndex);
     }
 
+    public (float, float) XYCoordsFor(PixelID pixelId)
+    {
+        (int xBinIndex, int yBinIndex) = pixelId.XYCoords();
+        return (xBinIndex * binsize, yBinIndex * binsize);
+    }
+
     public PixelID? PixelIDFor(float x, float y)
     {
         int binx;

@@ -1,16 +1,14 @@
 ﻿using Cameca.CustomAnalysis.Interface;
-using Cameca.CustomAnalysis.Utilities;
 using Cameca.Extensions.Controls;
-using CommunityToolkit.HighPerformance;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-
 using System.Windows.Media;
 
+using Cameca.CustomAnalysis.Pca.VoxelLogic;
 namespace Cameca.CustomAnalysis.Pca;
 
 /// <summary>
@@ -22,12 +20,11 @@ namespace Cameca.CustomAnalysis.Pca;
 public partial class ScoresHistogramsView : UserControl
 {
     string currentHistogramId = "";
-    HashSet<string> histogramsToUseForPCAPhaseID = new HashSet<string>();
+    readonly HashSet<string> histogramsToUseForPCAPhaseID = new();
     int whichHistogram = 0;
     public ScoresHistogramsView()
     {
         InitializeComponent();
-        var histogram = ScoresHistogram;
     }
 
     public static readonly DependencyProperty HistogramsSourceProperty = DependencyProperty.Register(
@@ -52,7 +49,6 @@ public partial class ScoresHistogramsView : UserControl
     private static void HistogramsSourcePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is not ScoresHistogramsView scoresHistogramsView) { return; }
-        ICollection<IRenderData> renderData = scoresHistogramsView.HistogramsSource;
         scoresHistogramsView.RefreshHistogramData();
     }
 
@@ -62,7 +58,7 @@ public partial class ScoresHistogramsView : UserControl
     }
 
     // 
-    internal string AxisXLabelForHistogramID(string histogramID)
+    internal static string AxisXLabelForHistogramID(string histogramID)
     {
         return "PCA Component " + GridID.IndexForGridLetter(histogramID[0]);
     }
@@ -135,8 +131,7 @@ public partial class ScoresHistogramsView : UserControl
     private void UseHistogramForPCAPhaseID_Click(object sender, RoutedEventArgs e)
     {
         CheckBox checkBox = (CheckBox)sender;
-        bool? checkBoxChecked = checkBox.IsChecked;
-        bool isChecked = checkBoxChecked.HasValue ? checkBoxChecked.Value : true;
+        bool isChecked = checkBox.IsChecked ?? true;
         HistogramsUsageDelegate.UseHistogramForPca(currentHistogramId, isChecked);
     }
 

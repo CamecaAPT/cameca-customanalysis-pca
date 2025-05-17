@@ -26,8 +26,8 @@ public struct PcaPhaseIdentificationProperties
           float peakSummitAllowance, 
           int numDimsForPCAPhaseId)
     {
-        this.oneDProjectionBinSize = 0.1f;
-        this.oneDProjectionDelocalization = 0.1f; 
+        this.oneDProjectionBinSize = 0.05f;
+        this.oneDProjectionDelocalization = 0.05f; 
         this.gridProjectionBinSize = gridProjectionBinSize;
         this.gridProjectionDelocalization = gridProjectionDelocalization;
         this.noiseFloorFraction = noiseFloor;

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 
+using Cameca.CustomAnalysis.Pca.VoxelLogic;
 namespace Cameca.CustomAnalysis.Pca.Models;
 // OneDGridsResults represents the projection of the PCA Components results
 // onto a single dimension's line

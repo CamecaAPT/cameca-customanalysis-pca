@@ -6,6 +6,7 @@ using System;
 using System.IO;
 
 using Cameca.CustomAnalysis.Pca.Models;
+using System.Windows.Shapes;
 namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 
 // PcaScoresGrid represents a three dimensional grid containing the PCA scores for a collection of voxels
@@ -50,12 +51,12 @@ public class PcaScoresGrid
     }
 
     // really just the ASCII value of the first character
-    internal int ASCIIValueForChar(char s)
+    static internal int ASCIIValueForChar(char s)
     {
         return (int)s;
     }
 
-    internal char CharValueForASCII(int a)
+    static internal char CharValueForASCII(int a)
     {
         return (char)a;
     }
@@ -121,7 +122,7 @@ public class PcaScoresGrid
     // SO, first  put all the voxels into a different list corresponding to each pixel
     // then we can do the lookup once and assign all the voxels from that pixel to 
     // the same phase
-    Dictionary<PixelID, List<VoxelID>> AggregateVoxelsIntoListsPerPixel(List<VoxelID> voxelIds, DensityPlane grid, Dictionary<VoxelID, PcaVoxel> pcaVoxels, int firstDim, int secondDim)
+    static Dictionary<PixelID, List<VoxelID>> AggregateVoxelsIntoListsPerPixel(List<VoxelID> voxelIds, DensityPlane grid, Dictionary<VoxelID, PcaVoxel> pcaVoxels, int firstDim, int secondDim)
     {
         // For each voxel, assign the voxel to the List corresponding with its pixel
         Dictionary<PixelID, List<VoxelID>> voxelLists = new();
@@ -148,7 +149,7 @@ public class PcaScoresGrid
         return voxelLists;
     }
 
-    Dictionary<BinID, List<VoxelID>> AggregateVoxelsIntoListsPerBin(List<VoxelID> voxelIds, DensityLine line, Dictionary<VoxelID, PcaVoxel> pcaVoxels, int pcaDimension)
+    static Dictionary<BinID, List<VoxelID>> AggregateVoxelsIntoListsPerBin(List<VoxelID> voxelIds, DensityLine line, Dictionary<VoxelID, PcaVoxel> pcaVoxels, int pcaDimension)
     {
         // For each voxel, assign the voxel to the List corresponding with its bin
         Dictionary<BinID, List<VoxelID>> voxelLists = new();
@@ -177,7 +178,7 @@ public class PcaScoresGrid
     // VoxelBuckets essentially inverts the dictionary passed in
     // returns a dictionary where the key is the pcaCode string,
     // and the value is a HashSet of VoxelIDs with that pcaCode
-    internal Dictionary<PcaPhaseName, HashSet<VoxelID>> VoxelBuckets(Dictionary<VoxelID, PcaPhaseName> pcaCodes)
+    static internal Dictionary<PcaPhaseName, HashSet<VoxelID>> VoxelBuckets(Dictionary<VoxelID, PcaPhaseName> pcaCodes)
     {
         Dictionary<PcaPhaseName, HashSet<VoxelID>> buckets = new();
         foreach (KeyValuePair<VoxelID, PcaPhaseName> kvp in pcaCodes)
@@ -195,7 +196,7 @@ public class PcaScoresGrid
         }
         return buckets;
     }
-    internal Dictionary<PcaPhaseName, int> PcaCodeCounts(Dictionary<PcaPhaseName, HashSet<VoxelID>> voxelBuckets)
+    static internal Dictionary<PcaPhaseName, int> PcaCodeCounts(Dictionary<PcaPhaseName, HashSet<VoxelID>> voxelBuckets)
     {
         Dictionary<PcaPhaseName, int> pcaCodeCounts = new();
         foreach (KeyValuePair<PcaPhaseName, HashSet<VoxelID>> kvp in voxelBuckets)
@@ -204,7 +205,7 @@ public class PcaScoresGrid
         }
         return pcaCodeCounts;
     }
-    internal void DumpPcaCodeCounts(Dictionary<string, int> pcaCodeCounts)
+    static internal void DumpPcaCodeCounts(Dictionary<string, int> pcaCodeCounts)
     {
         string docPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         string outputFilename = System.IO.Path.Combine(docPath, "PcaCodeStats.txt");
@@ -223,7 +224,7 @@ public class PcaScoresGrid
         }
     }
 
-    internal void DumpPartitions(List<List<PixelID>> partitions, string gridId)
+    static internal void DumpPartitions(List<List<PixelID>> partitions, string gridId)
     {
         string docPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         string outputFilename = System.IO.Path.Combine(docPath, "PcaPeakPartitions" + gridId + ".txt");
@@ -265,7 +266,7 @@ public class PcaScoresGrid
         }
     }
 
-    internal List<VoxelID> FindMatchingSets(VoxelID neighborID, Dictionary<VoxelID, HashSet<VoxelID>> voxelSets)
+    static internal List<VoxelID> FindMatchingSets(VoxelID neighborID, Dictionary<VoxelID, HashSet<VoxelID>> voxelSets)
     {
         List<VoxelID> matchingSets = new();
         foreach (KeyValuePair<VoxelID, HashSet<VoxelID>> kvp in voxelSets)
@@ -283,7 +284,7 @@ public class PcaScoresGrid
     // The reason we use a . to separate the letter from the number in PCA codes is to 
     // make it easy to identify a zero -- i.e. the algorithm here also
     // works if there are 10 peaks, because "A.10" doesn't contain ".0"
-    internal HashSet<PcaPhaseName> FilterForMatchableCode(List<PcaPhaseName> pcaCodesToMatch, PcaPhaseName pcaCode)
+    static internal HashSet<PcaPhaseName> FilterForMatchableCode(List<PcaPhaseName> pcaCodesToMatch, PcaPhaseName pcaCode)
     {
         // if pcaCode contains zero 0s or more than one 0, return empty List
         HashSet<PcaPhaseName> matches = new();
@@ -322,7 +323,7 @@ public class PcaScoresGrid
         return matches;
     }
 
-    void AddVoxelsToHashSetDictionary(Dictionary<PcaPhaseName, HashSet<VoxelID>> additions, Dictionary<PcaPhaseName, HashSet<VoxelID>> sets)
+    static void AddVoxelsToHashSetDictionary(Dictionary<PcaPhaseName, HashSet<VoxelID>> additions, Dictionary<PcaPhaseName, HashSet<VoxelID>> sets)
     {
         foreach (KeyValuePair<PcaPhaseName, HashSet<VoxelID>> kvp in additions)
         {
@@ -343,7 +344,7 @@ public class PcaScoresGrid
         }
     }
 
-    void AddVoxelsToPcaPhaseNameListSet(Dictionary<PcaPhaseNameList, HashSet<VoxelID>> additions, Dictionary<PcaPhaseNameList, HashSet<VoxelID>> sets)
+    static void AddVoxelsToPcaPhaseNameListSet(Dictionary<PcaPhaseNameList, HashSet<VoxelID>> additions, Dictionary<PcaPhaseNameList, HashSet<VoxelID>> sets)
     {
         foreach (KeyValuePair<PcaPhaseNameList, HashSet<VoxelID>> kvp in additions)
         {
@@ -365,7 +366,7 @@ public class PcaScoresGrid
     }
 
     // return the total number of voxels unassigned
-    int SubtractVoxelsFromHashSetDictionary(Dictionary<PcaPhaseName, HashSet<VoxelID>> subtractions, Dictionary<PcaPhaseName, HashSet<VoxelID>> sets)
+    static int SubtractVoxelsFromHashSetDictionary(Dictionary<PcaPhaseName, HashSet<VoxelID>> subtractions, Dictionary<PcaPhaseName, HashSet<VoxelID>> sets)
     {
         int unassignedCount = 0;
         foreach (KeyValuePair<PcaPhaseName, HashSet<VoxelID>> kvp in subtractions)
@@ -441,8 +442,7 @@ public class PcaScoresGrid
         float binSeparation = properties.gridProjectionBinSize;
         float delocalization = properties.gridProjectionDelocalization;
         int numDimsToInclude = this.scoreDims;
- 
-        int AAsciiValue = ASCIIValueForChar('A');
+
         // now, make twoD grids using all pairs of dimensions
         for (int i = 0; i < (numDimsToInclude - 1); ++i)
         {
@@ -529,13 +529,16 @@ public class PcaScoresGrid
                     foreach (PixelID pixelID in pixelIdList)
                     {
                         // Lookup for all the voxels bucketed under this pixelId
-                        List<VoxelID> voxelIdsForThisPixel = voxelLists[pixelID];
-                        foreach (VoxelID voxelId in voxelIdsForThisPixel)
+                        if (voxelLists.ContainsKey(pixelID))
                         {
-                            pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(pcaCode);
+                            List<VoxelID> voxelIdsForThisPixel = voxelLists[pixelID];
+                            foreach (VoxelID voxelId in voxelIdsForThisPixel)
+                            {
+                                pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(pcaCode);
+                            }
+                            // remove that entry from voxelLists
+                            voxelLists.Remove(pixelID);
                         }
-                        // remove that entry from voxelLists
-                        voxelLists.Remove(pixelID);
                     }
                     peakIndex += 1;
                 }
@@ -779,7 +782,7 @@ public class PcaScoresGrid
         // now, pcaCodeVoxelSets is ready to be used for define a per-voxel component mapping
         // lets order the pcaCodeVoxelSets by population
         List<PcaPhaseName> pcaCodesByPopulation = pcaCodeVoxelSets.Keys.ToList();
-        PopulationSorter<PcaPhaseName, VoxelID> comparator = new(pcaCodeVoxelSets);
+        var comparator = new PopulationSorter<PcaPhaseName, VoxelID>(pcaCodeVoxelSets);
         pcaCodesByPopulation.Sort(comparator);
 
         // now pcaCodesByPopulation is sorted?
@@ -846,7 +849,7 @@ public class PcaScoresGrid
     // If it does, add it to the appropriate list
     // return the list of lists
     // indices not identified are not returned in any list
-    public List<List<BinID>> IdentifyOneDPartitions(DensityLine oneDGrid, int dimX, PcaPhaseIdentificationProperties props)
+    static public List<List<BinID>> IdentifyOneDPartitions(DensityLine oneDGrid, int dimX, PcaPhaseIdentificationProperties props)
     {
         // to identify the first maximum, just find the pixel with the highest value
         // then, accumulate neighboring pixels, avoiding neighbors with higher values
@@ -1074,6 +1077,42 @@ public class PcaScoresGrid
         return densities;
     }
 
+    public string GridInfo(string gridString)
+    {
+        string info = "";
+        var gridId = new TwoDGridID(gridString);
+        if (twoDPartitions.ContainsKey(gridId))
+        {
+            List<List<PixelID>> lists = twoDPartitions[gridId];
+            DensityPlane plane = twoDGrids[gridId];
+            int regionCount = lists.Count;
+            info = "Regions Identified: " + regionCount;
+            for (int r = 0; r < regionCount; ++r)
+            {
+                List<PixelID> rthList = lists[r];
+                int peakCount = rthList.Count;
+                // calculate center of peak
+                float xSum = 0.0f;
+                float ySum = 0.0f;
+                foreach (PixelID pixelId in rthList)
+                {
+                    (float nthX, float nthY) = plane.XYCoordsFor(pixelId);
+                    xSum += nthX;
+                    ySum += nthY;
+                }
+                float xCenter = xSum / peakCount;
+                float yCenter = ySum / peakCount;
+                float area = peakCount * plane.binsize * plane.binsize;
+                info += "\n  region " + r 
+                      + "\n    pixels: " + peakCount.ToString()
+                      + "\n    area: " + area.ToString()
+                      + "\n    x center: " + xCenter.ToString()
+                      + "\n    y center: " + yCenter.ToString();
+            }
+        }
+
+        return info;
+    }
     public string HistogramInfo(string histogramString)
     {
         string info = "";

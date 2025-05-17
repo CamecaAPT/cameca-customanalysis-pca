@@ -4,7 +4,11 @@ public readonly struct TwoDGridID : IStringConvertible
 {
     readonly string stringValue;
 
-    public TwoDGridID(int firstDim, int secondDim)  
+    public TwoDGridID(string gridId)
+    {
+        stringValue = gridId;
+    }
+    public TwoDGridID(int firstDim, int secondDim)
     {
         stringValue = GridID.GridLetterForIndex(firstDim) + GridID.GridLetterForIndex(secondDim);
     }

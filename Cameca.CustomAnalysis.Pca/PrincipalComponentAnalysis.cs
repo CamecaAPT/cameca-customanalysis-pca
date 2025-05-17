@@ -146,6 +146,16 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
         InvalidatePcaPhases();
     }
+    
+    public string GridInfo(string gridID)
+    {
+        string info = "";
+        if (scoresGrid != null)
+        {
+            info = scoresGrid.GridInfo(gridID);
+        }
+        return info;
+    }
 
     public bool UsesHistogramForPca(string gridID)
     {
@@ -474,7 +484,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     }
 
     // Updates the components 3D plots when the component data (derived from selected number of components) changes
-    float[] GetPhaseIdScoresForVoxelIndices(PhaseIdResults phaseIdResults, int compIndex, int[] voxelIndices)
+    static float[] GetPhaseIdScoresForVoxelIndices(PhaseIdResults phaseIdResults, int compIndex, int[] voxelIndices)
     {
         int numIndices = voxelIndices.Length;
         float[] scores = new float[numIndices];
@@ -738,7 +748,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             return Resources.ColorMap.GetPresetColorMap(preset);
         }
     }
-    private SerializableColorMap SerializeColorMap(IColorMap colorMap)
+    static private SerializableColorMap SerializeColorMap(IColorMap colorMap)
     {
         return new SerializableColorMap
         {
@@ -758,7 +768,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         };
     }
 
-    public void FillRenderDataWithGridData(IHistogram2DRenderData renderData, TwoDPeakProjection projection)
+    static public void FillRenderDataWithGridData(IHistogram2DRenderData renderData, TwoDPeakProjection projection)
     {
         // renderData.ColorMap = Resources.ColorMap.GetPresetColorMap(ColorMapPreset.GreyScale);
         DensityPlane dp = projection.densityPlane;
@@ -819,7 +829,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         var binner = new PositionToVoxels(minVector, voxelSize, xBinStride, yBinStride);
         var phaseIds = PcaPhaseIDResults;
 
-        if (Properties.UsePCAPhaseForDetatchedROI)
+        if (Properties.UsePCAPhaseForDetatchedROI && (phaseIds != null))
         {
             int pcaPhaseOfInterest = Properties.PcaPhaseIndex;
 
