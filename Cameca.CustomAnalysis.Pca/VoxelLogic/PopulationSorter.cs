@@ -1,7 +1,8 @@
+using System;
 using System.Collections.Generic;
 
 namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
-public class PopulationSorter<T, U> : IComparer<T>
+public class PopulationSorter<T, U> : IComparer<T>  where T: IEquatable<T>
 {
     readonly Dictionary<T, HashSet<U>> dict;
     public PopulationSorter(Dictionary<T, HashSet<U>> d)

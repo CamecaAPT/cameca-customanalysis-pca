@@ -55,12 +55,12 @@ public partial class ProjectionGridsView : UserControl
         RefreshGridData();
     }
 
-    internal string AxisLabelForGridLetter(char gridLetter)
+    static internal string AxisLabelForGridLetter(char gridLetter)
     { 
         return "PCA Component " + GridID.IndexForGridLetter(gridLetter);
     }
 
-    internal string AxisYLabelForGridID(string gridID)
+    static internal string AxisYLabelForGridID(string gridID)
     {
         if (gridID.Length != 2)
         {
@@ -70,7 +70,7 @@ public partial class ProjectionGridsView : UserControl
     }
 
     // 
-    internal string AxisXLabelForGridID(string gridID)
+    static internal string AxisXLabelForGridID(string gridID)
     {
         if (gridID.Length != 2 )
         {
@@ -112,6 +112,7 @@ public partial class ProjectionGridsView : UserControl
             gridLabel.Content = "Grid " + renderData.Name;
 
             UseGridForPCAPhaseID.IsChecked = GridsUsageDelegate.UsesGridForPca(currentGridId);
+            GridInfoText.Text = GridsUsageDelegate.GridInfo(currentGridId);
         }
     }
 
