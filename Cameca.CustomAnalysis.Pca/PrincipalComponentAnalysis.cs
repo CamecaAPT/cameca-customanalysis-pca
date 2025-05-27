@@ -649,7 +649,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         IColorStop stop = factory.CreateColorStop();
         stop.BottomColor = bottom;
         stop.TopColor = top;
-        stop.relativePosition = position;
+        stop.RelativePosition = position;
         return stop;
     }
 
@@ -672,7 +672,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
         IColorMap colorMap = colorMapFactory.CreateColorMap();
         colorMap.ColorStops = colorStops;
-
+        return colorMap;
     }
 
     partial void OnPcaTwoDGridsResultsChanged(TwoDGridsResults? value)
@@ -699,7 +699,6 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             // now make the altRenderData with the different peaks identified
             var highlightedPeaksColorMap = HighlightedPeaksColorMap();
             HighlightedPeaksGridRenderData = Array.Empty<IRenderData>();
-            int gridCount = twoDPeakProjections.Count;
             var newHPGridProjectionsData = new List<IRenderData>();
             foreach (KeyValuePair<TwoDGridID, TwoDPeakProjection> kvp in twoDPeakProjections)
             {
@@ -835,6 +834,22 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             BottomValue = colorMap.BottomValue,
             TopValue = colorMap.TopValue,
         };
+    }
+
+    static public void FillRenderDataWithHPGridData(IHistogram2DRenderData renderData, TwoDPeakProjection projection)
+    {
+        // TODO: implement this when I figure out how to make the colorr map
+        // Ideally, The color map has a regular grayscal range from 0 to 1
+        // pixels not in any peak get a value (P/PMax)
+        // then, from 1 to 2 a tinted grayscale (a bit pink, maybe?) 
+        // and from 2 to 3 and 3 to 4 a grayscale with a different tint
+        // pixels in peak 1 will be assigned a value 1 + (P/PMax)
+        // pixels in peak 2 will be assigned a value 2 + (P/PMax)
+        // etc.  etc.
+        // I think six ranges of tinted colors will be enough:
+        // peak seven would then use the same color as peak 1
+        // After coding a bit of this, I could not figure out how to
+        // make a custom color map, so put this on hold.
     }
 
     static public void FillRenderDataWithGridData(IHistogram2DRenderData renderData, TwoDPeakProjection projection)
