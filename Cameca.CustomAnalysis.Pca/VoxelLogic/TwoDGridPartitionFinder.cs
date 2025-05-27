@@ -254,17 +254,27 @@ public class TwoDGridPartitionFinder
                         // its possible we have another peak to find
                         // first. filter any previous identified higherPixels to see if they are now part of a new peak:
                         foundIncreasePixelIds = FilterForAvailableIds(foundIncreasePixelIds);
-                        if (foundIncreasePixelIds.Count > 0)
-                        {
-                            // it is a certainty we still have a peak to find
-                            maybeMaximumPixelId = grid.FindMaximum(unplacedPixelIds);
-                        }
-                        else
+                        maybeMaximumPixelId = grid.FindMaximum(unplacedPixelIds);
+                        if (foundIncreasePixelIds.Count == 0) 
                         {
                             // if a new peak was identified, it has absorbed the pixels we found
                             // we should continue with a lower search floor
-                            maybeMaximumPixelId = null;
                             shouldContinueWithLowerSearchFloor = (noiseFloor < searchFloor);
+
+                            // alternatively, it is possible there is a completely separate peak
+                            // in which case, the previous peak did not find an increase, but we should continue with 
+                            // identifying that new peak.
+                            // in this case, see if maybeMaximumPixelId has a value above the searchFloor
+                            // if it doesn't remove it from consideration
+                            if (maybeMaximumPixelId.HasValue)
+                            {
+                                var nextPixelId = maybeMaximumPixelId.Value;
+                                float nextPixelVal = grid.ValueAtPixel(nextPixelId);
+                                if (nextPixelVal < noiseFloor)
+                                {
+                                    maybeMaximumPixelId = null;
+                                }
+                            }
                         }
                         break;
                     }

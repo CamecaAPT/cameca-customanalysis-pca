@@ -46,10 +46,14 @@
                  Click="UseHistogramForPCAPhaseID_Click" 
                  Margin="10,10,10,10">
             </CheckBox>
-            <TextBlock x:Name="HistogramInfoText" 
-                 Width="140"
-                 Margin="10,10,10,10">
-            </TextBlock>
+            <TextBox x:Name="HistogramInfoText" 
+                 Width="170"
+                 Margin="10,10,10,10"
+                 MaxHeight="250"
+                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 ScrollViewer.CanContentScroll="True">
+            </TextBox>
         </StackPanel>
         <Label x:Name="HistogramLabel" 
                  Grid.Column="1" 
