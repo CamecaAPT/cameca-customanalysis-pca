@@ -56,6 +56,9 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     private ICollection<IRenderData> selectedGridRenderData = Array.Empty<IRenderData>();
 
     [ObservableProperty]
+    private ICollection<IRenderData> highlightedPeaksGridRenderData = Array.Empty<IRenderData>();
+
+    [ObservableProperty]
     private IGridsUsageDelegate gridsUsageDelegate = new DoNothingGridsUsageDelegate();
 
     [ObservableProperty]
@@ -628,6 +631,50 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             ScoresHistogramRenderData = newHistogramsData;
         }
     }
+
+    /*
+    public interface IColorStop : INotifyPropertyChanged
+    {
+        Color BottomColor { get; set; }
+
+        float RelativePosition { get; set; }
+
+        Color TopColor { get; set; }
+    }
+    Resources.ColorMap.CreateColorMap();
+    */
+
+    private IColorStop ColorStop(IColorMapFactory factory, Color top, Color bottom, float position)
+    {
+        IColorStop stop = factory.CreateColorStop();
+        stop.BottomColor = bottom;
+        stop.TopColor = top;
+        stop.relativePosition = position;
+        return stop;
+    }
+
+    private IColorMap HighlightedPeaksColorMap()
+    {
+        Color whiteColor = Color.FromRgb(0xFF, 0xFF, 0xFF);
+        Color blackColor = Color.FromRgb(0x00, 0x00, 0x00);
+
+        IColorMapFactory colorMapFactory = Resources.ColorMap;
+
+        List<IColorStop> colorStops = new List<IColorStop>();
+        colorStops.Add(ColorStop(colorMapFactory, whiteColor, whiteColor, 0.0f));
+        colorStops.Add(ColorStop(colorMapFactory, Color.FromRgb(0xFF, 0xFF, 0xDF), blackColor, 1.0f));
+        colorStops.Add(ColorStop(colorMapFactory, Color.FromRgb(0xFF, 0xDF, 0xDF), Color.FromRgb(0x20, 0x20, 0x00), 2.0f));
+        colorStops.Add(ColorStop(colorMapFactory, Color.FromRgb(0xFF, 0xDF, 0xFF), Color.FromRgb(0x20, 0x00, 0x00), 3.0f));
+        colorStops.Add(ColorStop(colorMapFactory, Color.FromRgb(0xDF, 0xDF, 0xFF), Color.FromRgb(0x20, 0x00, 0x20), 4.0f));
+        colorStops.Add(ColorStop(colorMapFactory, Color.FromRgb(0xDF, 0xFF, 0xFF), Color.FromRgb(0x00, 0x00, 0x20), 5.0f));
+        colorStops.Add(ColorStop(colorMapFactory, Color.FromRgb(0xDF, 0xFF, 0xDF), Color.FromRgb(0x00, 0x20, 0x20), 6.0f));
+        colorStops.Add(ColorStop(colorMapFactory, blackColor, Color.FromRgb(0x00, 0x20, 0x00), 7.0f));
+
+        IColorMap colorMap = colorMapFactory.CreateColorMap();
+        colorMap.ColorStops = colorStops;
+
+    }
+
     partial void OnPcaTwoDGridsResultsChanged(TwoDGridsResults? value)
     {
         if (PcaTwoDGridsResults is
@@ -635,6 +682,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
                 TwoDPeakProjections: Dictionary<TwoDGridID, TwoDPeakProjection> twoDPeakProjections
             })
         {
+            // make the simple grayscale render data
             SelectedGridRenderData = Array.Empty<IRenderData>();
             int gridCount = twoDPeakProjections.Count;
             var newGridProjectionsData = new List<IRenderData>();
@@ -647,6 +695,21 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
                 newGridProjectionsData.Add(histogram);
             }
             SelectedGridRenderData = newGridProjectionsData;
+
+            // now make the altRenderData with the different peaks identified
+            var highlightedPeaksColorMap = HighlightedPeaksColorMap();
+            HighlightedPeaksGridRenderData = Array.Empty<IRenderData>();
+            int gridCount = twoDPeakProjections.Count;
+            var newHPGridProjectionsData = new List<IRenderData>();
+            foreach (KeyValuePair<TwoDGridID, TwoDPeakProjection> kvp in twoDPeakProjections)
+            {
+                var histogram = Resources.ChartObjects.CreateHistogram2D();
+                histogram.Name = kvp.Key.ToString();
+                histogram.ColorMap = highlightedPeaksColorMap;
+                FillRenderDataWithHPGridData(histogram, kvp.Value);
+                newHPGridProjectionsData.Add(histogram);
+            }
+            HighlightedPeaksGridRenderData = newHPGridProjectionsData;
         }
     }
     // Updates the components 3D plots when the component data (derived from selected number of components) changes
@@ -654,6 +717,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     {
         ComponentRenderData = Array.Empty<IRenderData>();
         SelectedGridRenderData = Array.Empty<IRenderData>();
+        HighlightedPeaksGridRenderData = Array.Empty<IRenderData>();
 
         if (PcaComponentsResults is not { Grid3DData: { } gridData,
             Components: { } components,

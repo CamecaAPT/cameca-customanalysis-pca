@@ -39,6 +39,13 @@
                  Click="AdvanceGridButton_Click" 
                  Margin="10,10,10,10">
             </Button>
+            <CheckBox x:Name="ShowPeakPartitions" 
+                 Content="Show Peak Partitions" 
+                 Height="32" 
+                 Width="140"
+                 Click="ShowPeakPartitions_Click" 
+                 Margin="10,10,10,10">
+            </CheckBox>
             <CheckBox x:Name="UseGridForPCAPhaseID" 
                  Content="Use Grid for PCA Phase ID" 
                  Height="32" 
