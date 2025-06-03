@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using System.Numerics;
 using System.Windows.Media;
 using System.Xml.Serialization;
 
@@ -24,9 +23,21 @@ public enum BornemannTableSignificance
     Sig900 = 5,
 }
 
+public enum GridMethod
+{
+    [Display(Name = "Ion Types")]
+    IonTypes = 0,
+    [Display(Name = "Peaks")]
+    Peaks = 1,
+}
+
 [XmlRoot("PcaOptions")]
 public partial class PcaProperties : ObservableObject
 {
+    [ObservableProperty]
+    [field: Display(Name = "Grid Method")]
+    private GridMethod gridMethod = GridMethod.IonTypes;
+
     [ObservableProperty]
     [field: Display(Name = "Voxel Size (nm)")]
     private float voxelSize = 1f;

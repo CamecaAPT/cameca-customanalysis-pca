@@ -16,6 +16,6 @@ extern "C" DOPCAFLOAT_API void doEigen(const int nVoxels, const int nFeatures,
 
 extern "C" DOPCAFLOAT_API void doPCA(const int nVoxels, const int nFeatures,
 	const float* data,
-	const int nIons, const int nComponents, int nevals,
+	const int nComponents, int nevals,
 	float* scores, float* loads, float* evals);
 

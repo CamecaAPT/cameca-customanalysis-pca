@@ -9,7 +9,6 @@ public static class PcaLib
         int nVoxels,
         int nFeatures,
         float[] data,
-        int nIons,
         int nComponents,
         int nevals,
         float[] scores,

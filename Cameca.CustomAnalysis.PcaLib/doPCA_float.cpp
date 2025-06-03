@@ -139,7 +139,7 @@ DOPCAFLOAT_API void doEigen(const int nVoxels, const int nFeatures, const float*
 // This is an exported function.
 DOPCAFLOAT_API void doPCA(const int nVoxels, const int nFeatures,
     const float* data,
-    const int nIons, const int nComponents, int nevals,
+    const int nComponents, int nevals,
     float* scores, float* loads, float* evals)
 {
     lapack_int n, il = 0, iu = 0, itype = 1, ZERO = 0, info = 0;

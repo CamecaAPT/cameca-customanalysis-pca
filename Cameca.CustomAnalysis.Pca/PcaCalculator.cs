@@ -87,10 +87,9 @@ internal static class PcaCalculator
     private const float ScoresCoefficient = 1000f;
     private const float LoadingsCoefficient = 0.001f;
 
-    public static EigenvalueResults GetEignevalues(IIonData ionData, IGrid3DData gridData)
+    public static EigenvalueResults GetEignevalues(IIonData ionData, IGrid3DData gridData, int nFeatures)
     {
         int nAllVoxels = gridData.NumVoxels[0] * gridData.NumVoxels[1] * gridData.NumVoxels[2];
-        int nFeatures = ionData.Ions.Count;
 
         var localBuffer = Enumerable.Range(0, nFeatures)
             .Select(ionIndex => GetNormalizedIonCount(gridData.GetDataForIon(ionIndex)))
@@ -129,18 +128,9 @@ internal static class PcaCalculator
         return new EigenvalueResults(evals);
     }
 
-    // Each ion type counts should be divided by the square root of their mean prior to eigenanalysis
     private static float[] GetNormalizedIonCount(ReadOnlyMemory<float> buffer)
     {
         return buffer.ToArray();
-        var ionCounts = buffer.ToArray();
-        float mean = ionCounts.Average();
-        float sqRtMean = MathF.Sqrt(mean);
-        for (int i = 0 ; i < ionCounts.Length; i++)
-        {
-            ionCounts[i] /= sqRtMean;
-        }
-        return ionCounts;
     }
  
     public static PcaScoresGrid GenerateScoresGrid(IIonData ionData, ComponentsResults compResults, PcaPhaseIdentificationProperties properties)
@@ -168,14 +158,10 @@ internal static class PcaCalculator
         return new NoiseEigenvalueResults(rank, noiseEvals);
     }
 
-    public static ComponentsResults GetComponents(IIonData ionData, IGrid3DData gridData, int nComponents)
+    public static ComponentsResults GetComponents(IGrid3DData gridData, IIonData ionData, int nFeatures, int nComponents)
     {
-        ulong rangedCount = ionData.GetIonTypeCounts().Values.Sum();
-        int nIons = (int)rangedCount;
-
         // Remove empty voxels
         int nAllVoxels = gridData.NumVoxels[0] * gridData.NumVoxels[1] * gridData.NumVoxels[2];
-        int nFeatures = ionData.Ions.Count;
 
         var localBuffer = Enumerable.Range(0, nFeatures)
             .Select(ionIndex => GetNormalizedIonCount(gridData.GetDataForIon(ionIndex)))
@@ -214,7 +200,7 @@ internal static class PcaCalculator
         float[] evals = new float[nevals];
 
         // Call the doPCA function
-        PcaLib.doPCA(nVoxels, nFeatures, dataBuffer, nIons, nComponents, nevals, scores, loads, evals);
+        PcaLib.doPCA(nVoxels, nFeatures, dataBuffer, nComponents, nevals, scores, loads, evals);
 
         // Normalization
         for (int i = 0; i < scores.Length; i++)

@@ -101,6 +101,9 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     [NotifyCanExecuteChangedFor(nameof(UpdateSelectedComponentCommand))]
     public ICollection<string> loadingsLabels = Array.Empty<string>();
 
+    [ObservableProperty]
+    public double loadingsLabelsRotation = 0d;
+
     public bool UpdateComponentsCanExecute => PcaComponentsResults is null;
     public bool UpdateGridsCanExecute => PcaTwoDGridsResults is null;
     public bool UpdatePCAPhasesCanExecute => PcaPhaseIDResults is null;
@@ -245,7 +248,36 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
         return PcaCalculator.GetEignevalues(
             ionData,
-            gridData);
+            gridData,
+            nFeatures: GetMaxGrid3DDataIndex(gridData));
+    }
+
+    /// <summary>
+    /// <see cref="IGrid3DData"/> assumes number of Ions defined the max index, but as we're repurposing
+    /// it a bit, we need to use some other method of identifying how many channels it supports.
+    /// A naive solution is just try until we get an exception and use that max value.
+    /// </summary>
+    /// <param name="gridData"></param>
+    /// <returns></returns>
+    private static int GetMaxGrid3DDataIndex(IGrid3DData gridData)
+    {
+        int max = 0;
+        try
+        {
+            while (true)
+            {
+                gridData.GetDataForIon(max);
+                max++;
+            }
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return max;
+        }
+        catch
+        {
+            throw;
+        }
     }
 
     [RelayCommand(CanExecute = nameof(UpdateRankEstimationCanExecute))]
@@ -281,7 +313,11 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             return;
         }
 
-        PcaComponentsResults = PcaCalculator.GetComponents(ionData, gridData, Properties.NumberOfComponents);
+        PcaComponentsResults = PcaCalculator.GetComponents(
+            gridData,
+            ionData,
+            GetMaxGrid3DDataIndex(gridData),
+            Properties.NumberOfComponents);
 
         UpdateOptionsBounds();
 
@@ -420,12 +456,6 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
         // Loading
         int features = loadingData.Length;
-        var ions = ionData.Ions;
-        if (ions.Count != features)
-        {
-            throw new InvalidOperationException("Count of ion ranges unexpectedly does not match the number of PCA features");
-        }
-
         var series = new ColumnSeries
         {
             Name = "",
@@ -435,16 +465,43 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             Values = new ChartValues<float>(loadingData),
         };
 
-        var ionBrushes = ions.Select(ionInfo => new SolidColorBrush(Resources.IonDisplayInfo.GetColor(ionInfo))).ToArray();
-        var mapper = new CartesianMapper<float>()
-            .X((_, i) => i)
-            .Y(value => value)
-            .Fill((_, i) => ionBrushes[i]);
-        LoadingsSeries = new SeriesCollection(mapper)
+        switch (Properties.GridMethod)
         {
-            series
-        };
-        LoadingsLabels = ions.Select(x => x.Name).ToList();
+            case GridMethod.IonTypes:
+                var ions = ionData.Ions;
+                var ionBrushes = ions.Select(ionInfo => new SolidColorBrush(Resources.IonDisplayInfo.GetColor(ionInfo))).ToArray();
+                var ionMapper = new CartesianMapper<float>()
+                    .X((_, i) => i)
+                    .Y(value => value)
+                    .Fill((_, i) => ionBrushes[i]);
+                LoadingsSeries = new SeriesCollection(ionMapper)
+                {
+                    series
+                };
+                LoadingsLabels = ions.Select(x => x.Name).ToList();
+                LoadingsLabelsRotation = 0d;
+                break;
+            case GridMethod.Peaks:
+                var ionRanges = Resources.RangeManager!.GetIonRanges();
+                var peakBrushes = ionRanges.Select(x => new SolidColorBrush(x.Color)).ToArray();
+                var peakMapper = new CartesianMapper<float>()
+                    .X((_, i) => i)
+                    .Y(value => value)
+                    .Fill((_, i) => peakBrushes[i]);
+                LoadingsSeries = new SeriesCollection(peakMapper)
+                {
+                    series
+                };
+                LoadingsLabels = ionRanges
+                    .Select(x => $"{x.Name} ({x.Min.ToString("f3")}, {x.Max.ToString("f3")})")
+                    .ToList();
+                LoadingsLabelsRotation = 45d;
+                break;
+            default:
+                break;
+        }
+
+        
    }
 
     // PCA Phases can be updated independently of the Components and grids   if the number of grids to use changes
@@ -905,6 +962,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         CanSave = true;
         switch (e.PropertyName)
         {
+            case nameof(PcaProperties.GridMethod):
             case nameof(PcaProperties.VoxelSize):
             case nameof(PcaProperties.VoxelGridEdgeBuffer):
                 InvalidateAll();
@@ -929,7 +987,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
                 break;
             case nameof(PcaProperties.GridProjectionDelocalization):
                 InvalidatePcaGrids();
-                break;
+                break; 
             case nameof(PcaProperties.NoiseFloorFraction):
                 InvalidatePcaGrids();
                 break;
@@ -950,6 +1008,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
     private void InvalidateAll()
     {
+        Properties.NumberOfComponents = 0;
         NoiseEigenvalueResults = null;
         EigenvalueResults = null;
         InvalidatePcaComponents();
@@ -1009,16 +1068,34 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
         if (await Resources.GetIonData(cancellationToken: cancellationToken) is IIonData ionData)
         {
-            return await Grid3DUtils.CreateIonGrid3DData(
-                Resources,
-                ionData,
-                new double[] {
-                    Properties.VoxelSize,
-                    Properties.VoxelSize,
-                    Properties.VoxelSize,
-                },
-                edgeBuffer: Properties.VoxelGridEdgeBuffer,
-                cancellationToken: cancellationToken);
+            switch (Properties.GridMethod)
+            {
+                case GridMethod.IonTypes:
+                    return await Grid3DUtils.CreateIonGrid3DData(
+                        Resources,
+                        ionData,
+                        new double[] {
+                            Properties.VoxelSize,
+                            Properties.VoxelSize,
+                            Properties.VoxelSize,
+                        },
+                        edgeBuffer: Properties.VoxelGridEdgeBuffer,
+                        cancellationToken: cancellationToken);
+                case GridMethod.Peaks:
+                    return await Grid3DUtils.CreatePeakGrid3DData(
+                        Resources,
+                        ionData,
+                        new double[] {
+                            Properties.VoxelSize,
+                            Properties.VoxelSize,
+                            Properties.VoxelSize,
+                        },
+                        edgeBuffer: Properties.VoxelGridEdgeBuffer,
+                        cancellationToken: cancellationToken);
+                default:
+                    break;
+            }
+            
         }
         return null;
     }

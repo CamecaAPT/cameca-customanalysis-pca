@@ -158,7 +158,9 @@
                             </Style>
                         </lvc:CartesianChart.Resources>
                         <lvc:CartesianChart.AxisX>
-                            <lvc:Axis Labels="{Binding LoadingsLabels}" FontSize="18">
+                            <lvc:Axis Labels="{Binding LoadingsLabels}"
+                                      LabelsRotation="{Binding LoadingsLabelsRotation}"
+                                      FontSize="18">
                                 <lvc:Axis.Separator>
                                     <lvc:Separator Step="1" />
                                 </lvc:Axis.Separator>

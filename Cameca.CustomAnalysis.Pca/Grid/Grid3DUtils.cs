@@ -2,9 +2,10 @@
 using Cameca.CustomAnalysis.Pca.Grid;
 using Cameca.CustomAnalysis.Utilities;
 using System;
-using System.Configuration;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -32,14 +33,36 @@ internal class Grid3DUtils
             gridParams.GridRange,
             data);
     }
+    public static async Task<GenericGrid3DData?> CreatePeakGrid3DData(IResources resources, IIonData ionData, double[] voxelSize, double edgeBuffer = 1.5d, CancellationToken cancellationToken = default)
+    {
+        var ionRanges = resources.RangeManager?.GetIonRanges();
+        if (ionRanges is null) { return null; }
+
+        var sections = new string[] { IonDataSectionName.Position, IonDataSectionName.Mass };
+        bool sectionsAvailable = await resources.EnsureRequiredSectionsAvailable(ionData, sections, cancellationToken: cancellationToken);
+        if (!sectionsAvailable) { return null; }
+
+        var gridParams = CreateGridParameters(ionData.Extents, voxelSize, edgeBuffer);
+
+        float[,] data = CreateData(ionData, ionRanges, voxelSize, gridParams, sections);
+
+        return new GenericGrid3DData(
+            gridParams.VoxelCount,
+            voxelSize,
+            gridParams.GridDelta,
+            gridParams.GridRange,
+            data);
+    }
 
     private static float[,] CreateData(IIonData ionData, double[] voxelSize, GridParameters gridParams, string[] sections)
     {
+        int channelCount = ionData.Ions.Count();
+
         int voxelsX = gridParams.VoxelCount[0];
         int voxelsY = gridParams.VoxelCount[1];
         int voxelsAll = voxelsX * voxelsY * gridParams.VoxelCount[2];
 
-        float[,] data = new float[ionData.Ions.Count(), voxelsAll];
+        float[,] data = new float[channelCount, voxelsAll];
         foreach (var chunk in ionData.CreateSectionDataEnumerable(sections))
         {
             var positions = chunk.ReadSectionData<Vector3>(IonDataSectionName.Position).Span;
@@ -59,6 +82,72 @@ internal class Grid3DUtils
                 var voxIndex = voxX + (voxY * voxelsX) + (voxZ * voxelsX * voxelsY);
 
                 data[ionTypes[i], voxIndex] += 1;
+            }
+        }
+        return data;
+    }
+
+    private readonly struct RangeMapEntry
+    {
+        public readonly double Min;
+        public readonly double Max;
+        public readonly byte Index;
+        public RangeMapEntry(double min, double max, byte index)
+        {
+            this.Min = min;
+            this.Max = max;
+            this.Index = index;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static byte GetIndex(List<RangeMapEntry> rangeMap, float mass)
+    {
+        for (int r = 0; r < rangeMap.Count; r++)
+        {
+            var entry = rangeMap[r];
+            if (mass >= entry.Min && mass < entry.Max)
+            {
+                return entry.Index;
+            }
+        }
+        return byte.MaxValue;
+    }
+
+    private static float[,] CreateData(IIonData ionData, IEnumerable<IonTypeInfoRange> ionRanges, double[] voxelSize, GridParameters gridParams, string[] sections)
+    {
+        var rangeMap = ionRanges.Select((r, i) => new RangeMapEntry(r.Min, r.Max, (byte)i)).ToList();
+
+        int channelCount = ionRanges.Count();
+
+        int voxelsX = gridParams.VoxelCount[0];
+        int voxelsY = gridParams.VoxelCount[1];
+        int voxelsAll = voxelsX * voxelsY * gridParams.VoxelCount[2];
+
+        float[,] data = new float[channelCount, voxelsAll];
+        foreach (var chunk in ionData.CreateSectionDataEnumerable(sections))
+        {
+            var positions = chunk.ReadSectionData<Vector3>(IonDataSectionName.Position).Span;
+            var masses = chunk.ReadSectionData<float>(IonDataSectionName.Mass).Span;
+
+            for (var i = 0; i < chunk.Length; i++)
+            {
+                // Check if in assigned peak range
+                float mass = masses[i];
+
+                var index = GetIndex(rangeMap, masses[i]);
+
+                if (index == byte.MaxValue) { continue; }
+
+                var position = positions[i];
+
+                var voxX = (int)Math.Floor((position.X - gridParams.GridRange[0, 0]) / voxelSize[0]);
+                var voxY = (int)Math.Floor((position.Y - gridParams.GridRange[1, 0]) / voxelSize[1]);
+                var voxZ = (int)Math.Floor((position.Z - gridParams.GridRange[2, 0]) / voxelSize[2]);
+
+                var voxIndex = voxX + (voxY * voxelsX) + (voxZ * voxelsX * voxelsY);
+
+                data[index, voxIndex] += 1;
             }
         }
         return data;
@@ -111,3 +200,4 @@ internal class Grid3DUtils
         return new GridParameters(gridRange, gridDelta, voxelCount);
     }
 }
+
