@@ -238,7 +238,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
 
         var gridNode = Resources.GetGrid();
-        if (gridNode is null || await gridNode.GetDataAsync<IGrid3DData>(cancellationToken: cancellationToken) is not { } gridData)
+        if (await GetGridData(gridNode, cancellationToken) is not IGrid3DData gridData)
         {
             return null;
         }
@@ -275,7 +275,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
 
         var gridNode = Resources.GetGrid();
-        if (gridNode is null || await gridNode.GetDataAsync<IGrid3DData>(cancellationToken: cancellationToken) is not { } gridData)
+        if (await GetGridData(gridNode, cancellationToken) is not IGrid3DData gridData)
         {
             DataStateIsError = true;
             return;
@@ -311,7 +311,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
 
         var gridNode = Resources.GetGrid();
-        if (gridNode is null || await gridNode.GetDataAsync<IGrid3DData>(cancellationToken: cancellationToken) is not { } gridData)
+        if (await GetGridData(gridNode, cancellationToken) is not IGrid3DData gridData)
         {
             DataStateIsError = true;
             return;
@@ -358,9 +358,10 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
 
     }
-// PCA Phases can be updated independently of the Components if the number of grids to use changes
-// or if any of the properties to use in the calculation change
-[RelayCommand(CanExecute = nameof(UpdateGridsCanExecute))]
+
+    // PCA Phases can be updated independently of the Components if the number of grids to use changes
+    // or if any of the properties to use in the calculation change
+    [RelayCommand(CanExecute = nameof(UpdateGridsCanExecute))]
     public async Task UpdateGrids(CancellationToken cancellationToken)
     {
         DataStateIsError = false;
@@ -371,7 +372,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
 
         var gridNode = Resources.GetGrid();
-        if (gridNode is null || await gridNode.GetDataAsync<IGrid3DData>(cancellationToken: cancellationToken) is not { } gridData)
+        if (await GetGridData(gridNode, cancellationToken) is not IGrid3DData gridData)
         {
             DataStateIsError = true;
             return;
@@ -904,6 +905,10 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         CanSave = true;
         switch (e.PropertyName)
         {
+            case nameof(PcaProperties.VoxelSize):
+            case nameof(PcaProperties.VoxelGridEdgeBuffer):
+                InvalidateAll();
+                break;
             case nameof(PcaProperties.NumberOfComponents):
                 if (Properties.NumberOfComponents == 0)
                 {
@@ -945,6 +950,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
     private void InvalidateAll()
     {
+        NoiseEigenvalueResults = null;
         EigenvalueResults = null;
         InvalidatePcaComponents();
         InvalidatePcaPhases();
@@ -993,5 +999,27 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
                 DataState.IsErrorState = value;
             }
         }
+    }
+
+    private async Task<IGrid3DData?> GetGridData(INodeResource? gridNode, CancellationToken cancellationToken)
+    {
+        if (gridNode is null)
+        {
+            return null;
+        }
+        if (await Resources.GetIonData(cancellationToken: cancellationToken) is IIonData ionData)
+        {
+            return await Grid3DUtils.CreateIonGrid3DData(
+                Resources,
+                ionData,
+                new double[] {
+                    Properties.VoxelSize,
+                    Properties.VoxelSize,
+                    Properties.VoxelSize,
+                },
+                edgeBuffer: Properties.VoxelGridEdgeBuffer,
+                cancellationToken: cancellationToken);
+        }
+        return null;
     }
 }

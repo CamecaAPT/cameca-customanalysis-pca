@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Numerics;
 using System.Windows.Media;
 using System.Xml.Serialization;
 
@@ -26,6 +27,14 @@ public enum BornemannTableSignificance
 [XmlRoot("PcaOptions")]
 public partial class PcaProperties : ObservableObject
 {
+    [ObservableProperty]
+    [field: Display(Name = "Voxel Size (nm)")]
+    private float voxelSize = 1f;
+
+    [ObservableProperty]
+    [field: Display(Name = "Voxel Grid Edge Buffer")]
+    private float voxelGridEdgeBuffer = 1.5f;
+
     [ObservableProperty]
     private int gaps = 1;
 
