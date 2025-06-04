@@ -29,6 +29,8 @@ public enum GridMethod
     IonTypes = 0,
     [Display(Name = "Peaks")]
     Peaks = 1,
+    [Display(Name = "Bins")]
+    Bins = 2,
 }
 
 [XmlRoot("PcaOptions")]
@@ -37,6 +39,14 @@ public partial class PcaProperties : ObservableObject
     [ObservableProperty]
     [field: Display(Name = "Grid Method")]
     private GridMethod gridMethod = GridMethod.IonTypes;
+
+    [ObservableProperty]
+    [field: Display(Name = "Bin Size (for Bins grid method)")]
+    private double binSize = 1d;
+
+    [ObservableProperty]
+    [field: Display(Name = "Max Bin value (for Bins grid method)")]
+    private float? binMaxDa = null;
 
     [ObservableProperty]
     [field: Display(Name = "Voxel Size (nm)")]

@@ -102,6 +102,8 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     public ICollection<string> loadingsLabels = Array.Empty<string>();
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UpdateSelectedComponentCanExecute))]
+    [NotifyCanExecuteChangedFor(nameof(UpdateSelectedComponentCommand))]
     public double loadingsLabelsRotation = 0d;
 
     public bool UpdateComponentsCanExecute => PcaComponentsResults is null;
@@ -110,10 +112,22 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
     public bool UpdateRankEstimationCanExecute => NoiseEigenvalueResults is null;
 
-    public bool UpdateSelectedComponentCanExecute =>
-        !LoadingsSeries.Any() || !LoadingsLabels.Any() || !ScoresHistogramRenderData.Any();
+    public bool UpdateSelectedComponentCanExecute
+    {
+        get
+        {
+            return Properties.GridMethod == GridMethod.Bins
+                ? !LoadingHistogramRenderData.Any()
+                : !LoadingsSeries.Any() || !LoadingsLabels.Any() || !ScoresHistogramRenderData.Any();
+        }
+    }
 
     public Func<double, string> AxisYLabelFormatter { get; } = (double value) => value.ToString("F3");
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UpdateSelectedComponentCanExecute))]
+    [NotifyCanExecuteChangedFor(nameof(UpdateSelectedComponentCommand))]
+    private ICollection<IRenderData> loadingHistogramRenderData = Array.Empty<IRenderData>();
 
     internal HashSet<string> gridsToUseForPCA = new();
     internal HashSet<string> histogramsToUseForPCA = new();
@@ -497,11 +511,16 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
                     .ToList();
                 LoadingsLabelsRotation = 45d;
                 break;
+            case GridMethod.Bins:
+                var histogram = Resources.ChartObjects.CreateHistogram(
+                    loadingData.Select((y, x) => new Vector2(x, y)).ToArray(),
+                    Colors.Black,
+                    1f);
+                LoadingHistogramRenderData = new IRenderData[] { histogram };
+                break;
             default:
                 break;
         }
-
-        
    }
 
     // PCA Phases can be updated independently of the Components and grids   if the number of grids to use changes
@@ -967,6 +986,13 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             case nameof(PcaProperties.VoxelGridEdgeBuffer):
                 InvalidateAll();
                 break;
+            case nameof(PcaProperties.BinSize):
+            case nameof(PcaProperties.BinMaxDa):
+                if (Properties.GridMethod == GridMethod.Bins)
+                {
+                    InvalidateAll();
+                }
+                break;
             case nameof(PcaProperties.NumberOfComponents):
                 if (Properties.NumberOfComponents == 0)
                 {
@@ -1002,6 +1028,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     /* Data invalidation methods */
     private void InvalidateSelectedComponent()
     {
+        LoadingHistogramRenderData = Array.Empty<IRenderData>();
         LoadingsSeries = new SeriesCollection();
         LoadingsLabels = Array.Empty<string>();
     }
@@ -1090,6 +1117,19 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
                             Properties.VoxelSize,
                             Properties.VoxelSize,
                         },
+                        edgeBuffer: Properties.VoxelGridEdgeBuffer,
+                        cancellationToken: cancellationToken);
+                case GridMethod.Bins:
+                    return await Grid3DUtils.CreateBinsGrid3DData(
+                        Resources,
+                        ionData,
+                        new double[] {
+                            Properties.VoxelSize,
+                            Properties.VoxelSize,
+                            Properties.VoxelSize,
+                        },
+                        Properties.BinSize,
+                        Properties.BinMaxDa,
                         edgeBuffer: Properties.VoxelGridEdgeBuffer,
                         cancellationToken: cancellationToken);
                 default:
