@@ -47,6 +47,10 @@
 		<None Include="..\LICENSE" Pack="True" PackagePath="$(PackageLicenseFile)" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <ProjectReference Include="..\Cameca.CustomAnalysis.PcaLib.Interface\Cameca.CustomAnalysis.PcaLib.Interface.vcxproj" />
+	</ItemGroup>
+
 	<PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
 		<ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
 		<Deterministic>true</Deterministic>
