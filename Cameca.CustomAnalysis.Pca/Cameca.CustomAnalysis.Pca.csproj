@@ -46,7 +46,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\Cameca.CustomAnalysis.PcaLib.Interface\Cameca.CustomAnalysis.PcaLib.Interface.vcxproj" />
+	  <ProjectReference Include="..\Cameca.CustomAnalysis.PcaLib.Interface\Cameca.CustomAnalysis.PcaLib.Interface.vcxproj" Condition="'$(SkipNativeReferences)' != 'true'" />
 	</ItemGroup>
 
 	<PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
