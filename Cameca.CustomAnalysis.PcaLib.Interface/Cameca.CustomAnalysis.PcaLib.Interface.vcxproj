@@ -81,7 +81,7 @@
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>"$(SolutionDir)"</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalDependencies />
@@ -101,7 +101,7 @@
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>"$(SolutionDir)"</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalDependencies />
@@ -122,10 +122,21 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ComponentData.h" />
+    <ClInclude Include="GridParameters.h" />
     <ClInclude Include="ManagedWrapper.h" />
+    <ClInclude Include="VectorMarshaller.h" />
+    <ClInclude Include="PrincipalComponentAnalysis.h" />
+    <ClInclude Include="VoxelFeatureMatrix.h" />
+    <ClInclude Include="VoxelFeatureMatrixBuilder.h" />
+    <ClInclude Include="VoxelFeatureMatrixIon.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Interface.cpp" />
     <ClCompile Include="ManagedWrapper.cpp" />
+    <ClCompile Include="PrincipalComponentAnalysis.cpp" />
+    <ClCompile Include="VoxelFeatureMatrix.cpp" />
+    <ClCompile Include="VoxelFeatureMatrixBuilder.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -21,10 +21,25 @@
     <ClInclude Include="pch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="doPCA_float.h">
+    <ClInclude Include="RMT_rank.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RMT_rank.h">
+    <ClInclude Include="VoxelFeatureMatrix.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VoxelFeatureMatrixBuilder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PcaLibExport.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VoxelFeatureMatrixImpl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VoxelFeatureMatrixIon.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PrincipalComponentAnalysis.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -32,10 +47,19 @@
     <ClCompile Include="pch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="doPCA_float.cpp">
+    <ClCompile Include="RMT_rank.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="RMT_rank.cpp">
+    <ClCompile Include="VoxelFeatureMatrix.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="VoxelFeatureMatrixBuilder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="VoxelFeatureMatrixImpl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PrincipalComponentAnalysis.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

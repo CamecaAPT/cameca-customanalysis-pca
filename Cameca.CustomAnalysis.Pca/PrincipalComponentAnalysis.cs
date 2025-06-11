@@ -21,6 +21,8 @@ using Cameca.CustomAnalysis.Pca;
 using Cameca.CustomAnalysis.Pca.Utils;
 using Cameca.CustomAnalysis.Pca.Models;
 using Cameca.CustomAnalysis.Pca.VoxelLogic;
+using Cameca.CustomAnalysis.PcaLib.Interface;
+using PcaLibPrincipalComponentAnalysis = Cameca.CustomAnalysis.PcaLib.Interface.PrincipalComponentAnalysis;
 
 namespace Cameca.CustomAnalysis.Pca;
 
@@ -131,6 +133,21 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
     internal HashSet<string> gridsToUseForPCA = new();
     internal HashSet<string> histogramsToUseForPCA = new();
+
+    private PcaLibPrincipalComponentAnalysis? principalComponentAnalysis = null;
+    public PcaLibPrincipalComponentAnalysis? Analysis
+    {
+        get => principalComponentAnalysis;
+        set
+        {
+            if (!EqualityComparer<PcaLibPrincipalComponentAnalysis>.Default.Equals(principalComponentAnalysis, value))
+            {
+                principalComponentAnalysis?.Dispose();
+                principalComponentAnalysis = value;
+            }
+        }
+    }
+
     public PrincipalComponentAnalysis(
         IStandardAnalysisFilterNodeBaseServices services,
         ResourceFactory resourceFactory,
@@ -142,6 +159,76 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         this.optionsAccessor = optionsAccessor;
         this.gridsUsageDelegate = this;
         this.histogramsUsageDelegate = this;
+    }
+
+    private async Task<PcaLibPrincipalComponentAnalysis> GetAnalysis(CancellationToken cancellationToken = default)
+    {
+        if (Analysis is null)
+        {
+            if (await Resources.GetIonData(cancellationToken: cancellationToken) is not { } ionData)
+            {
+                throw new InvalidOperationException($"IonData is required to create {nameof(VoxelFeatureMatrix)}");
+            }
+            var featureResolver = CreateFeatureResolver();
+            Analysis = CreateAnalysis(ionData, featureResolver);
+        }
+        return Analysis;
+    }
+    private IFeatureResolver CreateFeatureResolver()
+    {
+        switch (Properties.GridMethod)
+        {
+            case GridMethod.IonTypes:
+                return new IonTypeFeatureResolver();
+            case GridMethod.Peaks:
+                var ionRanges = Resources.RangeManager?.GetIonRanges()
+                    ?? throw new InvalidOperationException("Requires range information");
+                return new PeakFeatureResolver(ionRanges);
+            case GridMethod.Bins:
+                return new BinnedFeatureResolver(Properties.BinSize, Properties.BinStart, Properties.BinEnd);
+            default:
+                throw new NotSupportedException($"Grid Method is not supported: {Properties.GridMethod.ToString()}");
+        }
+    }
+
+    private PcaLibPrincipalComponentAnalysis CreateAnalysis(IIonData ionData, IFeatureResolver featureResolver)
+    {
+        var gridParams = Grid3DUtils.CreateGridParameters(
+            ionData.Extents,
+            Properties.VoxelSize,
+            Properties.VoxelGridEdgeBuffer);
+
+        int totalVoxelCount = gridParams.VoxelCount.Aggregate(1, (accu, next) => accu *= next);
+        using var builder = new VoxelFeatureMatrixBuilder(totalVoxelCount, ionData.IonCount);
+        var sectionNames = featureResolver.RequiredSections
+            .Concat(new string[] { IonDataSectionName.Position })
+            .ToArray();
+        int voxelsX = gridParams.VoxelCount[0];
+        int voxelsY = gridParams.VoxelCount[1];
+        int voxelsAll = voxelsX * voxelsY * gridParams.VoxelCount[2];
+
+        foreach (var chunk in ionData.CreateSectionDataEnumerable(sectionNames))
+        {
+            var buffer = new VoxelFeatureMatrixIon[chunk.Length];
+            var positions = chunk.ReadSectionData<Vector3>(IonDataSectionName.Position);
+            featureResolver.LoadChunk(chunk);
+
+            for (var i = 0; i < chunk.Length; i++)
+            {
+                var position = positions.Span[i];
+
+                int voxX = (int)Math.Floor((position.X - gridParams.GridStart[0]) / gridParams.VoxelSize);
+                int voxY = (int)Math.Floor((position.Y - gridParams.GridStart[1]) / gridParams.VoxelSize);
+                int voxZ = (int)Math.Floor((position.Z - gridParams.GridStart[2]) / gridParams.VoxelSize);
+
+                int voxIndex = voxX + (voxY * voxelsX) + (voxZ * voxelsX * voxelsY);
+
+                int feature = featureResolver.GetFeature(i);
+                buffer[i] = new VoxelFeatureMatrixIon(voxIndex, feature);
+            }
+            builder.Update(buffer);
+        }
+        return new PcaLibPrincipalComponentAnalysis(gridParams, builder.Build());
     }
 
     public bool UsesGridForPca(string gridID)
@@ -234,36 +321,15 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     // There is not benefit of prematurely calculating all the other data until the number of components is manually set after looking at the scree plot
     protected override async Task<bool> Update(CancellationToken cancellationToken)
     {
-        if (await GetEigenvalueResults(cancellationToken) is { } results)
-        {
-            EigenvalueResults = results;
-            NoiseEigenvalueResults = PcaCalculator.GetNoiseEigenvalues(
-                results.Evals,
-                Properties.Gaps,
-                (int)Properties.Significance,
-                Properties.Refine);
-            return true;
-        }
-        return false;
+        await UpdateRankEstimation(cancellationToken);
+        return EigenvalueResults is not null;
     }
 
     private async Task<EigenvalueResults?> GetEigenvalueResults(CancellationToken cancellationToken)
     {
-        if (await Resources.GetIonData(cancellationToken: cancellationToken) is not { } ionData)
-        {
-            return null;
-        }
-
-        var gridNode = Resources.GetGrid();
-        if (await GetGridData(gridNode, cancellationToken) is not IGrid3DData gridData)
-        {
-            return null;
-        }
-
-        return PcaCalculator.GetEignevalues(
-            ionData,
-            gridData,
-            nFeatures: GetMaxGrid3DDataIndex(gridData));
+        var pca = await GetAnalysis();
+        var scores = pca.GetEigenvalues();
+        return new EigenvalueResults(scores);
     }
 
     /// <summary>
@@ -297,14 +363,18 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     [RelayCommand(CanExecute = nameof(UpdateRankEstimationCanExecute))]
     public async Task UpdateRankEstimation(CancellationToken cancellationToken)
     {
-        var eigenvalueResults = EigenvalueResults ??= await GetEigenvalueResults(cancellationToken);
-        if (eigenvalueResults is not null)
+        if (EigenvalueResults is null)
         {
-            NoiseEigenvalueResults = PcaCalculator.GetNoiseEigenvalues(
-                eigenvalueResults.Evals,
+            EigenvalueResults = await GetEigenvalueResults(cancellationToken);
+        }
+        if ((Analysis ??= await GetAnalysis(cancellationToken)) is { } pca)
+        {
+            int estimatedRank = pca.EstimateRank(
                 Properties.Gaps,
                 (int)Properties.Significance,
                 Properties.Refine);
+            var noiseEvals = pca.GetNoiseEigenvalues(estimatedRank);
+            NoiseEigenvalueResults = new NoiseEigenvalueResults(estimatedRank, noiseEvals);
         }
     }
 
@@ -314,24 +384,15 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     public async Task UpdateComponents(CancellationToken cancellationToken)
     {
         DataStateIsError = false;
-        if (await Resources.GetIonData(cancellationToken: cancellationToken) is not { } ionData)
+        if (Analysis is null)
         {
             DataStateIsError = true;
             return;
         }
 
-        var gridNode = Resources.GetGrid();
-        if (await GetGridData(gridNode, cancellationToken) is not IGrid3DData gridData)
-        {
-            DataStateIsError = true;
-            return;
-        }
+        var components = Analysis.GetComponents(Properties.NumberOfComponents);
 
-        PcaComponentsResults = PcaCalculator.GetComponents(
-            gridData,
-            ionData,
-            GetMaxGrid3DDataIndex(gridData),
-            Properties.NumberOfComponents);
+        PcaComponentsResults = new ComponentsResults(Analysis.GridParams, Analysis.Matrix.GetVoxelIndices(), components);
 
         UpdateOptionsBounds();
 
@@ -353,20 +414,6 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     [RelayCommand(CanExecute = nameof(UpdateGridsCanExecute))]
     public async Task UpdateHistograms(CancellationToken cancellationToken)
     {
-        DataStateIsError = false;
-        if (await Resources.GetIonData(cancellationToken: cancellationToken) is not { } ionData)
-        {
-            DataStateIsError = true;
-            return;
-        }
-
-        var gridNode = Resources.GetGrid();
-        if (await GetGridData(gridNode, cancellationToken) is not IGrid3DData gridData)
-        {
-            DataStateIsError = true;
-            return;
-        }
-
         if (PcaComponentsResults is null)
         {
             await UpdateComponents(cancellationToken);
@@ -381,7 +428,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         List<IRenderData> newHistogramsData = new();
         int componentIndex = 0;
 
-        foreach (ComponentResults componentResults in componentsResults.Components)
+        foreach (var componentResults in componentsResults.Components)
         {
             float[] scores = componentResults.Scores;
             int voxels = scores.Length;
@@ -399,14 +446,14 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
                 binnedScores[index] += 1;
             }
             var scoreData = binnedScores.Select((y, i) => new Vector2(min + (i * binSize), y * invBinSize)).ToArray();
-            var scoresHistogram = Resources.ChartObjects.CreateHistogram (scoreData, color: Colors.Blue);
-            scoresHistogram.Name = GridID.GridLetterForIndex(componentIndex);
+            var scoresHistogram = Resources.ChartObjects.CreateHistogram(
+                scoreData,
+                color: Colors.Blue,
+                name: GridID.GridLetterForIndex(componentIndex));
             newHistogramsData.Add(scoresHistogram);
             ++componentIndex;
         }
         ScoresHistogramRenderData = newHistogramsData;
-
-
     }
 
     // PCA Phases can be updated independently of the Components if the number of grids to use changes
@@ -414,20 +461,6 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     [RelayCommand(CanExecute = nameof(UpdateGridsCanExecute))]
     public async Task UpdateGrids(CancellationToken cancellationToken)
     {
-        DataStateIsError = false;
-        if (await Resources.GetIonData(cancellationToken: cancellationToken) is not { } ionData)
-        {
-            DataStateIsError = true;
-            return;
-        }
-
-        var gridNode = Resources.GetGrid();
-        if (await GetGridData(gridNode, cancellationToken) is not IGrid3DData gridData)
-        {
-            DataStateIsError = true;
-            return;
-        }
-
         if (PcaComponentsResults is null)
         {
            await UpdateComponents(cancellationToken);
@@ -437,7 +470,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         if (compResults != null)
         {
             var pcaPhaseIdProperties = new PcaPhaseIdentificationProperties(Properties.GridProjectionBinSize, Properties.GridProjectionDelocalization, Properties.NoiseFloorFraction, Properties.PeakSummitAllowance, Properties.NumberOfComponents);
-            ScoresGrid = PcaCalculator.GenerateScoresGrid(ionData, compResults, pcaPhaseIdProperties);
+            ScoresGrid = PcaCalculator.GenerateScoresGrid(compResults, pcaPhaseIdProperties);
             PcaTwoDGridsResults = PcaCalculator.CalculateTwoDGrids(ScoresGrid, pcaPhaseIdProperties);
             PcaOneDGridsResults = PcaCalculator.CalculateOneDGrids(ScoresGrid, pcaPhaseIdProperties);
         }
@@ -526,7 +559,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     // PCA Phases can be updated independently of the Components and grids   if the number of grids to use changes
     // or if any of the properties to use in the calculation change
     [RelayCommand(CanExecute = nameof(UpdatePCAPhasesCanExecute))]
-    public async Task UpdatePCAPhases(CancellationToken cancellationToken)
+    public void UpdatePCAPhases()
     {
         var scoresGrid = ScoresGrid;
         var oneDGridsResults = PcaOneDGridsResults;
@@ -548,12 +581,11 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             return;
         }
         var positions = evals.Select((value, index) => new Vector3(index, 0f, value)).ToArray();
-        var series = Resources.ChartObjects.CreateSeries();
-        series.Name = "Eigenvalues";
-        series.Positions = positions;
-        series.Color = Colors.Blue;
-        series.MarkerShape = MarkerShape.Circle;
-        series.MarkerColor = Colors.Blue;
+        var series = Resources.ChartObjects.CreateSeries(
+            positions,
+            Colors.Blue,
+            markerShape: MarkerShape.Circle,
+            name: "Eigenvalues");
 
         EigenvalueRenderData.Add(series);
     }
@@ -584,13 +616,13 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
                 EigenvalueRenderData.Remove(noiseEigenvalues);
             }
             var noisePositions = Enumerable.Range(rank, noiseEvals.Length)
-                .Select(index => new Vector3(index, 0f, noiseEvals[index - rank]))
+                .Select(index => new Vector3(index, -1f, noiseEvals[index - rank]))
                 .ToArray();
-            var noiseSeries = Resources.ChartObjects.CreateSeries();
-            noiseSeries.Name = "Noise Eigenvalues";
-            noiseSeries.Positions = noisePositions;
-            noiseSeries.Color = Colors.Red;
-            noiseSeries.MarkerShape = MarkerShape.None;
+            var noiseSeries = Resources.ChartObjects.CreateSeries(
+                noisePositions,
+                Colors.Red,
+                markerShape: MarkerShape.None,
+                name: "Noise Eigenvalues");
 
             EigenvalueRenderData.Add(noiseSeries);
         }
@@ -627,7 +659,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
                 // data fed into GetScoredPositions is an array of voxelIndices for which a dot should be generated,
                 // and an array of scores -- scores[n] is the score for the voxel at voxelIndex[n]
-                var positionsWithValues = PositionScores.GetScoredPositions(PcaComponentsResults.Grid3DData, voxelIndices, phaseIdScores, jitterStdDev: jitterStdDev);
+                var positionsWithValues = PositionScores.GetScoredPositions(PcaComponentsResults.GridParams, voxelIndices, phaseIdScores, jitterStdDev: jitterStdDev);
 
                 var valuePoints = Resources.ChartObjects.CreateValuePoints();
         
@@ -730,7 +762,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         ComponentRenderData = Array.Empty<IRenderData>();
         SelectedGridRenderData = Array.Empty<IRenderData>();
 
-        if (PcaComponentsResults is not { Grid3DData: { } gridData,
+        if (PcaComponentsResults is not { GridParams: { } gridParams,
             Components: { } components,
             VoxelIndices: { } voxelIndices }
          || Resources.GetValidIonData() is not { } ionData)
@@ -748,7 +780,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         for (int compIndex = 0; compIndex < numComponents; compIndex++)
         {
             var scores = components[compIndex].Scores;
-            var positionsWithValues = PositionScores.GetScoredPositions(gridData, voxelIndices, scores, jitterStdDev: jitterStdDev);
+            var positionsWithValues = PositionScores.GetScoredPositions(gridParams, voxelIndices, scores, jitterStdDev: jitterStdDev);
 
             var valuePoints = Resources.ChartObjects.CreateValuePoints();
             valuePoints.Name = $"Component {compIndex}";
@@ -877,6 +909,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         Vector2 origin = new((minCoord.y * dp.binsize) - halfBinsize, (minCoord.x * dp.binsize) - halfBinsize);
         renderData.Update(rom, binsize, origin);
     }
+
     // Updates readonly Min/Max properties so the bounds are displayed in the Properties panel 
     private void UpdateOptionsBounds()
     {
@@ -897,17 +930,17 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
 
         // Extract necessary data out of ComponentsResults using some pattern matching for null checks and variable assignment
-        if (PcaComponentsResults is not { Grid3DData: { } gridData, VoxelIndices: { } nonEmptyVoxels }
+        if (PcaComponentsResults is not { GridParams: { } gridParams, VoxelIndices: { } nonEmptyVoxels }
             || PcaComponentsResults.Components[Properties.ComponentIndex] is not { Scores: { } scores })
         {
             DataStateIsError = true;
             yield break;
         }
 
-        var minVector = gridData.GetMinVector();
-        var voxelSize = gridData.GetVoxelSizeDimensions();
-        int xBinStride = gridData.NumVoxels[0];
-        int yBinStride = gridData.NumVoxels[1];
+        var minVector = gridParams.GetMinVector();
+        var voxelSize = gridParams.GetVoxelSizeDimensions();
+        int xBinStride = gridParams.VoxelCount[0];
+        int yBinStride = gridParams.VoxelCount[1];
 
         var binner = new PositionToVoxels(minVector, voxelSize, xBinStride, yBinStride);
         var phaseIds = PcaPhaseIDResults;
@@ -987,7 +1020,8 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
                 InvalidateAll();
                 break;
             case nameof(PcaProperties.BinSize):
-            case nameof(PcaProperties.BinMaxDa):
+            case nameof(PcaProperties.BinStart):
+            case nameof(PcaProperties.BinEnd):
                 if (Properties.GridMethod == GridMethod.Bins)
                 {
                     InvalidateAll();
@@ -1036,6 +1070,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     private void InvalidateAll()
     {
         Properties.NumberOfComponents = 0;
+        Analysis = null;
         NoiseEigenvalueResults = null;
         EigenvalueResults = null;
         InvalidatePcaComponents();
@@ -1087,56 +1122,12 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
     }
 
-    private async Task<IGrid3DData?> GetGridData(INodeResource? gridNode, CancellationToken cancellationToken)
+    protected override void Dispose(bool disposing)
     {
-        if (gridNode is null)
+        if (disposing)
         {
-            return null;
+            Analysis?.Dispose();
         }
-        if (await Resources.GetIonData(cancellationToken: cancellationToken) is IIonData ionData)
-        {
-            switch (Properties.GridMethod)
-            {
-                case GridMethod.IonTypes:
-                    return await Grid3DUtils.CreateIonGrid3DData(
-                        Resources,
-                        ionData,
-                        new double[] {
-                            Properties.VoxelSize,
-                            Properties.VoxelSize,
-                            Properties.VoxelSize,
-                        },
-                        edgeBuffer: Properties.VoxelGridEdgeBuffer,
-                        cancellationToken: cancellationToken);
-                case GridMethod.Peaks:
-                    return await Grid3DUtils.CreatePeakGrid3DData(
-                        Resources,
-                        ionData,
-                        new double[] {
-                            Properties.VoxelSize,
-                            Properties.VoxelSize,
-                            Properties.VoxelSize,
-                        },
-                        edgeBuffer: Properties.VoxelGridEdgeBuffer,
-                        cancellationToken: cancellationToken);
-                case GridMethod.Bins:
-                    return await Grid3DUtils.CreateBinsGrid3DData(
-                        Resources,
-                        ionData,
-                        new double[] {
-                            Properties.VoxelSize,
-                            Properties.VoxelSize,
-                            Properties.VoxelSize,
-                        },
-                        Properties.BinSize,
-                        Properties.BinMaxDa,
-                        edgeBuffer: Properties.VoxelGridEdgeBuffer,
-                        cancellationToken: cancellationToken);
-                default:
-                    break;
-            }
-            
-        }
-        return null;
+        base.Dispose(disposing);
     }
 }

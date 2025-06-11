@@ -45,8 +45,12 @@ public partial class PcaProperties : ObservableObject
     private double binSize = 1d;
 
     [ObservableProperty]
-    [field: Display(Name = "Max Bin value (for Bins grid method)")]
-    private float? binMaxDa = null;
+    [field: Display(Name = "Bin Start Value (for Bins grid method)")]
+    private float? binStart = null;
+
+    [ObservableProperty]
+    [field: Display(Name = "Bin End Value (for Bins grid method)")]
+    private float? binEnd = null;
 
     [ObservableProperty]
     [field: Display(Name = "Voxel Size (nm)")]

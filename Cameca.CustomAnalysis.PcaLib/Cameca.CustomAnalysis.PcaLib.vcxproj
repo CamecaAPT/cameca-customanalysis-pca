@@ -151,20 +151,28 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="doPCA_float.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="PcaLibExport.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="PrincipalComponentAnalysis.h" />
     <ClInclude Include="RMT_rank.h" />
+    <ClInclude Include="VoxelFeatureMatrix.h" />
+    <ClInclude Include="VoxelFeatureMatrixBuilder.h" />
+    <ClInclude Include="VoxelFeatureMatrixImpl.h" />
+    <ClInclude Include="VoxelFeatureMatrixIon.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="doPCA_float.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="PrincipalComponentAnalysis.cpp" />
     <ClCompile Include="RMT_rank.cpp" />
+    <ClCompile Include="VoxelFeatureMatrix.cpp" />
+    <ClCompile Include="VoxelFeatureMatrixBuilder.cpp" />
+    <ClCompile Include="VoxelFeatureMatrixImpl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

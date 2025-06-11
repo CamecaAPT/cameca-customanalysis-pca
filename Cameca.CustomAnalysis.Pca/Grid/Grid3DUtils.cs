@@ -1,254 +1,11 @@
 ﻿using Cameca.CustomAnalysis.Interface;
-using Cameca.CustomAnalysis.Pca.Grid;
-using Cameca.CustomAnalysis.Utilities;
+using Cameca.CustomAnalysis.PcaLib.Interface;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Cameca.CustomAnalysis.Pca;
 
-
-internal record GridParameters(double[,] GridRange, double[] GridDelta, int[] VoxelCount);
-
 internal class Grid3DUtils
 {
-    public static async Task<GenericGrid3DData?> CreateIonGrid3DData(IResources resources, IIonData ionData, double[] voxelSize, double edgeBuffer = 1.5d, CancellationToken cancellationToken = default)
-    {
-        var sections = new string[] { IonDataSectionName.Position, IonDataSectionName.IonType };
-        bool sectionsAvailable = await resources.EnsureRequiredSectionsAvailable(ionData, sections, cancellationToken: cancellationToken);
-        if (!sectionsAvailable) { return null; }
-
-        var gridParams = CreateGridParameters(ionData.Extents, voxelSize, edgeBuffer);
-
-        float[,] data = CreateData(ionData, voxelSize, gridParams, sections);
-
-        return new GenericGrid3DData(
-            gridParams.VoxelCount,
-            voxelSize,
-            gridParams.GridDelta,
-            gridParams.GridRange,
-            data);
-    }
-    public static async Task<GenericGrid3DData?> CreatePeakGrid3DData(IResources resources, IIonData ionData, double[] voxelSize, double edgeBuffer = 1.5d, CancellationToken cancellationToken = default)
-    {
-        var ionRanges = resources.RangeManager?.GetIonRanges();
-        if (ionRanges is null) { return null; }
-
-        var sections = new string[] { IonDataSectionName.Position, IonDataSectionName.Mass };
-        bool sectionsAvailable = await resources.EnsureRequiredSectionsAvailable(ionData, sections, cancellationToken: cancellationToken);
-        if (!sectionsAvailable) { return null; }
-
-        var gridParams = CreateGridParameters(ionData.Extents, voxelSize, edgeBuffer);
-
-        float[,] data = CreateData(ionData, ionRanges, voxelSize, gridParams, sections);
-
-        return new GenericGrid3DData(
-            gridParams.VoxelCount,
-            voxelSize,
-            gridParams.GridDelta,
-            gridParams.GridRange,
-            data);
-    }
-
-    public static async Task<GenericGrid3DData?> CreateBinsGrid3DData(IResources resources, IIonData ionData, double[] voxelSize, double binSize, float? maxDa, double edgeBuffer = 1.5d, CancellationToken cancellationToken = default)
-    {
-        var sections = new string[] { IonDataSectionName.Position, IonDataSectionName.Mass };
-        bool sectionsAvailable = await resources.EnsureRequiredSectionsAvailable(ionData, sections, cancellationToken: cancellationToken);
-        if (!sectionsAvailable) { return null; }
-
-        var gridParams = CreateGridParameters(ionData.Extents, voxelSize, edgeBuffer);
-
-        float[,] data = CreateData(ionData, binSize, maxDa, voxelSize, gridParams, sections);
-
-        return new GenericGrid3DData(
-            gridParams.VoxelCount,
-            voxelSize,
-            gridParams.GridDelta,
-            gridParams.GridRange,
-            data);
-    }
-
-    private static float[,] CreateData(IIonData ionData, double[] voxelSize, GridParameters gridParams, string[] sections)
-    {
-        int channelCount = ionData.Ions.Count();
-
-        int voxelsX = gridParams.VoxelCount[0];
-        int voxelsY = gridParams.VoxelCount[1];
-        int voxelsAll = voxelsX * voxelsY * gridParams.VoxelCount[2];
-
-        float[,] data = new float[channelCount, voxelsAll];
-        foreach (var chunk in ionData.CreateSectionDataEnumerable(sections))
-        {
-            var positions = chunk.ReadSectionData<Vector3>(IonDataSectionName.Position).Span;
-            var ionTypes = chunk.ReadSectionData<byte>(IonDataSectionName.IonType).Span;
-
-            for (var i = 0; i < chunk.Length; i++)
-            {
-                // Unranged Ion
-                if (ionTypes[i] == byte.MaxValue) { continue; }
-
-                var position = positions[i];
-
-                var voxX = (int)Math.Floor((position.X - gridParams.GridRange[0, 0]) / voxelSize[0]);
-                var voxY = (int)Math.Floor((position.Y - gridParams.GridRange[1, 0]) / voxelSize[1]);
-                var voxZ = (int)Math.Floor((position.Z - gridParams.GridRange[2, 0]) / voxelSize[2]);
-
-                var voxIndex = voxX + (voxY * voxelsX) + (voxZ * voxelsX * voxelsY);
-
-                data[ionTypes[i], voxIndex] += 1;
-            }
-        }
-        return data;
-    }
-
-    private readonly struct RangeMapEntry
-    {
-        public readonly double Min;
-        public readonly double Max;
-        public readonly byte Index;
-        public RangeMapEntry(double min, double max, byte index)
-        {
-            this.Min = min;
-            this.Max = max;
-            this.Index = index;
-        }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static byte GetIndex(List<RangeMapEntry> rangeMap, float mass)
-    {
-        for (int r = 0; r < rangeMap.Count; r++)
-        {
-            var entry = rangeMap[r];
-            if (mass >= entry.Min && mass < entry.Max)
-            {
-                return entry.Index;
-            }
-        }
-        return byte.MaxValue;
-    }
-
-    private static float[,] CreateData(IIonData ionData, IEnumerable<IonTypeInfoRange> ionRanges, double[] voxelSize, GridParameters gridParams, string[] sections)
-    {
-        var rangeMap = ionRanges.Select((r, i) => new RangeMapEntry(r.Min, r.Max, (byte)i)).ToList();
-
-        int channelCount = ionRanges.Count();
-
-        int voxelsX = gridParams.VoxelCount[0];
-        int voxelsY = gridParams.VoxelCount[1];
-        int voxelsAll = voxelsX * voxelsY * gridParams.VoxelCount[2];
-
-        float[,] data = new float[channelCount, voxelsAll];
-        foreach (var chunk in ionData.CreateSectionDataEnumerable(sections))
-        {
-            var positions = chunk.ReadSectionData<Vector3>(IonDataSectionName.Position).Span;
-            var masses = chunk.ReadSectionData<float>(IonDataSectionName.Mass).Span;
-
-            for (var i = 0; i < chunk.Length; i++)
-            {
-                // Check if in assigned peak range
-                float mass = masses[i];
-
-                var index = GetIndex(rangeMap, masses[i]);
-
-                if (index == byte.MaxValue) { continue; }
-
-                var position = positions[i];
-
-                var voxX = (int)Math.Floor((position.X - gridParams.GridRange[0, 0]) / voxelSize[0]);
-                var voxY = (int)Math.Floor((position.Y - gridParams.GridRange[1, 0]) / voxelSize[1]);
-                var voxZ = (int)Math.Floor((position.Z - gridParams.GridRange[2, 0]) / voxelSize[2]);
-
-                var voxIndex = voxX + (voxY * voxelsX) + (voxZ * voxelsX * voxelsY);
-
-                data[index, voxIndex] += 1;
-            }
-        }
-        return data;
-    }
-
-    private static float GetMaxMass(IIonData ionData, float? maxValue)
-    {
-        if (maxValue.HasValue)
-        {
-            float max = maxValue.Value;
-            float maxMass = float.MinValue;
-            foreach (var chunk in ionData.CreateSectionDataEnumerable(IonDataSectionName.Mass))
-            {
-                var masses = chunk.ReadSectionData<float>(IonDataSectionName.Mass).Span;
-                for (var i = 0; i < chunk.Length; i++)
-                {
-                    if (masses[i] > maxMass)
-                    {
-                        maxMass = masses[i];
-                        if (maxMass > max)
-                        {
-                            return max;
-                        }
-                    }
-                }
-            }
-            return maxMass;
-        }
-        else
-        {
-            float maxMass = float.MinValue;
-            foreach (var chunk in ionData.CreateSectionDataEnumerable(IonDataSectionName.Mass))
-            {
-                var masses = chunk.ReadSectionData<float>(IonDataSectionName.Mass).Span;
-                for (var i = 0; i < chunk.Length; i++)
-                {
-                    if (masses[i] > maxMass)
-                    {
-                        maxMass = masses[i];
-                    }
-                }
-            }
-            return maxMass;
-        }
-    }
-
-    private static float[,] CreateData(IIonData ionData, double binSize, float? maxDa, double[] voxelSize, GridParameters gridParams, string[] sections)
-    {
-        // Just keep it naive for now and go through mass twice: once to find max value to allocate the bin size, second to populate for each channel
-        // Inefficient, but keeps the code much simpler than otherwise resizing all channels as we find a need for higher bin indices
-        float maxMass = GetMaxMass(ionData, maxDa);
-
-        int voxelsX = gridParams.VoxelCount[0];
-        int voxelsY = gridParams.VoxelCount[1];
-        int voxelsAll = voxelsX * voxelsY * gridParams.VoxelCount[2];
-
-        int channelCount = (int)Math.Ceiling(maxMass / binSize);
-
-        float[,] data = new float[channelCount, voxelsAll];
-        foreach (var chunk in ionData.CreateSectionDataEnumerable(sections))
-        {
-            var positions = chunk.ReadSectionData<Vector3>(IonDataSectionName.Position).Span;
-            var masses = chunk.ReadSectionData<float>(IonDataSectionName.Mass).Span;
-
-            for (var i = 0; i < chunk.Length; i++)
-            {
-                int index = (int)Math.Floor(masses[i] / binSize);
-                if (index >= channelCount) { continue; }
-
-                var position = positions[i];
-
-                var voxX = (int)Math.Floor((position.X - gridParams.GridRange[0, 0]) / voxelSize[0]);
-                var voxY = (int)Math.Floor((position.Y - gridParams.GridRange[1, 0]) / voxelSize[1]);
-                var voxZ = (int)Math.Floor((position.Z - gridParams.GridRange[2, 0]) / voxelSize[2]);
-
-                var voxIndex = voxX + (voxY * voxelsX) + (voxZ * voxelsX * voxelsY);
-
-                data[index, voxIndex] += 1;
-            }
-        }
-        return data;
-    }
-
     /// <summary>
     /// Calculate voxel counts and grid ranges 
     /// </summary>
@@ -264,7 +21,7 @@ internal class Grid3DUtils
     /// <param name="edgeBuffer"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public static GridParameters CreateGridParameters(Extents roiExtents, double[] voxelSize, double edgeBuffer = 1.5d)
+    public static GridParameters CreateGridParameters(Extents roiExtents, double voxelSize, double edgeBuffer = 1.5d)
     {
         if (edgeBuffer < 0d) throw new ArgumentOutOfRangeException(nameof(edgeBuffer), edgeBuffer, $"{nameof(edgeBuffer)} must be non-negative value");
 
@@ -274,8 +31,7 @@ internal class Grid3DUtils
         new double[] { roiExtents.Min.Y, roiExtents.Max.Y },
         new double[] { roiExtents.Min.Z, roiExtents.Max.Z },
         };
-        double[,] gridRange = new double[3, 2];
-        double[] gridDelta = new double[3];
+        double[] gridStart = new double[3];
         int[] voxelCount = new int[3];
 
         // Calculate voxel counts and grid ranges
@@ -286,14 +42,12 @@ internal class Grid3DUtils
         {
             double delta = extents[i][1] - extents[i][0];
             double center = extents[i][1] - delta / 2d;
-            double halfCount = Math.Ceiling((delta / 2d) / voxelSize[i]) + edgeBuffer;
+            double halfCount = Math.Ceiling((delta / 2d) / voxelSize) + edgeBuffer;
 
-            gridRange[i, 0] = center - halfCount * voxelSize[i];
-            gridRange[i, 1] = center + halfCount * voxelSize[i];
-            gridDelta[i] = gridRange[i, 1] - gridRange[i, 0];
+            gridStart[i] = center - halfCount * voxelSize;
             voxelCount[i] = (int)(2.0 * halfCount + 0.5);
         }
-        return new GridParameters(gridRange, gridDelta, voxelCount);
+        return new GridParameters(gridStart, voxelSize, voxelCount);
     }
 }
 

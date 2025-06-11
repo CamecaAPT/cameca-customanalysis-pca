@@ -25,7 +25,7 @@ namespace Cameca::CustomAnalysis::PcaLib::Interface {
                 delete m_Instance;
             }
         }
-    protected:
+
         T* GetInstance()
         {
             return m_Instance;
