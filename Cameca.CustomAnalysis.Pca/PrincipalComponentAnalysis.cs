@@ -169,8 +169,15 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             {
                 throw new InvalidOperationException($"IonData is required to create {nameof(VoxelFeatureMatrix)}");
             }
-            var featureResolver = CreateFeatureResolver();
-            Analysis = CreateAnalysis(ionData, featureResolver);
+            if (Properties.GridMethod == GridMethod.Grid3D)
+            {
+                Analysis = CreateAnalysisFrom3DGrid(ionData);
+            }
+            else
+            {
+                var featureResolver = CreateFeatureResolver();
+                Analysis = CreateAnalysis(ionData, featureResolver);
+            }
         }
         return Analysis;
     }
@@ -189,6 +196,38 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             default:
                 throw new NotSupportedException($"Grid Method is not supported: {Properties.GridMethod.ToString()}");
         }
+    }
+
+    private PcaLibPrincipalComponentAnalysis CreateAnalysisFrom3DGrid(IIonData ionData)
+    {
+        if (Resources.GetGrid() is not { } grid)
+        {
+            throw new InvalidOperationException("3D Grid Method requires presence of 3D Grid node");
+        }
+        var hostGridData = grid.GetData<IGrid3DData>()!;
+        double voxelSize = hostGridData.VoxelSize[0];
+        if (voxelSize != hostGridData.VoxelSize[1] || voxelSize != hostGridData.VoxelSize[2])
+        {
+            throw new InvalidOperationException("All 3D Grid voxel dimensions must be the same");
+        }
+
+        var gridStart = new double[]{
+            hostGridData.GridRange[0, 0],
+            hostGridData.GridRange[1, 0],
+            hostGridData.GridRange[2, 0],
+        };
+        var gridParams = new GridParameters(gridStart, voxelSize, hostGridData.NumVoxels);
+
+        int totalVoxelCount = gridParams.VoxelCount.Aggregate(1, (accu, next) => accu *= next);
+        int nFeatureCount = ionData.Ions.Count();
+        using var builder = new VoxelFeatureMatrixFrom3DGridBuilder(totalVoxelCount, nFeatureCount);
+
+        for (int i = 0; i < nFeatureCount; i++)
+        {
+            builder.Update(hostGridData.GetDataForIon(i));
+        }
+
+        return new PcaLibPrincipalComponentAnalysis(gridParams, builder.Build());
     }
 
     private PcaLibPrincipalComponentAnalysis CreateAnalysis(IIonData ionData, IFeatureResolver featureResolver)
@@ -369,12 +408,19 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
         if ((Analysis ??= await GetAnalysis(cancellationToken)) is { } pca)
         {
-            int estimatedRank = pca.EstimateRank(
-                Properties.Gaps,
-                (int)Properties.Significance,
-                Properties.Refine);
-            var noiseEvals = pca.GetNoiseEigenvalues(estimatedRank);
-            NoiseEigenvalueResults = new NoiseEigenvalueResults(estimatedRank, noiseEvals);
+            if (Properties.GridMethod != GridMethod.Grid3D)
+            {
+                int estimatedRank = pca.EstimateRank(
+                    Properties.Gaps,
+                    (int)Properties.Significance,
+                    Properties.Refine);
+                var noiseEvals = pca.GetNoiseEigenvalues(estimatedRank);
+                NoiseEigenvalueResults = new NoiseEigenvalueResults(estimatedRank, noiseEvals);
+            }
+            else
+            {
+                NoiseEigenvalueResults = new NoiseEigenvalueResults(0, Array.Empty<float>());
+            }
         }
     }
 
@@ -515,6 +561,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         switch (Properties.GridMethod)
         {
             case GridMethod.IonTypes:
+            case GridMethod.Grid3D:
                 var ions = ionData.Ions;
                 var ionBrushes = ions.Select(ionInfo => new SolidColorBrush(Resources.IonDisplayInfo.GetColor(ionInfo))).ToArray();
                 var ionMapper = new CartesianMapper<float>()
@@ -1015,9 +1062,14 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         switch (e.PropertyName)
         {
             case nameof(PcaProperties.GridMethod):
+                InvalidateAll();
+                break;
             case nameof(PcaProperties.VoxelSize):
             case nameof(PcaProperties.VoxelGridEdgeBuffer):
-                InvalidateAll();
+                if (Properties.GridMethod != GridMethod.Grid3D)
+                {
+                    InvalidateAll();
+                }
                 break;
             case nameof(PcaProperties.BinSize):
             case nameof(PcaProperties.BinStart):

@@ -129,6 +129,7 @@
     <ClInclude Include="PrincipalComponentAnalysis.h" />
     <ClInclude Include="VoxelFeatureMatrix.h" />
     <ClInclude Include="VoxelFeatureMatrixBuilder.h" />
+    <ClInclude Include="VoxelFeatureMatrixFrom3DGridBuilder.h" />
     <ClInclude Include="VoxelFeatureMatrixIon.h" />
   </ItemGroup>
   <ItemGroup>
@@ -137,6 +138,7 @@
     <ClCompile Include="PrincipalComponentAnalysis.cpp" />
     <ClCompile Include="VoxelFeatureMatrix.cpp" />
     <ClCompile Include="VoxelFeatureMatrixBuilder.cpp" />
+    <ClCompile Include="VoxelFeatureMatrixFrom3DGridBuilder.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

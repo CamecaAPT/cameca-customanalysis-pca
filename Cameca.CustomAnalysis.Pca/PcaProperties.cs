@@ -31,6 +31,8 @@ public enum GridMethod
     Peaks = 1,
     [Display(Name = "Bins")]
     Bins = 2,
+    [Display(Name = "Ion Types (from 3D Grid)")]
+    Grid3D = 4,
 }
 
 [XmlRoot("PcaOptions")]

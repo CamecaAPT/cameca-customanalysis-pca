@@ -158,6 +158,7 @@
     <ClInclude Include="RMT_rank.h" />
     <ClInclude Include="VoxelFeatureMatrix.h" />
     <ClInclude Include="VoxelFeatureMatrixBuilder.h" />
+    <ClInclude Include="VoxelFeatureMatrixFrom3DGridBuilder.h" />
     <ClInclude Include="VoxelFeatureMatrixImpl.h" />
     <ClInclude Include="VoxelFeatureMatrixIon.h" />
   </ItemGroup>
@@ -172,6 +173,7 @@
     <ClCompile Include="RMT_rank.cpp" />
     <ClCompile Include="VoxelFeatureMatrix.cpp" />
     <ClCompile Include="VoxelFeatureMatrixBuilder.cpp" />
+    <ClCompile Include="VoxelFeatureMatrixFrom3DGridBuilder.cpp" />
     <ClCompile Include="VoxelFeatureMatrixImpl.cpp" />
   </ItemGroup>
   <ItemGroup>
