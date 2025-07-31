@@ -1,6 +1,8 @@
+using System.Collections;
 using System.Collections.Generic;
 using System;
 using PcaExtensionMethods;
+using System.Linq;
 
 namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 
@@ -86,7 +88,8 @@ public class TwoDPeak
     public PeakID peakId;
     readonly PixelID peakMaxPixelId; // this is also the id for this object in container's dictionary
     readonly List<PixelID> borderPixelIds;
-    readonly List<PixelID> inPeakPixelIds;
+    readonly HashSet<PixelID> inPeakPixelIds;
+    readonly List<PixelID> excludedPixelIds;
     readonly List<PixelSuggestion> nextCandidates;
     readonly List<PixelSuggestion> topCandidates; // this list is recycled as the return vehicle for getting next suggestions
     readonly DensityPlane referenceGrid;
@@ -100,8 +103,9 @@ public class TwoDPeak
         this.partitionFinder = partitionFinder;
         this.peakMaxPixelId = peakMaxPixelId;
         this.peakId = new PeakID(peakMaxPixelId);
-        this.inPeakPixelIds = new List<PixelID>();
+        this.inPeakPixelIds = new HashSet<PixelID>();
         this.borderPixelIds = new List<PixelID>();
+        this.excludedPixelIds = new List<PixelID>();
         this.nextCandidates = new List<PixelSuggestion>();
         this.topCandidates = new List<PixelSuggestion>();
         this.referenceGrid = grid;
@@ -114,15 +118,67 @@ public class TwoDPeak
         nextCandidates.Add(firstSuggestion);
     }
 
+    // this gets called at the final step of PartitionFinder -- 
+    // the algorithm says we should have a zone around the border between peaks
+    // such that pixel closer that PMD * W to a borderPixel should not be considered
+    // part of the peak, where W is the borderExclusionRatio, and 
+    // PMD is the distance of the pixel to its peak maximum pixel.
+    public List<PixelID> ExcludePixelsNear(HashSet<PixelID> allBorderPixelIds, float borderExclusionRatio)
+    {
+
+        // pixel coords are integers of the pixel grid
+        PixelCoords peakMaxPixelCoords = peakMaxPixelId.PixelCoords();
+        float borderExclusionRatioSquared = borderExclusionRatio * borderExclusionRatio;
+        List<PixelID> excludedPixels = new List<PixelID>();
+
+        foreach (var pixelID in inPeakPixelIds)
+        {
+            // first calculate the distance of each peak pixel to the peak max  
+            // and to avoid an expensive squareroot calculation, use the
+            // distance squared in our comparisons
+            var dSquaredToPeakMax = pixelID.DSquaredTo(peakMaxPixelCoords);
+            var pixelCoords = pixelID.PixelCoords();
+            foreach (var borderPixel in allBorderPixelIds)
+            {
+                var dSquaredToBorder = borderPixel.DSquaredTo(pixelCoords);
+
+                // here, we want to test if
+                //      dToBorder < dToPeakMax * borderExclusionRatio
+                // that's the same test as 
+                //      dSquaredToBorder < dSquaredToPeakMax * borderExclusionRatioSquared
+                // assuming none of the values are negative (LOL)
+
+                if (dSquaredToBorder < dSquaredToPeakMax * borderExclusionRatioSquared)
+                {
+                    // In this case, the pixel is closer to the border than the threshold -- 
+                    // it should be part of the border zone, and not part of the peak
+                    excludedPixels.Add(pixelID);
+                    break; // exit the borderPixel foreach loop
+                }
+            }
+        }
+
+        // all the pixels in the excludedPixels HashMap should be taken out of the 
+        // inPeakPixelIds
+        inPeakPixelIds.ExceptWith(excludedPixels);
+        return excludedPixels;
+    }
+
     public List<PixelID> PixelList()
     {
-        return inPeakPixelIds;
+        return inPeakPixelIds.ToList();
+    }
+
+    public List<PixelID> BorderPixelIds()
+    {
+        return borderPixelIds;
     }
 
     public bool HasFoundIncrease()
     {
         return foundIncreaseIds.Count > 0;
     }
+
     // if suggestion accepted, remove from list and 
     // add adjacent pixels to list
     public void RemoveFromCandidates(PixelSuggestion suggestion)

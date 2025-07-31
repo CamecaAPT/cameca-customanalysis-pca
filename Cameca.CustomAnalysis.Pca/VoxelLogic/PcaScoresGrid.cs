@@ -247,7 +247,10 @@ public class PcaScoresGrid
                 bool firstCoord = true;
                 foreach (PixelID pixelId in partition)
                 {
-                    (int x, int y) = pixelId.XYCoords();
+                    var pixelCoords = pixelId.PixelCoords();
+                    var x = pixelCoords.x;
+                    var y = pixelCoords.y;
+
                     if (!firstCoord) {
                         outputFile.Write(",");
                     }
