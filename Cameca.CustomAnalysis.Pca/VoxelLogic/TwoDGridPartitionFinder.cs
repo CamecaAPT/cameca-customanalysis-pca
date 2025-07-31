@@ -10,10 +10,11 @@ public class TwoDGridPartitionFinder
 {
     readonly DensityPlane grid;
     List<PixelID> unplacedPixelIds;
-    readonly List<PixelID> rejectedPixelIds;
+    readonly HashSet<PixelID> peakBorderPixelIds;
     List<PixelID> foundIncreasePixelIds; // when a peak finds an increase, remember it here
     readonly Dictionary<PeakID, TwoDPeak> peaks;
     PcaPhaseIdentificationProperties properties;
+    readonly float borderExclusionRatio;
 
     // These are the return codes returned by IterateIdentifyingPeaks()
     // Depending on this result, the Logic in FindPartitions will either
@@ -34,15 +35,18 @@ public class TwoDGridPartitionFinder
     {
         this.grid = twoDGrid;
         this.peaks = new Dictionary<PeakID, TwoDPeak> ();
-        this.rejectedPixelIds = new List<PixelID>();
+        this.peakBorderPixelIds = new HashSet<PixelID>();
         this.foundIncreasePixelIds = new List<PixelID>();
         this.unplacedPixelIds = twoDGrid.GridPointIds();
         this.properties = props;
+        this.borderExclusionRatio = 0.2f;
     }
 
     // for each iteration step,
     // 1) ask the different peaks if they have found an increase
-    //    if yes -- make new peak, otherwise
+    //    if yes -- make new peak, also, pixel that found increase
+    //    should get transferred to rejected pixel list
+    //    if no increse found, then ... otherwise
     // 2) ask the different peaks to suggest 
     //    their next target pixel(s)
     // 3) find highest valued pixel(s)
@@ -69,10 +73,12 @@ public class TwoDGridPartitionFinder
                 TwoDPeak nthPeak = peaks[peakKey];
                 if (nthPeak.HasFoundIncrease()) {
                     // need to clean out the 'HasFoundIncrease' flag from the peaks
-                    // this will get done by the caller if we return the 'found increase' flag
+                    // this will get done for all the peaks by the caller if
+                    // we return the 'found increase' flag
                     return ReturnCode.foundIncrease; 
                 }
             }
+
 
             // step 2
             candidateRanker.Clear();
@@ -126,7 +132,7 @@ public class TwoDGridPartitionFinder
                 List<PixelSuggestion> tempCandidates = bestCandidates;
                 bestCandidates = new List<PixelSuggestion>();
                 // remove the collisions from bestCandidates
-                // add the ids to rejectedPixelIds
+                // add the ids to peakBorderPixelIds
                 // notify peaks of rejection
 
                 foreach (PixelSuggestion suggestion in tempCandidates)
@@ -143,7 +149,7 @@ public class TwoDGridPartitionFinder
 
                 foreach (PixelID pixelId in collisions)
                 {
-                    rejectedPixelIds.Add(pixelId);
+                    peakBorderPixelIds.Add(pixelId);
                     unplacedPixelIds.Remove(pixelId);
                 }
             }
@@ -175,7 +181,7 @@ public class TwoDGridPartitionFinder
     public void Clear()
     {
         peaks.Clear();
-        rejectedPixelIds.Clear();
+        peakBorderPixelIds.Clear();
         unplacedPixelIds.Clear();
         unplacedPixelIds = grid.GridPointIds();
     }
@@ -284,7 +290,47 @@ public class TwoDGridPartitionFinder
                         break;
                     }
             }
-      
+        }
+
+        // now, the peaks dictionary is complete, but there is still work to do in cleaning up the borders
+        // each peak has some pixels in its borderPixelIds list, and our algorithm has a collection 
+        // of pixelIds in its "collisions" list
+        // together, these pixels constitute the boundaries between the identified peaks.
+        // Part of the algorithm should be to establish a border zone between the peaks of a certain width
+        // because voxels near the borders could indeed be part of the tail in either region.
+        // So, lets define a parameter W, between 0 and 1 but likely around 0.25, such that any pixel 
+        // whose distance to a border/collision pixel is less than W times its distance to the peak max
+        // should be considered as part of the border region, and therefore voxels that land in the 
+        // those pixels should not get a designation from either peak.  Lets call that
+        // W parameter the borderExclusionRatio
+
+        // So, to do that calculation now, first, generate a list of all the collision/border pixel IDs
+        // loop through all the pixels identified to be part of each peak, and test for this condition.
+        // This seems like it should be an O(2) operation, because both the number of peak pixels and 
+        // the number of border pixels grow as the grid size gets smaller, but the number of border pixels 
+        // only grows as the root of number of pixels in the peak, so the complexity scaling is actually
+        // not as bad as it might seem.  Still, this will be an issue for the smallest grid sizes.
+
+        foreach (var peak in peaks.Values)
+        {
+            var borderIds = peak.BorderPixelIds();
+            peakBorderPixelIds.UnionWith(borderIds);
+        }
+
+        // now peakBorderPixelIds contains all the borderIds
+        // run the loop through all the peaks
+        //
+        // FURURE: at some point, we might consider
+        // remembering which peaks were on the border, so that 
+        // we have more information about how to assign voxels.
+        // i.e. rather than just have voxels in these pixels get a ? 
+        // designation, we do have some information about which regions they
+        // might be a part of
+        List<PixelID> excludedPixelIDs = new List<PixelID>();
+        foreach (var peak in peaks.Values)
+        {
+            List<PixelID> peakExcludedPixelIds = peak.ExcludePixelsNear(peakBorderPixelIds, borderExclusionRatio);
+            excludedPixelIDs.AddRange(peakExcludedPixelIds);
         }
     }
 

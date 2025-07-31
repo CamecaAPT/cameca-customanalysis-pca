@@ -12,6 +12,5 @@ public sealed class OneDPeakProjection
         this.densityLine = dl;
     }
 
-  
 }
 

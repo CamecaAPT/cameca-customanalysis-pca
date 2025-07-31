@@ -7,7 +7,17 @@ using System.Linq;
 
 namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 
-public struct PixelID : IComparable<PixelID>
+public struct PixelCoords
+{
+    public int x;
+    public int y;
+    public PixelCoords(int x, int y)
+    {
+        this.x = x;
+        this.y = y;
+    }
+}
+public struct PixelID : IComparable<PixelID>, IEquatable<PixelID>
 {
     public readonly int pixelId;
     
@@ -36,11 +46,22 @@ public struct PixelID : IComparable<PixelID>
         return new PixelID(newId);
     }
 
-    public readonly (int, int) XYCoords()
+    public PixelCoords PixelCoords()
     {
         int y = (HalfGridStride + pixelId) >> GridStrideExp;
         int x = pixelId - (y * GridStride);
-        return (x, y);
+        return new PixelCoords(x, y);
+    }
+
+    // DSquaredTo is used to measure distance to another pixel,
+    // but if the exact distance is not required, sometimes it is OK to 
+    // return the much simpler distanceSquared (no squareroot required)
+    public int DSquaredTo(PixelCoords coords)
+    {
+        var myCoords = this.PixelCoords();
+        var diffx = myCoords.x = coords.x;
+        var diffy = myCoords.y = coords.y;
+        return (diffx * diffx + diffy * diffy);
     }
 
     public readonly int CompareTo(PixelID other)
@@ -48,10 +69,15 @@ public struct PixelID : IComparable<PixelID>
         return other.pixelId > pixelId ? -1 : other.pixelId < pixelId ? 1 : 0;
     }
 
+    public bool Equals(PixelID other)
+    {
+        return pixelId == other.pixelId;
+    }
+
     public readonly string DebugStr()
     {
-        (int x, int y) = this.XYCoords();
-        return pixelId.ToString() + ":{" + x + "," + y + "}";
+        var coords = this.PixelCoords();
+        return pixelId.ToString() + ":{" + coords.x + "," + coords.y + "}";
     }
 }
 
@@ -144,7 +170,7 @@ public class DensityPlane
             int miny = minx;
             void convolutionFunction(PixelID pixelId, float value)
             {
-                (int p, int q) = pixelId.XYCoords();
+                var coords = pixelId.PixelCoords();
                 for (int x = minx; x <= maxx; x+=1)
                 {
                     int xCoefficientIndex = (int)Math.Abs(x);
@@ -153,7 +179,7 @@ public class DensityPlane
                     {
                         int yCoefficientIndex = (int)Math.Abs(y);
                         float yCoeff = normalizedCoefficients[yCoefficientIndex];
-                        PixelID? nthPixelID = PixelID.PixelIDFor(p + x, q + y);
+                        PixelID? nthPixelID = PixelID.PixelIDFor(coords.x + x, coords.y + y);
                         if (nthPixelID != null)
                         {  
                             newDP.AddValueAtPixel(nthPixelID.Value, value * xCoeff * yCoeff);
@@ -193,7 +219,9 @@ public class DensityPlane
     // check for the 8 neighboring pixels and add them if they have a non-zero value
     public List<PixelID> PixelIdsNeighboring(PixelID pixelId)
     {
-        (int x, int y) = pixelId.XYCoords();
+        var pixelCoords = pixelId.PixelCoords();
+        var x = pixelCoords.x;
+        var y = pixelCoords.y;
         List<PixelID> neighbors = new();
         AddIfNonZero(x - 1, y - 1, neighbors);
         AddIfNonZero(x - 1, y, neighbors);
@@ -254,7 +282,10 @@ public class DensityPlane
         pixelIds.Sort();
         foreach (PixelID pixelId in pixelIds)
         {
-            (int x, int y) = pixelId.XYCoords();
+            var pixelCoords = pixelId.PixelCoords();
+            var x = pixelCoords.x;
+            var y = pixelCoords.y;
+
             if (!first)
             {
                 miny = Math.Min(y, miny);
@@ -333,7 +364,9 @@ public class DensityPlane
         pixelIds.Sort();
         foreach (PixelID pixelId in pixelIds)
         {
-            (int x, int y) = pixelId.XYCoords();
+            var pixelCoords = pixelId.PixelCoords();
+            var x = pixelCoords.x;
+            var y = pixelCoords.y;
             if (!first)
             {
                 miny = Math.Min(y, miny);
@@ -393,8 +426,8 @@ public class DensityPlane
 
     public (float, float) XYCoordsFor(PixelID pixelId)
     {
-        (int xBinIndex, int yBinIndex) = pixelId.XYCoords();
-        return (xBinIndex * binsize, yBinIndex * binsize);
+        var pixelCoords = pixelId.PixelCoords();
+        return (pixelCoords.x * binsize, pixelCoords.y * binsize);
     }
 
     public PixelID? PixelIDFor(float x, float y)

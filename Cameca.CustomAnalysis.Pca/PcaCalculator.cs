@@ -23,7 +23,7 @@ public struct PcaPhaseIdentificationProperties
           int numDimsForPCAPhaseId)
     {
         this.oneDProjectionBinSize = 0.05f;
-        this.oneDProjectionDelocalization = 0.05f; 
+        this.oneDProjectionDelocalization = gridProjectionDelocalization; 
         this.gridProjectionBinSize = gridProjectionBinSize;
         this.gridProjectionDelocalization = gridProjectionDelocalization;
         this.noiseFloorFraction = noiseFloor;
