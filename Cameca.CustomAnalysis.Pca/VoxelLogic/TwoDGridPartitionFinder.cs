@@ -9,9 +9,18 @@ namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 public class TwoDGridPartitionFinder
 {
     readonly DensityPlane grid;
-    List<PixelID> unplacedPixelIds;
+    List<PixelID> unplacedPixelIds; 
+    // In the case of just one peak, we'll also identify pixels well away from the main peak, 
+    // just as we do for one D partitioning
+    List<PixelID> longTailPixelIds;
+    // peakBorderPixelIDs will ultimately not be included in the peak pixels"
+    // they will be used as a basis for defining the border zone between peaks
     readonly HashSet<PixelID> peakBorderPixelIds;
-    List<PixelID> foundIncreasePixelIds; // when a peak finds an increase, remember it here
+    // when a peak finds an increase, remember it here in foundIncreasePixelIds
+    // when an increase is found, it means that there is likely another peak 
+    // in the DensityPlane that is as yet unfound. The returnCode ReturnCode.foundIncrease
+    // indicates that the pixel evaluation should be inturrupted and a new peak discovered
+    List<PixelID> foundIncreasePixelIds;   
     readonly Dictionary<PeakID, TwoDPeak> peaks;
     PcaPhaseIdentificationProperties properties;
     readonly float borderExclusionRatio;
@@ -37,6 +46,7 @@ public class TwoDGridPartitionFinder
         this.peaks = new Dictionary<PeakID, TwoDPeak> ();
         this.peakBorderPixelIds = new HashSet<PixelID>();
         this.foundIncreasePixelIds = new List<PixelID>();
+        this.longTailPixelIds = new List<PixelID>();
         this.unplacedPixelIds = twoDGrid.GridPointIds();
         this.properties = props;
         this.borderExclusionRatio = 0.2f;
@@ -182,7 +192,8 @@ public class TwoDGridPartitionFinder
     {
         peaks.Clear();
         peakBorderPixelIds.Clear();
-        unplacedPixelIds.Clear();
+        unplacedPixelIds = new List<PixelID>();
+        longTailPixelIds = new List<PixelID>();
         unplacedPixelIds = grid.GridPointIds();
     }
 
@@ -194,6 +205,10 @@ public class TwoDGridPartitionFinder
             TwoDPeak nthPeak = peaks[peakKey];
             List<PixelID> peakPixelList = nthPeak.PixelList();
             pixelLists.Add(peakPixelList);
+        }
+        if (longTailPixelIds.Count > 0)
+        {
+            pixelLists.Add(longTailPixelIds);
         }
         return pixelLists;
     }
@@ -292,7 +307,10 @@ public class TwoDGridPartitionFinder
             }
         }
 
-        // now, the peaks dictionary is complete, but there is still work to do in cleaning up the borders
+        // now, the peaks dictionary is complete, but there is still work to do.
+        // What exactly that work is depends on the number of peaks found
+        //
+        // If there are multiple peaks found, that extra work consists of cleaning up the borders
         // each peak has some pixels in its borderPixelIds list, and our algorithm has a collection 
         // of pixelIds in its "collisions" list
         // together, these pixels constitute the boundaries between the identified peaks.
@@ -304,33 +322,150 @@ public class TwoDGridPartitionFinder
         // those pixels should not get a designation from either peak.  Lets call that
         // W parameter the borderExclusionRatio
 
-        // So, to do that calculation now, first, generate a list of all the collision/border pixel IDs
-        // loop through all the pixels identified to be part of each peak, and test for this condition.
-        // This seems like it should be an O(2) operation, because both the number of peak pixels and 
-        // the number of border pixels grow as the grid size gets smaller, but the number of border pixels 
-        // only grows as the root of number of pixels in the peak, so the complexity scaling is actually
-        // not as bad as it might seem.  Still, this will be an issue for the smallest grid sizes.
+        // So, to do that calculation now.  THis is the case of multiple peaks, so all this
+        // logic goes in an if {} case
 
-        foreach (var peak in peaks.Values)
+        if (peaks.Count > 1)
         {
-            var borderIds = peak.BorderPixelIds();
-            peakBorderPixelIds.UnionWith(borderIds);
+
+            // first, generate a list of all the collision/border pixel IDs
+            // loop through all the pixels identified to be part of each peak, and test for this condition.
+            // This seems like it should be an O(2) operation, because both the number of peak pixels and 
+            // the number of border pixels grow as the grid size gets smaller, but the number of border pixels 
+            // only grows as the root of number of pixels in the peak, so the complexity scaling is actually
+            // not as bad as it might seem.  Still, this will be an issue for the smallest grid sizes.
+
+            foreach (var peak in peaks.Values)
+            {
+                var borderIds = peak.BorderPixelIds();
+                peakBorderPixelIds.UnionWith(borderIds);
+            }
+
+            // now peakBorderPixelIds contains all the borderIds
+            // run the loop through all the peaks
+            //
+            // FURURE: at some point, we might consider
+            // remembering which peaks were on the border, so that 
+            // we have more information about how to assign voxels.
+            // i.e. rather than just have voxels in these pixels get a ? 
+            // designation, we do have some information about which regions they
+            // might be a part of
+            List<PixelID> excludedPixelIDs = new List<PixelID>();
+            foreach (var peak in peaks.Values)
+            {
+                List<PixelID> peakExcludedPixelIds = peak.ExcludePixelsNear(peakBorderPixelIds, borderExclusionRatio);
+                excludedPixelIDs.AddRange(peakExcludedPixelIds);
+            }
         }
-
-        // now peakBorderPixelIds contains all the borderIds
-        // run the loop through all the peaks
-        //
-        // FURURE: at some point, we might consider
-        // remembering which peaks were on the border, so that 
-        // we have more information about how to assign voxels.
-        // i.e. rather than just have voxels in these pixels get a ? 
-        // designation, we do have some information about which regions they
-        // might be a part of
-        List<PixelID> excludedPixelIDs = new List<PixelID>();
-        foreach (var peak in peaks.Values)
+        else if (peaks.Count == 1)
         {
-            List<PixelID> peakExcludedPixelIds = peak.ExcludePixelsNear(peakBorderPixelIds, borderExclusionRatio);
-            excludedPixelIDs.AddRange(peakExcludedPixelIds);
+            // if there is only one peak identified in the main routine,
+            // there is no need to do border cleanup
+            // however, a grid with only one peak is not very useful in 
+            // partitioning the voxels in a sample  
+            // In this case (like we do in the One D case), we can create 
+            // a second degignation corresponding to the long tail of voxels not in 
+            // or close to the main peak
+            // FUTURE: in the future, we may look more carefully at the distribution
+            // of these voxels and try to find cluster-ish groups
+
+            // for now, lets use the most simple criterion we can find:  
+            // pixels further from the main peak than 1/2 the distance to the peak max
+
+
+            var keys = peaks.Keys.ToList();
+            PeakID mainPeakID = keys[0];
+            TwoDPeak mainPeak = peaks[mainPeakID];
+            PixelID mainPeakPixelId = mainPeak.peakMaxPixelId;
+            PixelCoords mainPeakPixelCoords = mainPeakPixelId.PixelCoords();
+            List<PixelID> rimPixelIds = mainPeak.AllNextCandidatesPixelIDs();
+
+            // rimPixelIds are the pixels not in the peak but which are adjacent
+            // to a pixel in the peak
+            // Our method for determining inclusion in the border area is:
+            // Identifying the closest rim pixel to 
+            // The distance of a Pixel Pc (candidatePixel) to the rim
+            // first involves finding the closest rim pixel Pr
+            // the distance between those two pixels will be
+            // be called Dcprp (distance of candidate pixel to rim pixel)
+            // the actual distance to the rim is slightly larger,
+            //   Dcpr = 0.5 + Dcprp
+            // Dcpr is (distance of candidate pixel to rim)
+            // 0.5 is added as the distance between the rim pixel and 
+            // pixels actually in the peak.  The fact that this is a
+            // "Manhattan distance" means that the algorithm is slightly non-ideal 
+            // but we are working in a fictitious PCA space anyway.
+            // Distance of the candidate pixel to the Main peak is 
+            //   Dcpmp
+            // So, we'll define a border zone as any pixel such that 
+            //    Dcpr * 2 <= Dcpmp
+            // And alternatively, pixels further away from the rim such that 
+            //    Dcpr > Dcpmp
+            // A SIMPLE EXAMPLE:
+            // there is a peak of just five pixels, {0,0} and its 4 neighbors
+            //    {1,0}, {0,1}, {-1, 0}, {0, -1}
+            // candidate pixels at {1,1} {2,0} {0,2} are rim pixels, all of
+            // which have a "distance to rim pixel" of 0 (distance to themselves)
+            // and therefore a "distance to rim of 0.5
+            // all of them are further than 1.0 to the main peak, so all of them are
+            // in the border zone
+            // A pixel at {1,2} is a distance 1 away from a rim pixel, and therefore 
+            // a distance 1.5 from the rim
+            // That pixel is closer to the main peak than 3.0 (its distance is sqrt(5))
+            // so that pixel is outside the border zone
+            // A pixel at {0,3} is also a distance 1 away from a rim pixel ({0,2})
+            // it's distance is exactly 3 away from the main peak, so it is inside the 
+            // border zone (the criterion is Dcpr * 2 <= Dcpmp, not Dcpr * 2 < Dcpmp)
+            // In this simple case, the border zone does look oddly shaped, but 
+            // such is the nature of a square grid and use of Manahttan distance..  Larger peaks will have 
+            // more reasonable border zone shapes.
+
+            foreach (var candidatePixel in unplacedPixelIds)
+            {
+                // Use DSquared rather than D to avoid a squareroot calculation
+                var distSquaredToMainPeak = candidatePixel.DSquaredTo(mainPeakPixelCoords);
+                // if we can't find a rim pixel closer than the main peak
+                // we'll use mainPeak pixelID
+                float closestDSqu = distSquaredToMainPeak;
+                PixelID closestRimPixelID = mainPeakPixelId;
+                foreach (var rimPixelId in rimPixelIds)
+                {
+                    var distSquaredToRimPixel = candidatePixel.DSquaredToPixel(rimPixelId);
+                    if (distSquaredToRimPixel < closestDSqu)
+                    {
+                        closestDSqu = distSquaredToRimPixel;
+                        closestRimPixelID = rimPixelId;
+                    }
+                }
+                // do one square root so we can add 0.5
+                double Dcpr = 0.5 + Math.Sqrt(closestDSqu);
+
+                // border zone test is
+                //     Dcpr * 2 <= Dcpm
+                // but less calculation required to test 
+                //     DcprSquared * 4 <= DcpmpSquared
+                if (Dcpr * Dcpr * 4 <= distSquaredToMainPeak)
+                {
+                    // candidate pixel is in border zone
+                }
+                else
+                {
+                    // candidate pixel is in long tail group
+                    longTailPixelIds.Add(candidatePixel);
+                }
+            }
+
+            // now remove longTailPixelIds from unplacedPixelIds  
+            foreach (var longTailPixelId in longTailPixelIds)
+            {
+                unplacedPixelIds.Remove(longTailPixelId);
+            }
+
+            // now the grid is partitioned into
+            // the main peak (mainPeak.pixelIDs)
+            // the borderZone (unplacedPixelIDs)
+            // long tail (longTailPixelIDs)
+
         }
     }
 

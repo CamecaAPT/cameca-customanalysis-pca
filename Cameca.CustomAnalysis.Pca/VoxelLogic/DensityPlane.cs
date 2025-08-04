@@ -59,9 +59,13 @@ public struct PixelID : IComparable<PixelID>, IEquatable<PixelID>
     public int DSquaredTo(PixelCoords coords)
     {
         var myCoords = this.PixelCoords();
-        var diffx = myCoords.x = coords.x;
-        var diffy = myCoords.y = coords.y;
+        var diffx = myCoords.x - coords.x;
+        var diffy = myCoords.y - coords.y;
         return (diffx * diffx + diffy * diffy);
+    }
+    public int DSquaredToPixel(PixelID otherId)
+    {
+        return (DSquaredTo(otherId.PixelCoords()));
     }
 
     public readonly int CompareTo(PixelID other)
