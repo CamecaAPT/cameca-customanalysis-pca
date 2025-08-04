@@ -54,11 +54,11 @@ public class OneDGridPartitionFinder
     // generally, this is intended to be used in the case of a single main peak,
     // or one extremely dominant peak, such that this dimension is not very useful
     // in a 2d partitioning scheme -- that is, using this dimension in a 2D grid with 
-    // any other dimension will not produce peaks that don't exiast independently in 
+    // any other dimension will not produce peaks that don't exist independently in 
     // the other doimensions 1D profile. 
     // 
     //  However, it is possible that the PCA analysis along this dimension can be used
-    // to partition voxels inside the main peak and those outside it.  In somr analyses, 
+    // to partition voxels inside the main peak and those outside it.  In some analyses, 
     // this manifests as a wide distribution of voxels along the axis, but recognizably outside
     // the main peak.
     //
@@ -94,6 +94,14 @@ public class OneDGridPartitionFinder
         }
 
         // Now, if only one peak was identified, create an artificial second peak with all the points well away from the first peak
+        // We should restrict the second artificial peak to one side of the main peak
+        // Although it is possible that significant number of voxels could live on the
+        // negative side of the main peak, it is usually the case that the long tail
+        // exists on the positive side
+
+        // borderBinIds[0] is the bin on the lower side
+        // borderBinIds[1] is the bin on the upper side
+        // longTailBinList will only consist of bins on the upper side
         if (peaks.Count == 1)
         {
             List<RangeID> keys = peaks.Keys.ToList();

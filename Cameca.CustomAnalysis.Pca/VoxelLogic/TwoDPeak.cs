@@ -86,7 +86,7 @@ public struct PixelSuggestion : IComparable<PixelSuggestion>
 public class TwoDPeak
 {
     public PeakID peakId;
-    readonly PixelID peakMaxPixelId; // this is also the id for this object in container's dictionary
+    public PixelID peakMaxPixelId; // this is also the id for this object in container's dictionary
     readonly List<PixelID> borderPixelIds;
     readonly HashSet<PixelID> inPeakPixelIds;
     readonly List<PixelID> excludedPixelIds;
@@ -164,6 +164,15 @@ public class TwoDPeak
         return excludedPixels;
     }
 
+    public List<PixelID> AllNextCandidatesPixelIDs()
+    {
+        List<PixelID> pixelIds = new List<PixelID>();
+        foreach (var pixelSuggestion in nextCandidates)
+        {
+            pixelIds.Add(pixelSuggestion.pixelId);
+        }
+        return pixelIds;
+    }
     public List<PixelID> PixelList()
     {
         return inPeakPixelIds.ToList();
