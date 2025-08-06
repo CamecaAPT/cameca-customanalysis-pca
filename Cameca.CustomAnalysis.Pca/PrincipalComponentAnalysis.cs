@@ -642,7 +642,8 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             {
                 var histogram = Resources.ChartObjects.CreateHistogram2D();
                 histogram.Name = kvp.Key.ToString();
-                histogram.ColorMap = Resources.ColorMap.GetPresetColorMap(ColorMapPreset.GreyScale);
+                //  histogram.ColorMap = Resources.ColorMap.GetPresetColorMap(ColorMapPreset.GreyScale);
+                histogram.ColorMap = PcaPhasesColorMap();
                 FillRenderDataWithGridData(histogram, kvp.Value);
                 newGridProjectionsData.Add(histogram);
             }
@@ -753,6 +754,73 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             return Resources.ColorMap.GetPresetColorMap(preset);
         }
     }
+
+    private SerializableColorMap SerializablePcaPhasesColorMap()
+    {
+        // make 4 zones  in the band from 0 to 4
+        // 0-1 is regular gray scale
+        // 1-2, 2-3, 3-4 are grayscale-ish bands with a tint 
+        // that means 3 color stops in addition to the top and bottom colors 
+        // of the ColorMap
+        SerializableColorMap scm = new SerializableColorMap();
+        List<SerializableColorStop> colorStops = new List<SerializableColorStop>();
+        var unknownColor = Color.FromRgb(255, 128, 0);
+        var whiteColor = Color.FromRgb(255, 255, 255);
+        var blackColor = Color.FromRgb(0, 0, 0);
+        for (var i = 1; i < 4; ++i)
+        {
+            SerializableColorStop colorStop = new SerializableColorStop();
+            byte br = 64;
+            byte bg = 64;
+            byte bb = 64;
+            byte tr = 255;
+            byte tg = 255;
+            byte tb = 255;
+            colorStop.RelativePosition = ((float)i) * 0.25f;
+            switch (i)
+            {
+                case 1:
+                    // apply red tint to top
+                    tr -= 64;
+                    break;
+                case 2:
+                    tg -= 64;
+                    br -= 64;
+                    break;
+                case 3:
+                    tb -= 64;
+                    bg -= 64;
+                    break;
+            }
+            colorStop.BottomColor = Color.FromRgb(br, bg, bb);
+            colorStop.TopColor = Color.FromRgb(tr, tg, tb);
+            colorStops.Add(colorStop);
+        }
+        scm.Bottom = whiteColor;
+        scm.NanColor = unknownColor;
+        scm.OutOfRangeBottom = unknownColor;
+        scm.OutOfRangeTop = unknownColor;
+        scm.Top = Color.FromRgb(0, 0, 64);
+
+        scm.ColorStops = colorStops;
+        scm.BottomValue = 0.0f;
+        scm.TopValue = 4.0f;
+        return scm;
+    }
+
+    private IColorMap PcaPhasesColorMap()
+    {
+        // make 4 zones  in the band from 0 to 4
+        // 0-1 is regular gray scale
+        // 1-2, 2-3, 3-4 are grayscale-ish bands with a tint 
+        // that means 3 color stops in addition to the top and bottom colors 
+        // of the ColorMap
+   
+        var scm = SerializablePcaPhasesColorMap();
+        return DeserializeColorMap(scm);
+    }
+
+ 
     static private SerializableColorMap SerializeColorMap(IColorMap colorMap)
     {
         return new SerializableColorMap
@@ -774,6 +842,51 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     }
 
     static public void FillRenderDataWithGridData(IHistogram2DRenderData renderData, TwoDPeakProjection projection)
+    {
+        // FillRenderDataWithGridDataGrayscale(renderData, projection);
+        FillRenderDataWithGridDataPeaksHighlighted(renderData, projection);
+    }
+
+    static public void FillRenderDataWithGridDataPeaksHighlighted(IHistogram2DRenderData renderData, TwoDPeakProjection projection)
+    {
+        // for the peaks highlighted variant
+        // add 3, 2 or 1 to the value in the pixel to get a highlight for peak 1 2 or three
+        // it is reverse so that the grid will be sure to have a pixel near the maximum
+        // peak 4 can reuse peak 1, etc.
+        DensityPlane dp = projection.densityPlane;
+        (TwoDGridCoord minCoord, TwoDGridCoord maxCoord) = dp.MinMaxGridCoords();
+        int spanX = 1 + maxCoord.x - minCoord.x;
+        int spanY = 1 + maxCoord.y - minCoord.y;
+        int span = Math.Max(spanX, spanY);
+        int numCoords = span * span;
+        float[] dat = new float[numCoords * 4];
+
+        // first, need to find the maximum value so we can normalize everything here
+        var maxGridValue = dp.GridMaximumValue();
+        for (int q = 0; q < spanY; q += 1)
+        {
+            int qOffset = q * span;
+            int gridq = q + minCoord.y;
+            for (int p = 0; p < spanX; p += 1)
+            {
+                int arrayIndex = qOffset + p;
+                int gridp = p + minCoord.x;
+                int partitionIndex = dp.PartitionIndexAtGridCoords(gridp, gridq);
+                int peakTintAddition = partitionIndex == 0 ? 0 : ((partitionIndex + 1) % 3) + 1;
+                float fractionOfMax = dp.ValueAtGridCoords(gridp, gridq) / maxGridValue;
+                dat[arrayIndex] = peakTintAddition + fractionOfMax;
+            }
+        }
+        ReadOnlyMemory2D<float> rom = new(dat, span, span);
+        Vector2 binsize = new(dp.binsize, dp.binsize);
+        // LiveCharts doesn't draw the bin at the bin center, but rather at the low coordinate of the bin
+        //  so, we need to subtract half the binsize from the x y coordinates to get it to render correctly
+        float halfBinsize = dp.binsize * 0.5f;
+        Vector2 origin = new((minCoord.y * dp.binsize) - halfBinsize, (minCoord.x * dp.binsize) - halfBinsize);
+        renderData.Update(rom, binsize, origin);
+    }
+
+    static public void FillRenderDataWithGridDataGrayscale(IHistogram2DRenderData renderData, TwoDPeakProjection projection)
     {
         // renderData.ColorMap = Resources.ColorMap.GetPresetColorMap(ColorMapPreset.GreyScale);
         DensityPlane dp = projection.densityPlane;

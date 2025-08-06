@@ -7,7 +7,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-
+using Cameca.CustomAnalysis.Pca.Utils;
 using Cameca.CustomAnalysis.Pca.VoxelLogic; 
 
 namespace Cameca.CustomAnalysis.Pca;
