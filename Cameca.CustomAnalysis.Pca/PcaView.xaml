@@ -116,6 +116,8 @@
                                ButtonContent="Update"
                                OverlayVisibility="{Binding UpdateGridsCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <local:ProjectionGridsView GridsSource="{Binding SelectedGridRenderData}"   
+                    <local:ProjectionGridsView GridsSourceTinted="{Binding SelectedGridRenderDataTinted}" 
+                                               GridsSourceUntinted="{Binding SelectedGridRenderDataUntinted}"  
                                                GridsUsageDelegate="{Binding GridsUsageDelegate}" />
                 </utils:ButtonOverlayControl>
             </TabItem>
@@ -161,16 +163,6 @@
                             <lvc:Axis Labels="{Binding LoadingsLabels}" FontSize="18">
                                 <lvc:Axis.Separator>
                                     <lvc:Separator Step="1" />
-                                </lvc:Axis.Separator>
-                            </lvc:Axis>
-                        </lvc:CartesianChart.AxisX>
-                        <lvc:CartesianChart.AxisY>
-                            <lvc:Axis Title="Loadings" FontSize="18" LabelFormatter="{Binding AxisYLabelFormatter, Mode=OneTime}" />
-                        </lvc:CartesianChart.AxisY>
-                    </lvc:CartesianChart>
-                </utils:ButtonOverlayControl>
-            </TabItem>
-
         </TabControl>
     </utils:ButtonOverlayControl>
 </UserControl>

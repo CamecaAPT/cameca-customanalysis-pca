@@ -53,10 +53,15 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     public ICollection<IRenderData> scoresHistogramRenderData = Array.Empty<IRenderData>();
 
     [ObservableProperty]
-    private ICollection<IRenderData> selectedGridRenderData = Array.Empty<IRenderData>();
+    private ICollection<IRenderData> selectedGridRenderDataTinted = Array.Empty<IRenderData>();
+    [ObservableProperty]
+    private ICollection<IRenderData> selectedGridRenderDataUntinted = Array.Empty<IRenderData>();
 
     [ObservableProperty]
     private IGridsUsageDelegate gridsUsageDelegate = new DoNothingGridsUsageDelegate();
+
+    [ObservableProperty]
+    private IGridsColorMapProvider gridsColorMapProvider = new PcaGridsColorMapProvider(null);
 
     [ObservableProperty]
     private IHistogramsUsageDelegate histogramsUsageDelegate = new DoNothingHistogramsUsageDelegate();
@@ -126,9 +131,11 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         this.nodeDataProvider = nodeDataProvider;
         this.optionsAccessor = optionsAccessor;
         this.gridsUsageDelegate = this;
+        this.gridsColorMapProvider = new PcaGridsColorMapProvider(null);
         this.histogramsUsageDelegate = this;
     }
 
+   
     public bool UsesGridForPca(string gridID)
     {
         return gridsToUseForPCA.Contains(gridID);
@@ -191,6 +198,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         {
             Properties.LogScaleY = optionsAccessor.GetOptions<PcaGlobalOptions>().IsLogScaleDefault;
         }
+        this.gridsColorMapProvider.SetColorMapFactory(Resources.ColorMap);
     }
 
     protected override byte[]? GetSaveContent()
@@ -635,26 +643,34 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
                 TwoDPeakProjections: Dictionary<TwoDGridID, TwoDPeakProjection> twoDPeakProjections
             })
         {
-            SelectedGridRenderData = Array.Empty<IRenderData>();
+            SelectedGridRenderDataTinted = Array.Empty<IRenderData>();
+            SelectedGridRenderDataUntinted = Array.Empty<IRenderData>();
             int gridCount = twoDPeakProjections.Count;
-            var newGridProjectionsData = new List<IRenderData>();
+            var newGridProjectionsDataTinted = new List<IRenderData>();
+            var newGridProjectionsDataUntinted = new List<IRenderData>();
             foreach (KeyValuePair<TwoDGridID, TwoDPeakProjection> kvp in twoDPeakProjections)
             {
-                var histogram = Resources.ChartObjects.CreateHistogram2D();
-                histogram.Name = kvp.Key.ToString();
-                //  histogram.ColorMap = Resources.ColorMap.GetPresetColorMap(ColorMapPreset.GreyScale);
-                histogram.ColorMap = PcaPhasesColorMap();
-                FillRenderDataWithGridData(histogram, kvp.Value);
-                newGridProjectionsData.Add(histogram);
+                var histogramTinted = Resources.ChartObjects.CreateHistogram2D();
+                var histogramUntinted = Resources.ChartObjects.CreateHistogram2D();
+                histogramTinted.Name = kvp.Key.ToString();
+                histogramTinted.ColorMap = GridsColorMapProvider.ColorMapForGrid(true);
+                histogramUntinted.Name = kvp.Key.ToString();
+                histogramUntinted.ColorMap = GridsColorMapProvider.ColorMapForGrid(false);
+                FillRenderDataWithGridData(histogramTinted, kvp.Value);
+                FillRenderDataWithGridData(histogramUntinted, kvp.Value);
+                newGridProjectionsDataTinted.Add(histogramTinted);
+                newGridProjectionsDataUntinted.Add(histogramUntinted);
             }
-            SelectedGridRenderData = newGridProjectionsData;
+            SelectedGridRenderDataTinted = newGridProjectionsDataTinted;
+            SelectedGridRenderDataUntinted = newGridProjectionsDataUntinted;
         }
     }
     // Updates the components 3D plots when the component data (derived from selected number of components) changes
     partial void OnPcaComponentsResultsChanged(ComponentsResults? value)
     {
         ComponentRenderData = Array.Empty<IRenderData>();
-        SelectedGridRenderData = Array.Empty<IRenderData>();
+        SelectedGridRenderDataTinted = Array.Empty<IRenderData>();
+        SelectedGridRenderDataUntinted = Array.Empty<IRenderData>();
 
         if (PcaComponentsResults is not { Grid3DData: { } gridData,
             Components: { } components,
@@ -755,72 +771,8 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
     }
 
-    private SerializableColorMap SerializablePcaPhasesColorMap()
-    {
-        // make 4 zones  in the band from 0 to 4
-        // 0-1 is regular gray scale
-        // 1-2, 2-3, 3-4 are grayscale-ish bands with a tint 
-        // that means 3 color stops in addition to the top and bottom colors 
-        // of the ColorMap
-        SerializableColorMap scm = new SerializableColorMap();
-        List<SerializableColorStop> colorStops = new List<SerializableColorStop>();
-        var unknownColor = Color.FromRgb(255, 128, 0);
-        var whiteColor = Color.FromRgb(255, 255, 255);
-        var blackColor = Color.FromRgb(0, 0, 0);
-        for (var i = 1; i < 4; ++i)
-        {
-            SerializableColorStop colorStop = new SerializableColorStop();
-            byte br = 64;
-            byte bg = 64;
-            byte bb = 64;
-            byte tr = 255;
-            byte tg = 255;
-            byte tb = 255;
-            colorStop.RelativePosition = ((float)i) * 0.25f;
-            switch (i)
-            {
-                case 1:
-                    // apply red tint to top
-                    tr -= 64;
-                    break;
-                case 2:
-                    tg -= 64;
-                    br -= 64;
-                    break;
-                case 3:
-                    tb -= 64;
-                    bg -= 64;
-                    break;
-            }
-            colorStop.BottomColor = Color.FromRgb(br, bg, bb);
-            colorStop.TopColor = Color.FromRgb(tr, tg, tb);
-            colorStops.Add(colorStop);
-        }
-        scm.Bottom = whiteColor;
-        scm.NanColor = unknownColor;
-        scm.OutOfRangeBottom = unknownColor;
-        scm.OutOfRangeTop = unknownColor;
-        scm.Top = Color.FromRgb(0, 0, 64);
+  
 
-        scm.ColorStops = colorStops;
-        scm.BottomValue = 0.0f;
-        scm.TopValue = 4.0f;
-        return scm;
-    }
-
-    private IColorMap PcaPhasesColorMap()
-    {
-        // make 4 zones  in the band from 0 to 4
-        // 0-1 is regular gray scale
-        // 1-2, 2-3, 3-4 are grayscale-ish bands with a tint 
-        // that means 3 color stops in addition to the top and bottom colors 
-        // of the ColorMap
-   
-        var scm = SerializablePcaPhasesColorMap();
-        return DeserializeColorMap(scm);
-    }
-
- 
     static private SerializableColorMap SerializeColorMap(IColorMap colorMap)
     {
         return new SerializableColorMap
