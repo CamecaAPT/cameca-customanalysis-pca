@@ -26,6 +26,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Cameca.CustomAnalysis.PcaLib", "Cameca.CustomAnalysis.PcaLib\Cameca.CustomAnalysis.PcaLib.vcxproj", "{A23617C0-CB26-489B-91F9-097988909E9C}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Cameca.CustomAnalysis.PcaLib.Interface", "Cameca.CustomAnalysis.PcaLib.Interface\Cameca.CustomAnalysis.PcaLib.Interface.vcxproj", "{465CE798-CD62-44D2-AE11-AE71DDAF7F13}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -50,6 +52,14 @@ Global
 		{A23617C0-CB26-489B-91F9-097988909E9C}.Release|x64.Build.0 = Release|x64
 		{A23617C0-CB26-489B-91F9-097988909E9C}.Release|x86.ActiveCfg = Release|Win32
 		{A23617C0-CB26-489B-91F9-097988909E9C}.Release|x86.Build.0 = Release|Win32
+		{465CE798-CD62-44D2-AE11-AE71DDAF7F13}.Debug|x64.ActiveCfg = Debug|x64
+		{465CE798-CD62-44D2-AE11-AE71DDAF7F13}.Debug|x64.Build.0 = Debug|x64
+		{465CE798-CD62-44D2-AE11-AE71DDAF7F13}.Debug|x86.ActiveCfg = Debug|Win32
+		{465CE798-CD62-44D2-AE11-AE71DDAF7F13}.Debug|x86.Build.0 = Debug|Win32
+		{465CE798-CD62-44D2-AE11-AE71DDAF7F13}.Release|x64.ActiveCfg = Release|x64
+		{465CE798-CD62-44D2-AE11-AE71DDAF7F13}.Release|x64.Build.0 = Release|x64
+		{465CE798-CD62-44D2-AE11-AE71DDAF7F13}.Release|x86.ActiveCfg = Release|Win32
+		{465CE798-CD62-44D2-AE11-AE71DDAF7F13}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,4 +1,3 @@
-using System;
 namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 public readonly struct TwoDGridID : IStringConvertible
 {

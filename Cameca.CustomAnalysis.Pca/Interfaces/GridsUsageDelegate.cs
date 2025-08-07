@@ -1,8 +1,4 @@
-﻿using Cameca.CustomAnalysis.Interface;
-using CommunityToolkit.Mvvm.ComponentModel;
-using System.ComponentModel.DataAnnotations;
-
-namespace Cameca.CustomAnalysis.Pca;
+﻿namespace Cameca.CustomAnalysis.Pca;
 
 
 public interface IGridsUsageDelegate

@@ -1,12 +1,14 @@
-// doPCA_float.cpp : Defines the exported functions for the DLL.
 #include "pch.h"
-#include "framework.h"
-#include "doPCA_float.h"
-
+#include "PrincipalComponentAnalysis.h"
 #include <mkl.h>
 #include <Eigen/Dense>
+#include "VoxelFeatureMatrixImpl.h"
+#include "RMT_rank.h"
+#include <optional>
 
 using namespace Eigen;
+using namespace Cameca::CustomAnalysis::PcaLib;
+
 
 void makePos(Map<MatrixXf>& T, Map<MatrixXf>& P)
 {
@@ -94,54 +96,18 @@ void varimax(Map<MatrixXf>& T, Map<MatrixXf>& P)
     P *= R;
 }
 
-
-DOPCAFLOAT_API void doEigen(const int nVoxels, const int nFeatures, const float* data, int nevals, float* evals) {
-    lapack_int n, il = 0, iu = 0, itype = 1, ZERO = 0, info = 0;
-    char range, All = 'A', Some = 'I', jobz = 'N', uplo = 'U', trans = 'T';
-    float alpha = 1.0, beta = 0.0;
-
-    float abstol = -1; // 2*dlamch("S");
-
-    Map<VectorXf> E(evals, nevals);
-
-    // Construct the data matrix
-    Map<const MatrixXf> X(data, nVoxels, nFeatures);
-
-    // Compute the mean spectrum
-    VectorXf meanX = X.colwise().mean();
-
-    // Allocate memory for the data covariance matrix
-    MatrixXf CXP = MatrixXf::Zero(nFeatures, nFeatures);
-
-    // Compute the data covariance matrix using the BLAS and make a copy
-    ssyrk(&uplo, &trans, &nFeatures, &nVoxels, &alpha, X.data(), &nVoxels,
-        &beta, CXP.data(), &nFeatures);
-    CXP = CXP / (float)nVoxels;
-    MatrixXf CXPcopy = CXP;
-
-    // Construct the noise covariance matrix assuming Poisson statistics
-    MatrixXf CV = meanX.asDiagonal();
-
-    // Compute all eigenvalues with LAPACK
-    // Note: the CXP and CV matrix will be destroyed
-    n = nFeatures;
-    nevals = nFeatures;
-    range = All;
-    jobz = 'N';
-    info = LAPACKE_ssygvx(LAPACK_COL_MAJOR, itype, jobz, range, uplo, n, CXP.data(), n, CV.data(), n,
-        NULL, NULL, il, iu, abstol, &nevals, E.data(), NULL, nevals, NULL);
-    //if (info != ZERO)  The algorithm didn't complete properly, need error checking code
-
-    // eigenvalues are sorted in ascending order -- make descending
-    E.reverseInPlace();
-}
-
 // This is an exported function.
-DOPCAFLOAT_API void doPCA(const int nVoxels, const int nFeatures,
-    const float* data,
-    const int nIons, const int nComponents, int nevals,
-    float* scores, float* loads, float* evals)
+int doPCA(
+    const MatrixXf& X,
+    const int nComponents,
+    float* scores,
+    float* loads,
+    const float scoresCoefficient,
+    const float loadsCoefficient)
 {
+    const int nVoxels = X.rows();
+    const int nFeatures = X.cols();
+
     lapack_int n, il = 0, iu = 0, itype = 1, ZERO = 0, info = 0;
     char range, All = 'A', Some = 'I', jobz = 'N', uplo = 'U', trans = 'T';
     float alpha = 1.0, beta = 0.0;
@@ -151,11 +117,6 @@ DOPCAFLOAT_API void doPCA(const int nVoxels, const int nFeatures,
     // Map outputs to Eigen matrices
     Map<MatrixXf> T(scores, nVoxels, nComponents);
     Map<MatrixXf> P(loads, nFeatures, nComponents);
-    Map<VectorXf> E(evals, nevals);
-
-    // Construct the data matrix
-    //Map<const Matrix<float, Dynamic, Dynamic, RowMajor>> X(data, nVoxels, nFeatures);
-    Map<const MatrixXf> X(data, nVoxels, nFeatures);
 
     // Compute the mean spectrum
     VectorXf meanX = X.colwise().mean();
@@ -175,26 +136,12 @@ DOPCAFLOAT_API void doPCA(const int nVoxels, const int nFeatures,
     // Compute all eigenvalues with LAPACK
     // Note: the CXP and CV matrix will be destroyed
     n = nFeatures;
-    nevals = nFeatures;
-    range = All;
-    jobz = 'N';
-    info = LAPACKE_ssygvx(LAPACK_COL_MAJOR, itype, jobz, range, uplo, n, CXP.data(), n, CV.data(), n,
-        NULL, NULL, il, iu, abstol, &nevals, E.data(), NULL, nevals, NULL);
-    //if (info != ZERO)  The algorithm didn't complete properly, need error checking code
-
-    // eigenvalues are sorted in ascending order -- make descending
-    E.reverseInPlace();
-
-    // Compute the nComponent scores and loadings
-    // Reconstruct CXP and CV since they were destroyed in previous calculation
-    CXP = CXPcopy;
-    CV = meanX.asDiagonal();
 
     // Create matrices for eigenvectors and truncated eigenvalues
     MatrixXf V = MatrixXf::Zero(nFeatures, nComponents);
     VectorXf Etrunc(nComponents);
 
-    nevals = nComponents;
+    int nevals = nComponents;
     range = Some;
     jobz = 'V';
     iu = n;
@@ -225,4 +172,137 @@ DOPCAFLOAT_API void doPCA(const int nVoxels, const int nFeatures,
     makePos(T, P);
 
     mkl_free(ifail);
+
+    T *= scoresCoefficient;
+    P *= loadsCoefficient;
+
+    return info;
 }
+
+
+LapackResult<const std::vector<float>> PrincipalComponentAnalysis::GetEigenvalues()
+{
+    if (eigenvalueResult.has_value())
+    {
+        return eigenvalueResult.value();
+    }
+
+    auto nevals = matrix->GetFeatureCount();
+    auto nFeatures = matrix->GetFeatureCount();
+    auto nVoxels = matrix->GetVoxelCount();
+
+    lapack_int n, il = 0, iu = 0, itype = 1, ZERO = 0, info = 0;
+    char range, All = 'A', Some = 'I', jobz = 'N', uplo = 'U', trans = 'T';
+    float alpha = 1.0, beta = 0.0;
+
+    float abstol = -1; // 2*dlamch("S");
+
+    VectorXf E = VectorXf::Zero(nevals);
+
+    // Construct the data matrix
+    const MatrixXf& X = matrix->GetMatrix();
+
+    // Compute the mean spectrum
+    VectorXf meanX = X.colwise().mean();
+
+    // Allocate memory for the data covariance matrix
+    MatrixXf CXP = MatrixXf::Zero(nFeatures, nFeatures);
+
+    // Compute the data covariance matrix using the BLAS and make a copy
+    ssyrk(&uplo, &trans, &nFeatures, &nVoxels, &alpha, X.data(), &nVoxels,
+        &beta, CXP.data(), &nFeatures);
+    CXP = CXP / (float)nVoxels;
+    MatrixXf CXPcopy = CXP;
+
+    // Construct the noise covariance matrix assuming Poisson statistics
+    MatrixXf CV = meanX.asDiagonal();
+
+    // Compute all eigenvalues with LAPACK
+    // Note: the CXP and CV matrix will be destroyed
+    n = nFeatures;
+    nevals = nFeatures;
+    range = All;
+    jobz = 'N';
+    info = LAPACKE_ssygvx(LAPACK_COL_MAJOR, itype, jobz, range, uplo, n, CXP.data(), n, CV.data(), n,
+        NULL, NULL, il, iu, abstol, &nevals, E.data(), NULL, nevals, NULL);
+    //if (info != ZERO)  The algorithm didn't complete properly, need error checking code
+
+    // eigenvalues are sorted in ascending order -- make descending
+    E.reverseInPlace();
+
+    const std::vector<float> result(E.data(), E.data() + E.size());
+    eigenvalueResult.emplace(std::move(LapackResult<const std::vector<float>>(result, info)));
+    return eigenvalueResult.value();
+}
+
+const int PrincipalComponentAnalysis::EstimateRankF(const int gaps, const int significance, const bool refine)
+{
+    if (!eigenvalueResult.has_value())
+    {
+        PrincipalComponentAnalysis::GetEigenvalues();
+    }
+    // Check for error state
+    if (eigenvalueResult.value().info != 0)
+    {
+        return 0;
+    }
+    // Copy due to issues getting const reference working
+    auto evals = eigenvalueResult.value().value;
+
+    const auto nObs = matrix->GetVoxelCount();
+    Map<VectorXf> mEvals(evals.data(), evals.size());
+    return EstimateRank(mEvals, nObs, gaps, significance, refine);
+}
+
+std::vector<float> PrincipalComponentAnalysis::GetNoiseEigenvalues(int rank)
+{
+    if (!eigenvalueResult.has_value())
+    {
+        PrincipalComponentAnalysis::GetEigenvalues();
+    }
+    // Check for error state
+    if (eigenvalueResult.value().info != 0)
+    {
+        return std::vector<float>();
+    }
+
+    const auto nObs = matrix->GetVoxelCount();
+    const auto nEvals = eigenvalueResult.value().value.size();
+
+    std::vector<float> data(nEvals - rank, 0.0f);
+    Map<VectorXf> y(data.data(), data.size());
+    MarchenkoPasturDist<float> MPdist(nObs, nEvals);
+    MPdist.NoiseEvals(rank, y);
+    return data;
+}
+
+LapackResult<std::vector<ComponentData>> PrincipalComponentAnalysis::GetComponents(const int nComponents)
+{
+    const int nVoxels = matrix->GetVoxelCount();
+    const int nFeatures = matrix->GetFeatureCount();
+    const float* data = matrix->GetMatrix().data();
+
+    std::vector<float> scores(nVoxels * nComponents, 0.0f);
+    std::vector<float> loads(nFeatures * nComponents, 0.0f);
+
+    auto info = doPCA(
+        matrix->GetMatrix(),
+        nComponents,
+        scores.data(),
+        loads.data(),
+        scoresCoefficient,
+        loadingsCoefficient);
+
+    std::vector<ComponentData>componentData;
+    componentData.reserve(nComponents);
+    for (auto i = 0; i < nComponents; ++i)
+    {
+        std::vector<float> compScores(scores.begin() + (nVoxels * i), scores.begin() + (nVoxels * (i + 1)));
+        std::vector<float> compLoads(loads.begin() + (nFeatures * i), loads.begin() + (nFeatures * (i + 1)));
+
+        componentData.push_back(ComponentData{ compScores, compLoads });
+    }
+
+    return LapackResult<std::vector<ComponentData>>{ componentData, info };
+}
+

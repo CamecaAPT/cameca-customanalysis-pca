@@ -6,7 +6,6 @@ using System;
 using System.IO;
 
 using Cameca.CustomAnalysis.Pca.Models;
-using System.Windows.Shapes;
 namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 
 // PcaScoresGrid represents a three dimensional grid containing the PCA scores for a collection of voxels
