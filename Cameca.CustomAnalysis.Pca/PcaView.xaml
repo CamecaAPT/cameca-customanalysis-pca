@@ -146,6 +146,43 @@
                 </utils:ButtonOverlayControl>
             </TabItem>
 
+            <TabItem Header="Loading">
+                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateSelectedComponentCommand}"
+                                ButtonContent="Update"
+                                OverlayVisibility="{Binding UpdateSelectedComponentCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid>
+                        <lvc:CartesianChart Series="{Binding LoadingsSeries}"
+                                            DisableAnimations="True"
+                                            LegendLocation="None"
+                                            Visibility="{Binding LoadingHistogramRenderData, Converter={local:CollectionVisibilityConverter Invert=True}}">
+                            <lvc:CartesianChart.Resources>
+                                <Style TargetType="lvc:DefaultTooltip">
+                                    <Setter Property="ShowSeries" Value="False" />
+                                </Style>
+                            </lvc:CartesianChart.Resources>
+                            <lvc:CartesianChart.AxisX>
+                                <lvc:Axis Labels="{Binding LoadingsLabels}"
+                                            LabelsRotation="{Binding LoadingsLabelsRotation}"
+                                            FontSize="18">
+                                    <lvc:Axis.Separator>
+                                        <lvc:Separator Step="1" />
+                                    </lvc:Axis.Separator>
+                                </lvc:Axis>
+                            </lvc:CartesianChart.AxisX>
+                            <lvc:CartesianChart.AxisY>
+                                <lvc:Axis Title="Loadings" FontSize="18" LabelFormatter="{Binding AxisYLabelFormatter, Mode=OneTime}" />
+                            </lvc:CartesianChart.AxisY>
+                        </lvc:CartesianChart>
+
+                        <controls:Chart2D DataSource="{Binding LoadingHistogramRenderData}"
+                                          Projection="XZ"
+                                          AxisYLabel="Loadings"
+                                          AxisXLabel="Bin Index"
+                                          Visibility="{Binding LoadingHistogramRenderData, Converter={local:CollectionVisibilityConverter}}" />
+                    </Grid>
+                </utils:ButtonOverlayControl>
+            </TabItem>
+
         </TabControl>
     </utils:ButtonOverlayControl>
 </UserControl>
