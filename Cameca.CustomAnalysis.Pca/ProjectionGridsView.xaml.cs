@@ -246,7 +246,11 @@ public partial class ProjectionGridsView : UserControl
         {
             if (histogram == currentTintedHistogram)
             {
+                var viewptLower = currentTintedHistogram.ViewportLower;
+                var viewptUpper = currentTintedHistogram.ViewportUpper;
                 currentTintedHistogram.Visibility = Visibility.Collapsed;
+                currentUntintedHistogram.ViewportLower = viewptLower;
+                currentUntintedHistogram.ViewportUpper = viewptUpper;
                 currentUntintedHistogram.Visibility = Visibility.Visible;
             }
         }
@@ -257,8 +261,13 @@ public partial class ProjectionGridsView : UserControl
         {
             if (histogram == currentUntintedHistogram)
             {
-                currentTintedHistogram.Visibility = Visibility.Visible;
+                var viewptLower = currentUntintedHistogram.ViewportLower;
+                var viewptUpper = currentUntintedHistogram.ViewportUpper;
                 currentUntintedHistogram.Visibility = Visibility.Collapsed;
+                currentTintedHistogram.ViewportLower = viewptLower;
+                currentTintedHistogram.ViewportUpper = viewptUpper;
+                currentTintedHistogram.Visibility = Visibility.Visible;
+
             }
         }
     }
