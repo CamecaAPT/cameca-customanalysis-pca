@@ -923,9 +923,6 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             return Resources.ColorMap.GetPresetColorMap(preset);
         }
     }
-
-  
-
     static private SerializableColorMap SerializeColorMap(IColorMap colorMap)
     {
         return new SerializableColorMap
