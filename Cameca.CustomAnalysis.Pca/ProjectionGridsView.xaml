@@ -10,8 +10,6 @@
              d:DesignHeight="450" d:DesignWidth="800">
     <UserControl.Resources>
         <local:SingleRenderDataValueConverter x:Key="SingleRenderDataValueConverter" />
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-        <local:BooleanToInverseVisibilityConverter x:Key="BooleanToInverseVisibilityConverter" />
     </UserControl.Resources>
     <Grid>
         <Grid.ColumnDefinitions>
@@ -73,7 +71,6 @@
 
 
         <controls:Histogram2D x:Name="ProjectionGrid2dHistogramUntinted" 
-                Visibility="{Binding MouseHovering, Converter={StaticResource BooleanToInverseVisibilityConverter}}"
                 Grid.Column="2" 
                 Grid.Row="1" 
                 MouseEnter="ProjectionGrid2dHistogram_MouseLeave" 
@@ -81,7 +78,6 @@
                 AxisXLabel="PCA dimension"
                 AxisYLabel="PCA dimension"/>
         <controls:Histogram2D x:Name="ProjectionGrid2dHistogramTinted" 
-                Visibility="{Binding MouseHovering, Converter={StaticResource BooleanToVisibilityConverter}}"
                 Grid.Column="2" 
                 Grid.Row="1" 
                 MouseLeave="ProjectionGrid2dHistogram_MouseEnter" 
