@@ -68,10 +68,20 @@
                  Background="White"   
                  Foreground="Black">
         </Label>
-        <controls:Histogram2D x:Name="ProjectionGrid2dHistogram" 
+
+
+        <controls:Histogram2D x:Name="ProjectionGrid2dHistogramUntinted" 
                 Grid.Column="2" 
                 Grid.Row="1" 
-                DataSource="{Binding SelectedGridRenderData, RelativeSource={RelativeSource AncestorType=local:ProjectionGridsView}}"
+                MouseEnter="ProjectionGrid2dHistogram_MouseLeave" 
+                DataSource="{Binding SelectedGridRenderDataUntinted, RelativeSource={RelativeSource AncestorType=local:ProjectionGridsView}}"
+                AxisXLabel="PCA dimension"
+                AxisYLabel="PCA dimension"/>
+        <controls:Histogram2D x:Name="ProjectionGrid2dHistogramTinted" 
+                Grid.Column="2" 
+                Grid.Row="1" 
+                MouseLeave="ProjectionGrid2dHistogram_MouseEnter" 
+                DataSource="{Binding SelectedGridRenderDataTinted, RelativeSource={RelativeSource AncestorType=local:ProjectionGridsView}}"
                 AxisXLabel="PCA dimension"
                 AxisYLabel="PCA dimension"/>
 

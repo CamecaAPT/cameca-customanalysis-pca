@@ -115,7 +115,8 @@
                 <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateGridsCommand}"
                                ButtonContent="Update"
                                OverlayVisibility="{Binding UpdateGridsCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <local:ProjectionGridsView GridsSource="{Binding SelectedGridRenderData}"   
+                    <local:ProjectionGridsView GridsSourceTinted="{Binding SelectedGridRenderDataTinted}" 
+                                               GridsSourceUntinted="{Binding SelectedGridRenderDataUntinted}"  
                                                GridsUsageDelegate="{Binding GridsUsageDelegate}" />
                 </utils:ButtonOverlayControl>
             </TabItem>

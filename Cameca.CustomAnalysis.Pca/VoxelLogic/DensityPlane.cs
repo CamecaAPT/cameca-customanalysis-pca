@@ -1,9 +1,12 @@
 
 using System;
-using System.IO;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Windows.Controls;
+using System.Windows.Navigation;
 
 namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 
@@ -142,7 +145,9 @@ public class DensityPlane
     int oobPoints;
     readonly float maxval;
     readonly Dictionary<PixelID, float> data;
-    
+    public List<List<PixelID>> partitions;
+    Dictionary<PixelID, int> partitionIndexMap;
+
     public DensityPlane(float binSep)
     {
         binsize = binSep;
@@ -151,6 +156,8 @@ public class DensityPlane
         oneOverBinsize = 1.0f / binSep;
         data = new Dictionary<PixelID, float>();
         maxval = PixelID.Maxgrid * binSep;
+        partitions = new List<List<PixelID>>();
+        partitionIndexMap = new Dictionary<PixelID, int>();
     }
 
     public delegate void ForEachPixelCallback(PixelID pixelId, float value);
@@ -237,8 +244,14 @@ public class DensityPlane
         AddIfNonZero(x + 1, y + 1, neighbors);
 
 		return neighbors;
-	}
-	
+    }
+
+    public float GridMaximumValue()
+    { 
+        var pixelIds = data.Keys.ToList();
+        return this.MaximumValue(pixelIds);   
+    }
+
     public float MaximumValue(List<PixelID> candidates)
     {
         float maxScore = float.MinValue;
@@ -411,6 +424,16 @@ public class DensityPlane
         return this.ValueAtPixel(pixelId.Value);
     }
 
+    // returns the one based index in partitions, or 0 if the pixel does not 
+    // appear in any of the partitions
+    public int PartitionIndexAtGridCoords(int x, int y)
+    {
+        var pixelIdOpt = PixelID.PixelIDFor(x, y);
+        if (pixelIdOpt == null) { return 0; }
+        var pixelId = pixelIdOpt ?? new PixelID(10000000);
+        return partitionIndexMap.ContainsKey(pixelId) ? partitionIndexMap[pixelId] : 0;
+    }
+
     public float ValueAtPixel(PixelID pixelId)
     {
         float binValue;
@@ -521,9 +544,22 @@ public class DensityPlane
         TwoDGridPartitionFinder partitionFinder = new(this, props);
 
         partitionFinder.FindPartitions(props.noiseFloorFraction);
-        var pixelLists = partitionFinder.GetPixelLists();
+        this.partitions = partitionFinder.GetPixelLists();
         partitionFinder.Clear();
-        return pixelLists;
+
+        // make a partitionIndexMap:
+        // make this once  -- O(1) operation -- and then subsequent calls to 
+        // PartitionIndexAtGridCoords will be O(0)
+        var partitionIndex = 0;
+        foreach (var partition in this.partitions)
+        {
+            partitionIndex += 1;
+            foreach (var pixelId in partition)
+            {
+                partitionIndexMap[pixelId] = partitionIndex;
+            }
+        }
+        return partitions;
     }
 }
 

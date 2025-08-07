@@ -53,10 +53,15 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     public ICollection<IRenderData> scoresHistogramRenderData = Array.Empty<IRenderData>();
 
     [ObservableProperty]
-    private ICollection<IRenderData> selectedGridRenderData = Array.Empty<IRenderData>();
+    private ICollection<IRenderData> selectedGridRenderDataTinted = Array.Empty<IRenderData>();
+    [ObservableProperty]
+    private ICollection<IRenderData> selectedGridRenderDataUntinted = Array.Empty<IRenderData>();
 
     [ObservableProperty]
     private IGridsUsageDelegate gridsUsageDelegate = new DoNothingGridsUsageDelegate();
+
+    [ObservableProperty]
+    private IGridsColorMapProvider gridsColorMapProvider = new PcaGridsColorMapProvider(null);
 
     [ObservableProperty]
     private IHistogramsUsageDelegate histogramsUsageDelegate = new DoNothingHistogramsUsageDelegate();
@@ -158,6 +163,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         this.nodeDataProvider = nodeDataProvider;
         this.optionsAccessor = optionsAccessor;
         this.gridsUsageDelegate = this;
+        this.gridsColorMapProvider = new PcaGridsColorMapProvider(null);
         this.histogramsUsageDelegate = this;
     }
 
@@ -332,6 +338,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         {
             Properties.LogScaleY = optionsAccessor.GetOptions<PcaGlobalOptions>().IsLogScaleDefault;
         }
+        this.gridsColorMapProvider.SetColorMapFactory(Resources.ColorMap);
     }
 
     protected override byte[]? GetSaveContent()
@@ -789,25 +796,34 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
                 TwoDPeakProjections: Dictionary<TwoDGridID, TwoDPeakProjection> twoDPeakProjections
             })
         {
-            SelectedGridRenderData = Array.Empty<IRenderData>();
+            SelectedGridRenderDataTinted = Array.Empty<IRenderData>();
+            SelectedGridRenderDataUntinted = Array.Empty<IRenderData>();
             int gridCount = twoDPeakProjections.Count;
-            var newGridProjectionsData = new List<IRenderData>();
+            var newGridProjectionsDataTinted = new List<IRenderData>();
+            var newGridProjectionsDataUntinted = new List<IRenderData>();
             foreach (KeyValuePair<TwoDGridID, TwoDPeakProjection> kvp in twoDPeakProjections)
             {
-                var histogram = Resources.ChartObjects.CreateHistogram2D();
-                histogram.Name = kvp.Key.ToString();
-                histogram.ColorMap = Resources.ColorMap.GetPresetColorMap(ColorMapPreset.GreyScale);
-                FillRenderDataWithGridData(histogram, kvp.Value);
-                newGridProjectionsData.Add(histogram);
+                var histogramTinted = Resources.ChartObjects.CreateHistogram2D();
+                var histogramUntinted = Resources.ChartObjects.CreateHistogram2D();
+                histogramTinted.Name = kvp.Key.ToString();
+                histogramTinted.ColorMap = GridsColorMapProvider.ColorMapForGrid(true);
+                histogramUntinted.Name = kvp.Key.ToString();
+                histogramUntinted.ColorMap = GridsColorMapProvider.ColorMapForGrid(false);
+                FillRenderDataWithGridData(histogramTinted, kvp.Value);
+                FillRenderDataWithGridData(histogramUntinted, kvp.Value);
+                newGridProjectionsDataTinted.Add(histogramTinted);
+                newGridProjectionsDataUntinted.Add(histogramUntinted);
             }
-            SelectedGridRenderData = newGridProjectionsData;
+            SelectedGridRenderDataTinted = newGridProjectionsDataTinted;
+            SelectedGridRenderDataUntinted = newGridProjectionsDataUntinted;
         }
     }
     // Updates the components 3D plots when the component data (derived from selected number of components) changes
     partial void OnPcaComponentsResultsChanged(ComponentsResults? value)
     {
         ComponentRenderData = Array.Empty<IRenderData>();
-        SelectedGridRenderData = Array.Empty<IRenderData>();
+        SelectedGridRenderDataTinted = Array.Empty<IRenderData>();
+        SelectedGridRenderDataUntinted = Array.Empty<IRenderData>();
 
         if (PcaComponentsResults is not { GridParams: { } gridParams,
             Components: { } components,
@@ -928,6 +944,51 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     }
 
     static public void FillRenderDataWithGridData(IHistogram2DRenderData renderData, TwoDPeakProjection projection)
+    {
+        // FillRenderDataWithGridDataGrayscale(renderData, projection);
+        FillRenderDataWithGridDataPeaksHighlighted(renderData, projection);
+    }
+
+    static public void FillRenderDataWithGridDataPeaksHighlighted(IHistogram2DRenderData renderData, TwoDPeakProjection projection)
+    {
+        // for the peaks highlighted variant
+        // add 3, 2 or 1 to the value in the pixel to get a highlight for peak 1 2 or three
+        // it is reverse so that the grid will be sure to have a pixel near the maximum
+        // peak 4 can reuse peak 1, etc.
+        DensityPlane dp = projection.densityPlane;
+        (TwoDGridCoord minCoord, TwoDGridCoord maxCoord) = dp.MinMaxGridCoords();
+        int spanX = 1 + maxCoord.x - minCoord.x;
+        int spanY = 1 + maxCoord.y - minCoord.y;
+        int span = Math.Max(spanX, spanY);
+        int numCoords = span * span;
+        float[] dat = new float[numCoords * 4];
+
+        // first, need to find the maximum value so we can normalize everything here
+        var maxGridValue = dp.GridMaximumValue();
+        for (int q = 0; q < spanY; q += 1)
+        {
+            int qOffset = q * span;
+            int gridq = q + minCoord.y;
+            for (int p = 0; p < spanX; p += 1)
+            {
+                int arrayIndex = qOffset + p;
+                int gridp = p + minCoord.x;
+                int partitionIndex = dp.PartitionIndexAtGridCoords(gridp, gridq);
+                int peakTintAddition = partitionIndex == 0 ? 0 : ((partitionIndex + 1) % 3) + 1;
+                float fractionOfMax = dp.ValueAtGridCoords(gridp, gridq) / maxGridValue;
+                dat[arrayIndex] = peakTintAddition + fractionOfMax;
+            }
+        }
+        ReadOnlyMemory2D<float> rom = new(dat, span, span);
+        Vector2 binsize = new(dp.binsize, dp.binsize);
+        // LiveCharts doesn't draw the bin at the bin center, but rather at the low coordinate of the bin
+        //  so, we need to subtract half the binsize from the x y coordinates to get it to render correctly
+        float halfBinsize = dp.binsize * 0.5f;
+        Vector2 origin = new((minCoord.y * dp.binsize) - halfBinsize, (minCoord.x * dp.binsize) - halfBinsize);
+        renderData.Update(rom, binsize, origin);
+    }
+
+    static public void FillRenderDataWithGridDataGrayscale(IHistogram2DRenderData renderData, TwoDPeakProjection projection)
     {
         // renderData.ColorMap = Resources.ColorMap.GetPresetColorMap(ColorMapPreset.GreyScale);
         DensityPlane dp = projection.densityPlane;
