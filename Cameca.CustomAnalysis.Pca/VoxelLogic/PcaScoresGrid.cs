@@ -6,6 +6,7 @@ using System;
 using System.IO;
 
 using Cameca.CustomAnalysis.Pca.Models;
+using Cameca.CustomAnalysis.Pca.Utils;
 namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 
 // PcaScoresGrid represents a three dimensional grid containing the PCA scores for a collection of voxels
@@ -1085,6 +1086,7 @@ public class PcaScoresGrid
         var gridId = new TwoDGridID(gridString);
         if (twoDPartitions.ContainsKey(gridId))
         {
+            PcaInfoNumberFormatter formatter = new PcaInfoNumberFormatter();
             List<List<PixelID>> lists = twoDPartitions[gridId];
             DensityPlane plane = twoDGrids[gridId];
             int regionCount = lists.Count;
@@ -1092,24 +1094,39 @@ public class PcaScoresGrid
             for (int r = 0; r < regionCount; ++r)
             {
                 List<PixelID> rthList = lists[r];
-                int peakCount = rthList.Count;
+                int peakPixelCount = rthList.Count;
+                float peakVoxelCount = 0.0f;
                 // calculate center of peak
-                float xSum = 0.0f;
-                float ySum = 0.0f;
+                float xPixelCoordSum = 0.0f;
+                float yPixelCoordSum = 0.0f; 
+                float xVoxelWeightSum = 0.0f;
+                float yVoxelWeightSum = 0.0f;
                 foreach (PixelID pixelId in rthList)
                 {
                     (float nthX, float nthY) = plane.XYCoordsFor(pixelId);
-                    xSum += nthX;
-                    ySum += nthY;
+                    float nthPixelValue = plane.ValueAtPixel(pixelId);
+                    peakVoxelCount += nthPixelValue;
+                    xPixelCoordSum += nthX;
+                    yPixelCoordSum += nthY;
+                    xVoxelWeightSum += nthX * nthPixelValue;
+                    yVoxelWeightSum += nthY * nthPixelValue;
                 }
-                float xCenter = xSum / peakCount;
-                float yCenter = ySum / peakCount;
-                float area = peakCount * plane.binsize * plane.binsize;
+                float xPixelCoordsCenter = xPixelCoordSum / peakPixelCount;
+                float yPixelCoordsCenter = yPixelCoordSum / peakPixelCount;
+                float xVoxelWeightCenter = xVoxelWeightSum / peakVoxelCount;
+                float yVoxelWeightCenter = yVoxelWeightSum / peakVoxelCount;
+                float area = peakPixelCount * plane.binsize * plane.binsize;
+
+                // note:  x and y are swapped in the UI display,
+                // so we label yCenter as "x center" and xCenter as "y center"
                 info += "\n  region " + r 
-                      + "\n    pixels: " + peakCount.ToString()
-                      + "\n    area: " + area.ToString()
-                      + "\n    x center: " + xCenter.ToString()
-                      + "\n    y center: " + yCenter.ToString();
+                      + "\n    pixels: " + peakPixelCount.ToString()
+                      + "\n    area: " + formatter.StringForGridInfoTable(area)
+                      + "\n    voxels: " + formatter.StringForGridInfoTable(peakVoxelCount)
+                      + "\n    centroid x: " + formatter.StringForGridInfoTable(yPixelCoordsCenter) 
+                      + " , y: " + formatter.StringForGridInfoTable(xPixelCoordsCenter) 
+                      + "\n    center of mass x: " + formatter.StringForGridInfoTable(yPixelCoordsCenter) 
+                      + " , y: " + formatter.StringForGridInfoTable(xPixelCoordsCenter);
             }
         }
 
