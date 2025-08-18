@@ -437,7 +437,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     public async Task UpdateComponents(CancellationToken cancellationToken)
     {
         DataStateIsError = false;
-        if (Analysis is null)
+        if (Analysis is null || (Analysis.Matrix.VoxelCount * Analysis.Matrix.FeatureCount) == 0)
         {
             DataStateIsError = true;
             return;
