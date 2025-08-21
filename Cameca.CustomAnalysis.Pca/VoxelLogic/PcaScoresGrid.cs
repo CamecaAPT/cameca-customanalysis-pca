@@ -1125,8 +1125,8 @@ public class PcaScoresGrid
                       + "\n    voxels: " + formatter.StringForGridInfoTable(peakVoxelCount)
                       + "\n    centroid x: " + formatter.StringForGridInfoTable(yPixelCoordsCenter) 
                       + " , y: " + formatter.StringForGridInfoTable(xPixelCoordsCenter) 
-                      + "\n    center of mass x: " + formatter.StringForGridInfoTable(yPixelCoordsCenter) 
-                      + " , y: " + formatter.StringForGridInfoTable(xPixelCoordsCenter);
+                      + "\n    center of mass x: " + formatter.StringForGridInfoTable(yVoxelWeightCenter) 
+                      + " , y: " + formatter.StringForGridInfoTable(xVoxelWeightCenter);
             }
         }
 
