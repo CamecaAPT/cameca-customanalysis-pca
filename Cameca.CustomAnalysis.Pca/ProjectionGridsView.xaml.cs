@@ -21,7 +21,7 @@ namespace Cameca.CustomAnalysis.Pca;
 public partial class ProjectionGridsView : UserControl
 {
    // [ObservableProperty]
-    private bool mouseHovering;
+    private bool tintPeakOnlyOnHover;
     Histogram2D? currentTintedHistogram;
     Histogram2D? currentUntintedHistogram;
     string currentGridId = "";
@@ -30,6 +30,7 @@ public partial class ProjectionGridsView : UserControl
     public ProjectionGridsView()
     {
         InitializeComponent();
+        tintPeakOnlyOnHover = false;
     }
 
     public static readonly DependencyProperty GridsSourceTintedProperty = DependencyProperty.Register(
@@ -140,7 +141,7 @@ public partial class ProjectionGridsView : UserControl
                 histogramTinted.AxisYLabel = AxisYLabelForGridID(renderDataTinted.Name);
                 histogramTinted.DataSource = singleListTinted;
                 histogramTinted.IsLegendVisible = true;
-                histogramTinted.Visibility = Visibility.Collapsed;
+                histogramTinted.Visibility = Visibility.Visible;
                 currentTintedHistogram = histogramTinted;
                 Label gridLabel = GridLabel;
                 gridLabel.Content = "Grid " + renderDataTinted.Name;
@@ -158,7 +159,7 @@ public partial class ProjectionGridsView : UserControl
                 histogramUntinted.AxisYLabel = AxisYLabelForGridID(renderDataUntinted.Name);
                 histogramUntinted.DataSource = singleListUntinted;
                 histogramUntinted.IsLegendVisible = true;
-                histogramUntinted.Visibility = Visibility.Visible;
+                histogramUntinted.Visibility = Visibility.Collapsed;
                 Label gridLabel = GridLabel;
                 gridLabel.Content = "Grid " + renderDataUntinted.Name;
                 currentUntintedHistogram = histogramUntinted;
@@ -219,11 +220,20 @@ public partial class ProjectionGridsView : UserControl
     private void UseGridForPCAPhaseID_Click(object sender, RoutedEventArgs e)
     {
         CheckBox checkBox = (CheckBox)sender;
-        bool isChecked = checkBox.IsChecked ?? true; 
+        bool isChecked = checkBox.IsChecked ?? true;
         GridsUsageDelegate.UseGridForPca(currentGridId, isChecked);
     }
 
-    
+    private void TintPeakOnHover_Click(object sender, RoutedEventArgs e)
+    {
+        CheckBox checkBox = (CheckBox)sender;
+        bool isChecked = checkBox.IsChecked ?? true;
+        this.tintPeakOnlyOnHover = isChecked;
+        if (this.tintPeakOnlyOnHover)
+        {
+            this.SwitchToUntintedDisplay();
+        }
+    }
     private static IEnumerable<T> GetChildren<T>(DependencyObject root) where T: DependencyObject
     {
         int childrenCount = VisualTreeHelper.GetChildrenCount(root);
@@ -240,18 +250,33 @@ public partial class ProjectionGridsView : UserControl
             }
         }
     }
+
+    private void SwitchToUntintedDisplay()
+    {
+        var viewptLower = currentTintedHistogram.ViewportLower;
+        var viewptUpper = currentTintedHistogram.ViewportUpper;
+        currentTintedHistogram.Visibility = Visibility.Collapsed;
+        currentUntintedHistogram.ViewportLower = viewptLower;
+        currentUntintedHistogram.ViewportUpper = viewptUpper;
+        currentUntintedHistogram.Visibility = Visibility.Visible;
+    }
+
+    private void SwitchToTintedDisplay()
+    {
+        var viewptLower = currentUntintedHistogram.ViewportLower;
+        var viewptUpper = currentUntintedHistogram.ViewportUpper;
+        currentUntintedHistogram.Visibility = Visibility.Collapsed;
+        currentTintedHistogram.ViewportLower = viewptLower;
+        currentTintedHistogram.ViewportUpper = viewptUpper;
+        currentTintedHistogram.Visibility = Visibility.Visible;
+    }
     private void ProjectionGrid2dHistogram_MouseEnter(object sender, MouseEventArgs e)
     {
         if (sender is Histogram2D histogram)
         {
-            if (histogram == currentTintedHistogram)
+            if (histogram == currentUntintedHistogram)
             {
-                var viewptLower = currentTintedHistogram.ViewportLower;
-                var viewptUpper = currentTintedHistogram.ViewportUpper;
-                currentTintedHistogram.Visibility = Visibility.Collapsed;
-                currentUntintedHistogram.ViewportLower = viewptLower;
-                currentUntintedHistogram.ViewportUpper = viewptUpper;
-                currentUntintedHistogram.Visibility = Visibility.Visible;
+                this.SwitchToTintedDisplay();
             }
         }
     }
@@ -259,15 +284,9 @@ public partial class ProjectionGridsView : UserControl
     {
         if (sender is Histogram2D histogram)
         {
-            if (histogram == currentUntintedHistogram)
-            {
-                var viewptLower = currentUntintedHistogram.ViewportLower;
-                var viewptUpper = currentUntintedHistogram.ViewportUpper;
-                currentUntintedHistogram.Visibility = Visibility.Collapsed;
-                currentTintedHistogram.ViewportLower = viewptLower;
-                currentTintedHistogram.ViewportUpper = viewptUpper;
-                currentTintedHistogram.Visibility = Visibility.Visible;
-
+            if ((this.tintPeakOnlyOnHover) && (histogram == currentTintedHistogram))
+            {      
+                this.SwitchToUntintedDisplay();
             }
         }
     }
