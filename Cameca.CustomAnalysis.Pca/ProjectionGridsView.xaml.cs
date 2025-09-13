@@ -233,7 +233,13 @@ public partial class ProjectionGridsView : UserControl
         {
             this.SwitchToUntintedDisplay();
         }
+        else
+        {
+            this.SwitchToTintedDisplay();
+
+        }
     }
+
     private static IEnumerable<T> GetChildren<T>(DependencyObject root) where T: DependencyObject
     {
         int childrenCount = VisualTreeHelper.GetChildrenCount(root);

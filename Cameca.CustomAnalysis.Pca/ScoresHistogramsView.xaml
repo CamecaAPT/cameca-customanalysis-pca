@@ -30,21 +30,21 @@
                  Height="32" 
                  Width="170"
                  Click="PreviousHistogramButton_Click" 
-                 Margin="10,10,10,10">
+                 Margin="10,10,10,0">
             </Button>
             <Button x:Name="AdvanceHistogramButton" 
                  Content="Advance To Next Histogram" 
                  Height="32" 
                  Width="170"
                  Click="AdvanceHistogramButton_Click" 
-                 Margin="10,10,10,10">
+                 Margin="10,10,10,0">
             </Button>
             <CheckBox x:Name="UseHistogramForPCAPhaseID" 
                  Content="Use for PCA Phase ID" 
                  Height="32" 
                  Width="170"
                  Click="UseHistogramForPCAPhaseID_Click" 
-                 Margin="10,10,10,10">
+                 Margin="10,10,10,0">
             </CheckBox>
             <TextBox x:Name="HistogramInfoText" 
                  Width="170"
