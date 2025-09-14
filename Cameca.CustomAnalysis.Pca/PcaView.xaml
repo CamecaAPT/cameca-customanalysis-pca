@@ -131,7 +131,6 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
@@ -151,7 +150,49 @@
                                 ButtonContent="Update"
                                 OverlayVisibility="{Binding UpdateSelectedComponentCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <Grid>
-                        <lvc:CartesianChart Series="{Binding LoadingsSeries}"
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="188" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="36" />
+                            <RowDefinition Height="36" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Button x:Name="PreviousComponentButton" 
+                                Content="Go to Previous Component" 
+                                Grid.Column="0" 
+                                Grid.Row="0"
+                                Height="32" 
+                                Width="180"
+                                Click="PreviousComponentButton_Click" 
+                                Margin="2,2,2,2">
+                        </Button>
+                        <Button x:Name="AdvanceComponentButton" 
+                                Content="Advance To Next Component" 
+                                Grid.Column="0" 
+                                Grid.Row="1"
+                                Height="32" 
+                                Width="180"
+                                Click="AdvanceComponentButton_Click" 
+                                Margin="2,2,2,2">
+                        </Button>
+                        <Label x:Name="GridLabel" 
+                            Grid.Column="1" 
+                            Grid.Row="0" 
+                            Content="{Binding LoadingsChartTitle}"
+                            Height="32" 
+                            Width="280" 
+                            FontSize="16" 
+                            FontFamily="Calibri"  
+                            FontWeight="Bold"   
+                            Background="White"   
+                            Foreground="Black">
+                        </Label>
+                        <lvc:CartesianChart Grid.Column="1"
+                                            Grid.Row="1"
+                                            Grid.RowSpan="2"
+                                            Series="{Binding LoadingsSeries}"
                                             DisableAnimations="True"
                                             LegendLocation="None"
                                             Visibility="{Binding LoadingHistogramRenderData, Converter={local:CollectionVisibilityConverter Invert=True}}">
@@ -174,7 +215,10 @@
                             </lvc:CartesianChart.AxisY>
                         </lvc:CartesianChart>
 
-                        <controls:Chart2D DataSource="{Binding LoadingHistogramRenderData}"
+                        <controls:Chart2D Grid.Column="1"
+                                          Grid.Row="1"
+                                          Grid.RowSpan="2"
+                                          DataSource="{Binding LoadingHistogramRenderData}"
                                           Projection="XZ"
                                           AxisYLabel="Loadings"
                                           AxisXLabel="Bin Index"

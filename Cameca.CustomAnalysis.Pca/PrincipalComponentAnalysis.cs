@@ -127,10 +127,15 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
                 ? !LoadingHistogramRenderData.Any()
                 : !LoadingsSeries.Any() || !LoadingsLabels.Any() || !ScoresHistogramRenderData.Any();
         }
-    }
+    } 
 
     public Func<double, string> AxisYLabelFormatter { get; } = (double value) => value.ToString("F3");
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UpdateSelectedComponentCanExecute))]
+    [NotifyCanExecuteChangedFor(nameof(UpdateSelectedComponentCommand))]
+    private string loadingsChartTitle = "Loadings";
+    
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(UpdateSelectedComponentCanExecute))]
     [NotifyCanExecuteChangedFor(nameof(UpdateSelectedComponentCommand))]
@@ -450,13 +455,34 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         UpdateOptionsBounds();
 
         // Ensure that the selected component falls in the valid range of number of components
-        if (Properties.PcaPhaseIndex < 0)
+        // operate on a local variable and update only on a change so that we dont
+        // trigger the ObservedPropertyChanges callbacks
+        var inRangeIndex = Properties.ComponentIndex;
+        if (inRangeIndex >= Properties.NumberOfComponents)
         {
-            Properties.ComponentIndex = 0;
+            inRangeIndex = Properties.NumberOfComponents - 1;
         }
-        else if (Properties.ComponentIndex > Properties.NumberOfComponents)
+        if (inRangeIndex < 0)
         {
-            Properties.ComponentIndex = Properties.NumberOfComponents;
+            inRangeIndex = 0;
+        }
+        if (inRangeIndex != Properties.ComponentIndex)
+        {
+            Properties.ComponentIndex = inRangeIndex;
+        }
+
+        inRangeIndex = Properties.PcaPhaseIndex;
+        if (inRangeIndex >= Properties.NumberOfComponents)
+        {
+            inRangeIndex = Properties.NumberOfComponents - 1;
+        }
+        if (inRangeIndex < 0)
+        {
+            inRangeIndex = 0;
+        }
+        if (inRangeIndex != Properties.PcaPhaseIndex)
+        {
+            Properties.PcaPhaseIndex = inRangeIndex;
         }
 
         await UpdateHistograms(cancellationToken);
@@ -529,7 +555,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
     }
 
-    // Uses the component data (or computes for all componets if necessary) to generate plots for the selected component by index
+    // Uses the component data (or computes for all components if necessary) to generate plots for the selected component by index
     [RelayCommand(CanExecute = nameof(UpdateSelectedComponentCanExecute))]
     public async Task UpdateSelectedComponent(CancellationToken cancellationToken)
     {
@@ -544,7 +570,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         int numComponents = Properties.NumberOfComponents;
         int selectedIndex = Properties.ComponentIndex;
 
-        if (PcaComponentsResults is null)
+        if ((PcaComponentsResults is null) || (PcaComponentsResults.Components.Count() == 0))
         {
             await UpdateComponents(cancellationToken);
         }
@@ -1022,8 +1048,15 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     private void UpdateOptionsBounds()
     {
         var selectedResult = PcaComponentsResults?.Components.ElementAtOrDefault(Properties.ComponentIndex);
-        Properties.Min = selectedResult?.Scores.Min();
-        Properties.Max = selectedResult?.Scores.Max();
+        if (selectedResult != null)
+        {
+            var nonnullSelectedResult = (ComponentData)selectedResult;
+            if (nonnullSelectedResult.Scores != null)
+            {
+                Properties.Min = nonnullSelectedResult.Scores.Min();
+                Properties.Max = nonnullSelectedResult.Scores.Max();
+            }
+        }
     }
 
     // Applies filter to the custom analysis: returns the ions in voxels for which the score of the selected component exceeds the specified threshold value
@@ -1178,6 +1211,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         LoadingHistogramRenderData = Array.Empty<IRenderData>();
         LoadingsSeries = new SeriesCollection();
         LoadingsLabels = Array.Empty<string>();
+        LoadingsChartTitle = "Loadings for Component " + Properties.ComponentIndex.ToString();
     }
 
     private void InvalidateAll()
@@ -1221,6 +1255,21 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         PcaPhaseIDResults = null;
     }
 
+    public async Task IncrementComponentIndex(int incr, CancellationToken token)
+    {
+        var currentIndex = Properties.ComponentIndex;
+        var newIndex = currentIndex + incr;
+        if (newIndex >= Properties.NumberOfComponents)
+        {
+            newIndex = 0;
+        }
+        if (newIndex < 0)
+        {
+            newIndex = Properties.NumberOfComponents - 1;
+        }
+        Properties.ComponentIndex = newIndex;
+        UpdateSelectedComponent(token);
+    }
     // Should actually be implemented in the base class CoreNodeBase along with existing DataStateIsValid.
     // Remove after a Cameca.CustomAnalysis.Utilities updates adds this functionality
     protected bool DataStateIsError
