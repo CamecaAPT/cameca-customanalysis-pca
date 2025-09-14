@@ -1255,7 +1255,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         PcaPhaseIDResults = null;
     }
 
-    public void IncrementComponentIndex(int incr)
+    public async Task IncrementComponentIndex(int incr, CancellationToken token)
     {
         var currentIndex = Properties.ComponentIndex;
         var newIndex = currentIndex + incr;
@@ -1267,7 +1267,8 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         {
             newIndex = Properties.NumberOfComponents - 1;
         }
-        Properties.NumberOfComponents = newIndex;
+        Properties.ComponentIndex = newIndex;
+        UpdateSelectedComponent(token);
     }
     // Should actually be implemented in the base class CoreNodeBase along with existing DataStateIsValid.
     // Remove after a Cameca.CustomAnalysis.Utilities updates adds this functionality

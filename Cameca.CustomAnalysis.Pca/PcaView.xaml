@@ -151,12 +151,12 @@
                                 OverlayVisibility="{Binding UpdateSelectedComponentCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="200" />
+                            <ColumnDefinition Width="188" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="32" />
-                            <RowDefinition Height="32" />
+                            <RowDefinition Height="36" />
+                            <RowDefinition Height="36" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
                         <Button x:Name="PreviousComponentButton" 
@@ -164,7 +164,7 @@
                                 Grid.Column="0" 
                                 Grid.Row="0"
                                 Height="32" 
-                                Width="160"
+                                Width="180"
                                 Click="PreviousComponentButton_Click" 
                                 Margin="2,2,2,2">
                         </Button>
@@ -173,7 +173,7 @@
                                 Grid.Column="0" 
                                 Grid.Row="1"
                                 Height="32" 
-                                Width="160"
+                                Width="180"
                                 Click="AdvanceComponentButton_Click" 
                                 Margin="2,2,2,2">
                         </Button>

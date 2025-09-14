@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System.Threading;
+using System.Windows;
 
 namespace Cameca.CustomAnalysis.Pca;
 
@@ -7,24 +8,38 @@ namespace Cameca.CustomAnalysis.Pca;
 /// </summary>
 internal partial class PcaView
 {
-
-    public PcaView()
+    CancellationTokenSource cancellationTokenSource;
+    CancellationToken? incrementIndexCancellationToken = null;
+     public PcaView()
     {
         InitializeComponent();
+        cancellationTokenSource = new CancellationTokenSource();
     }
 
-    private void AdvanceComponentButton_Click(object sender, RoutedEventArgs e)
+    private async void AdvanceComponentButton_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is PrincipalComponentAnalysis pca)
         {
-            pca.IncrementComponentIndex(1);
+            if (incrementIndexCancellationToken == null)
+            {
+                var cancellationToken = cancellationTokenSource.Token;
+                incrementIndexCancellationToken = cancellationToken;
+                await pca.IncrementComponentIndex(1, cancellationToken);
+                incrementIndexCancellationToken = null;
+            }
         }
     }
-    private void PreviousComponentButton_Click(object sender, RoutedEventArgs e)
+    private async void PreviousComponentButton_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is PrincipalComponentAnalysis pca)
         {
-            pca.IncrementComponentIndex(-1);
+            if (incrementIndexCancellationToken == null)
+            {
+                var cancellationToken = cancellationTokenSource.Token;
+                incrementIndexCancellationToken = cancellationToken;
+                await pca.IncrementComponentIndex(-1, cancellationToken);
+                incrementIndexCancellationToken = null;
+            }
         }
     }
 }
