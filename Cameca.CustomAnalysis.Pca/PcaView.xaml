@@ -131,7 +131,6 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
@@ -151,7 +150,53 @@
                                 ButtonContent="Update"
                                 OverlayVisibility="{Binding UpdateSelectedComponentCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <Grid>
-                        <lvc:CartesianChart Series="{Binding LoadingsSeries}"
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <StackPanel
+                             Grid.Column="0" 
+                             Grid.Row="0"
+                             Grid.RowSpan="2"
+                             Orientation="Vertical" 
+                             HorizontalAlignment="Center"
+                             Background="#efefef">
+                            <Button x:Name="PreviousComponentButton" 
+                                Content="Go to Previous Component" 
+                                Height="32" 
+                                Width="160"
+                                Click="PreviousComponentButton_Click" 
+                                Margin="10,10,10,0">
+                            </Button>
+                            <Button x:Name="AdvanceComponentButton" 
+                                Content="Advance To Next Component" 
+                                Height="32" 
+                                Width="160"
+                                Click="AdvanceComponentButton_Click" 
+                                Margin="10,10,10,10">
+                            </Button>
+                        </StackPanel>
+                        <Label x:Name="GridLabel" 
+                            Grid.Column="1" 
+                            Grid.Row="0" 
+                            Content="Loadings" 
+                            Height="32" 
+                            Width="140" 
+                            FontSize="16" 
+                            FontFamily="Calibri"  
+                            FontWeight="Bold"   
+                            Background="White"   
+                            Foreground="Black">
+                        </Label>
+
+                        <lvc:CartesianChart Grid.Column="1"
+                                            Grid.Row="1"
+                                            Grid.RowSpan="2"
+                                            Series="{Binding LoadingsSeries}"
                                             DisableAnimations="True"
                                             LegendLocation="None"
                                             Visibility="{Binding LoadingHistogramRenderData, Converter={local:CollectionVisibilityConverter Invert=True}}">
@@ -174,7 +219,10 @@
                             </lvc:CartesianChart.AxisY>
                         </lvc:CartesianChart>
 
-                        <controls:Chart2D DataSource="{Binding LoadingHistogramRenderData}"
+                        <controls:Chart2D Grid.Column="1"
+                                          Grid.Row="1"
+                                          Grid.RowSpan="2"
+                                          DataSource="{Binding LoadingHistogramRenderData}"
                                           Projection="XZ"
                                           AxisYLabel="Loadings"
                                           AxisXLabel="Bin Index"

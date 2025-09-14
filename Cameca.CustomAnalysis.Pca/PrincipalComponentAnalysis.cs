@@ -529,7 +529,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
     }
 
-    // Uses the component data (or computes for all componets if necessary) to generate plots for the selected component by index
+    // Uses the component data (or computes for all components if necessary) to generate plots for the selected component by index
     [RelayCommand(CanExecute = nameof(UpdateSelectedComponentCanExecute))]
     public async Task UpdateSelectedComponent(CancellationToken cancellationToken)
     {
@@ -1221,6 +1221,20 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         PcaPhaseIDResults = null;
     }
 
+    public void IncrementComponentIndex(int incr)
+    {
+        var currentIndex = Properties.ComponentIndex;
+        var newIndex = currentIndex + incr;
+        if (newIndex >= Properties.NumberOfComponents)
+        {
+            newIndex = 0;
+        }
+        if (newIndex < 0)
+        {
+            newIndex = Properties.NumberOfComponents - 1;
+        }
+        Properties.NumberOfComponents = newIndex;
+    }
     // Should actually be implemented in the base class CoreNodeBase along with existing DataStateIsValid.
     // Remove after a Cameca.CustomAnalysis.Utilities updates adds this functionality
     protected bool DataStateIsError
