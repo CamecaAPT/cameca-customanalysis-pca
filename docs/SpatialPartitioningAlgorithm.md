@@ -67,15 +67,15 @@ In the case of minimum smoothing, if a voxel has a PCA score exactly between the
 
 In the first case, thats
 
->    sqrt (  (1/2) * (1/2)^2  +  (1/2) * (1/2)^2  )
->
->               lower bin           higher bin
+    sqrt (  (1/2) * (1/2)^2  +  (1/2) * (1/2)^2  )
+    
+                lower bin           higher bin
 
 In the second case, that's 
 
->    sqrt (   (1/8) * (1)^2   +   (3/4) * (0)^2   +  (1/8) * (1)^2   )
->
->               lower bin           middle bin         higher bin
+    sqrt (   (1/8) * (1)^2   +   (3/4) * (0)^2   +  (1/8) * (1)^2   )
+    
+                lower bin           middle bin         higher bin
 
 Most values are in between these two extremes.  In these cases, the contributions are split between the three closest bins so as to maintain a delocalization of one half the bin separation, and maintain a center weight of the contributions at the value of the voxel.
 
@@ -89,8 +89,8 @@ If the delocalization amount is in fact larger than the default delocalization o
 
 Once the 1D profile is made, the first step is to identify its most prominent peak. The applicable part of the code is the class "OneDGridPartitionFinder". The bin with the highest population is identified as the basis of a "peak region", and then neighboring bins are added to the peak region as long as 
 
-- The value in the neighboring peak is a decrease from its neighbor in the peak region
-- The value in the neighboring peak is above a "noise floor"
+- The value in the neighboring bin is a decrease from its neighbor in the peak region
+- The value in the neighboring bin is above a "noise floor"
 
 The "noise floor" value is currently hard coded at 5% of the population of the most-populated bin.  Making this a user-settable parameter is a possibility for future work.
 
@@ -98,7 +98,9 @@ If an increase is detected in a next bin, the bin neighboring the bin with the i
 
 If a second peak is in fact identified, then the "First 1D mode" is used for partitioning -- i.e. each peak corresponds to a partition.
 
-The boundary between the peaks, where voxels would not be added to either partition, is currently one bin wide.  This is not ideal, because if there are indeak peaks, the overlapping region between them likely spans more than one bin. Implementing an expanded border region (as is done for the 2D case) is worth additional effort, and is a possibility for future work.  
+The boundary between the peaks, where voxels would not be added to either partition, is currently one bin wide.  This is not ideal, because if there are indeak peaks, the overlapping region between them likely spans more than one bin. Implementing an expanded border region (as is done for the 2D case) is worth additional effort, and is a possibility for future work. 
+
+There is an additional wrinkle which could be worth some extra attention in the future.  It is possible that the data should be treated as a single peak, but because of statistical fluctuations, the top appears to be two peaks, separated by a narrow and shallow valley.  In which case, there could be logic to not differentiate between the two peaks.  This logic is implemented for the 2D case below, but not for the 1D case. 
 
 ### Partition Finding in a 1D Profile -- Second Mode 
 
@@ -107,6 +109,54 @@ If only one peak is identified in the profile, it is still possible to designate
 The value of 0.5 is currently hard-coded. Making this a user-settable parameter is a possibility for future work.
 
 ## Identifying Partitions in Two Dimensional Data
+
+### First 1D Mode
+
+Like in the case of partition finding in one dimensional data, there are two modes for two dimensional data. In the first mode, there are two or more identifiable peaks in the two dimensional profile -- each peak can correspond to a partition.
+
+### Second 1D Mode
+
+In the second mode, there is only one identifiable peak.  The voxels that are obviously part of the peak in the 2D grid are the first partition.  The voxels that are an appreciable distance away from the peak are a second partition.  Voxels close to, but not in the peak are part of neither partition.
+
+### Creation of the 2D Grid
+
+The basis for finding cluster in 2D is a 2D grid of bins that represent the population of voxels with PCA scores in two PCA dimensions near that grid point. As in the 1D case, it is not just a histogram -- it is a sampling of each voxel's PCA scores projected onto those two dimensions.  Each voxel can contribute to nine different bins -- the contributions are weighted to cause a constant delocalization for each voxel, and maintain the weight of its contribution centered at its score.  
+
+The contributions for each dimension are calculated separately for each dimension (using the same process as for the 1D contribution) and then multiplied together.  So, for example, if the voxel has PCA scores which place it exactly in the center of one bin, each dimension will be split on each axis by 1/8, 3/4, 1/8, resulting in the contribution grid:
+
+     __________________________ 
+    |        |        |        | 
+    |        |        |        | 
+    |  1/64  |  3/32  |  1/64  |   
+    |        |        |        |   
+    |--------------------------|
+    |        |        |        |      
+    |  3/32  |  9/16  |  3/32  |   
+    |        |        |        |  
+    |--------------------------|
+    |        |        |        | 
+    |  1/64  |  3/32  |  1/64  |  
+    |        |        |        |    
+    |__________________________|
+    
+
+For a given binsize, the implied delocalization distance in each of the two dimensions in the grid is one half the binsize. Because the grid is two dimensional, the total delocalization when generating the grid is the binsize divided by square root of two.
+
+Additional smoothing is also possible, and this is again controlled by the user-settable parameter "GridProjectionDelocalization" in the properties pane.  Note, that this parameter is "per dimension".  The actual 2D delocalization of the generated grid is this value times the square root of 2.
+
+The procedure is analagous to the 1D case, but applied symmetrically in both PCA dimensions.  The applicable code is in the file PcaScoresGrid.cs, in the function CalculateTwoDDensity()
+
+
+### Partition Finding in a 2D Profile -- First Mode 
+
+Once the 2D profile is made, the process is very similar to that of the 1D case. First, the grid point with the global maximum is found, and this is the basis for a first partition. Neighboring grid points are added to the peak in order of decreasing grid point population, provided that
+
+
+the first step is to identify its most prominent peak. The applicable part of the code is the class "OneDGridPartitionFinder". The bin with the highest population is identified as the basis of a "peak region", and then neighboring bins are added to the peak region as long as 
+
+- The value at the neighboring grid point is a decrease from its neighbor in the peak region AND the value is OR the value is above a "twin peaks" threshold
+- The value at the neighboring grid point is above a "noise floor"
+
 
 ## Identifying Voxels for Consideration when Growing the Core Regions
 
