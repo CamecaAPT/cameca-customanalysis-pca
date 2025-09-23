@@ -35,7 +35,7 @@ If the goal is merely to identify two different phases, then a single partitioni
 5. Using the nomenclature in part 4, designate each voxel with a label for each partitioning.  Example, with three partitions, a voxel which is is in group 1 of all three partitions would be "A1B1C1".  A voxel in group 2 of the first partition and not in any group of the other two would be "A2B?C?"
 6. Designate as "core regions" all the voxels that do not have a "?" in their designation. These are the sets of voxels which define the basis for regions that will grow in the successive steps.
 7. Identify all voxels that are not in a core region, but are, in real 3D space, adjacent to a voxel in at least one "core region". The particulars of how to determine "Adjacent" are discussed below
-8. Evaluate each of the voxels identified in step 7.  If the designation applied in step 5 is similar to the designation of the core region it is adjacent to, add the voxel to that core region.  If the voxel is equally similar to two different adjacent core regions, add it to an "interface voxel" partition -- it will not be added to any core region.
+8. Evaluate each of the voxels identified in step 7.  If the designation applied in step 5 is similar to the designation of the core region it is adjacent to, add the voxel to that core region.  If the voxel is equally similar to two different adjacent core regions, add it to an "interface voxel" partition -- it will not be added to any core region. The particulars of how to determine "similarity" of voxels are discussed below
 9. If any of the voxels in step 8 have actually been added to a core region, repeat steps 7 and 8 indefinitely.
 10. Any remaining voxel which has no assignment different enough from all its adjacent voxels as to fail the test in step 8.  These voxels constitute the "unassigned voxel" partition
 11. At this point, all the voxels will either be 
@@ -151,17 +151,49 @@ The procedure is analagous to the 1D case, but applied symmetrically in both PCA
 
 Once the 2D profile is made, the process is very similar to that of the 1D case. First, the grid point with the global maximum is found, and this is the basis for a first partition. Neighboring grid points are added to the peak in order of decreasing grid point population, provided that
 
-
 the first step is to identify its most prominent peak. The applicable part of the code is the class "OneDGridPartitionFinder". The bin with the highest population is identified as the basis of a "peak region", and then neighboring bins are added to the peak region as long as 
 
-- The value at the neighboring grid point is a decrease from its neighbor in the peak region AND the value is OR the value is above a "twin peaks" threshold
+- The value at the neighboring grid point is a decrease from its neighbor in the peak region OR the value is above a "twin peaks" threshold
 - The value at the neighboring grid point is above a "noise floor"
 
+The "twin peaks" threshold is an exception to the rule that looks for a new peak if there is a neighboring bin with a higher value than its neighbor in the peak region. This logic is to allow for the case where a single peak has two local maxima because of statistical variations.  In the UI. this parameter is the "Peak Summit Allowance".  that is, if the valley between two peaks is greater than the the Peak Summit Allowance times the peak maximum, the algorithm considers them a single peak.  The default value for the Peak Summit Allowance is 0.8
 
-## Identifying Voxels for Consideration when Growing the Core Regions
+The noise floor is also a user-settable parameter.  Grid Points with a value lower than the noise floor times the value of the maximum of the highest peak will not be assigned to any partition.
+
+If a neighboring grid point is found to have a higher value than its neighbor in the peak region, this means there must be another peak maximum to be found.  The grid point with the maximum value not yet included in a peak is located and a new peak region defined. Then, the process to add neighboring grid points to one of the peaks continues. If a grid point is considered and is neighbor to more than one peak, it is added to a special "peak border" group, which will be used later to remove grid points from peaks.
+
+The algorithm of assigning grid points to peaks continues until there are no grid points remaining above the noise floor.
+
+At this point, some of the grid points are removed from their assigned peak, because they are in the overlap region between two or more peaks. The criterion used is this:
+
+There is a parameter called the "border exclusion ratio" -- lets call it BER here. Each grid point in every peak is considered, and its distance to its peak maximum (DPM) is calculated. if it is closer to any grid point in the "peak border" group than BER * DPM, then it is removed from the peak.  This creates a border zone around boundaries between peaks, as can be seen in the following screenshot:
+
+The Border Exclusion Ratio is not user-settable, but hard coded to 0.2.  Exposing this as a user-settable parameter could be a project for future work.
+
+Visually, this border area is seen in this image :
+
+![image](BorderExclusionZone.png "A 2D grid with two peaks separated by a border exclusion zone")
+
+The logic for this implementation is in the class TwoDPartitionFinder in the function FindPartitions()
+
+
+## Identifying "Adjacent" Voxels for Consideration when Growing the Core Regions
+
+There could be any number of ways to generate a candidates list for growing the core regions.  The currently implemented strategy is the simplest:  All voxels that share a face with a voxel in a core region is considered. There is no extra consideration for voxels which share an edge or a corner.
+
+The main hypothetical drawback to this approach is that regions might grow faster in the x y and z directions than in other directions, and lead to aniosotropy. 
+
+Another less likely bad scenario is if there are many unassignable voxels -- only considering voxels that share an face might be too restrictive a condition to allow every voxel in the sample to be considered. 
 
 ## Evaluating Voxel Similarity when Growing the Core Regions
 
+There could be any number of ways to evaluate the similarity of voxels for the core region growth evaluation in step 8.  The algorithm here can likely be improved by making this evaluation more complex.  
+
+The current implementation is extremely simple.  Voxels are considered similar to the core region if a single designation differs from that of the core region.  Because the core regions never contain a ? designation, this means that the only unassigned voxels that qualify are those that have a single ? in place of one of the core regions designations.  Example:  if the core region is A1B1C1, a neighboring voxel would qualify as "similar" if it has one of the designations A?B1C1, A1B?C1, or A1B1C?
+
+This also means that voxels with designations that include more than one ? will always end up as unassigned voxels.
+
+While the advantage to this approach is its simplicity, it is likely to break down significantly as more grids/dimensions are selected for inclusion in the algorithm.  Work to improve this piece is the likeliest source of improvement in the future.
 
 ## Why Use Concentrations as Input for PCA
 
