@@ -61,13 +61,6 @@ public class OneDGridPartitionFinder
     // to partition voxels inside the main peak and those outside it.  In some analyses, 
     // this manifests as a wide distribution of voxels along the axis, but recognizably outside
     // the main peak.
-    //
-    // So, the basic strategy here will be -- identify some properties of the main peak 
-    // its position, its max value, width at half max, width at quarter max, etc.
-    // then try to estimate where to draw a line between peak and non-peak components
-    //
-    // we'll model the peak as a bi-gaussian, and use the top 3/4 of the peak as a guide to find where 
-    // to cut off the peak region, and also how wide a border region should be defined.
     public List<List<BinID>> FindPartitions()
     {
         List<List<BinID>> partitions = new();

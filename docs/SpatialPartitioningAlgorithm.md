@@ -47,11 +47,70 @@ The number of spatial partitions identified will be the number of core regions, 
 
 ## Identifying Partitions in One Dimensional Data
 
+There are two modes to how a one dimensional profile could be used to define partitions. 
+
+### First 1D Mode
+
+In the first mode, there are two or more identifiable peaks in the one dimensional profile -- each peak can correspond to a partition.
+
+### Second 1D Mode
+
+In the second mode, there is only one identifiable peak.  The voxels that are obviously part of the peak are the first partition.  The voxels that are an appreciable distance away from the peak are a second partition.  Voxels close to, but not in the peak are part of neither partition.
+
+### Creation of the 1D Profile  
+
+The data for a one dimensional profile is just that - one dimension of values, each representing a constant-width region of the PCA dimension.  The values in each bin are the population of voxels near the bin. 
+
+That is, the data is not strictly a histogram -- it is not a count of voxels with a PCA score within the range of that bin.  Instead, it is sampled, such that each voxel contributes to multiple bins.
+
+In the case of minimum smoothing, if a voxel has a PCA score exactly between the axis values, then it contributes exactly one half to each value. This split is essentially equivalent to a delocalization of one-half the bin width. If the voxel falls exactly on an axis value, it contributes 3/4 to that bin, and 1/8 to each of the adjacent bins. This also represents a delocalization of of one-half the bin width, where delocalization is the square root of the sum over (P * dX^2).
+
+In the first case, thats
+
+>    sqrt (  (1/2) * (1/2)^2  +  (1/2) * (1/2)^2  )
+>
+>               lower bin           higher bin
+
+In the second case, that's 
+
+>    sqrt (   (1/8) * (1)^2   +   (3/4) * (0)^2   +  (1/8) * (1)^2   )
+>
+>               lower bin           middle bin         higher bin
+
+Most values are in between these two extremes.  In these cases, the contributions are split between the three closest bins so as to maintain a delocalization of one half the bin separation, and maintain a center weight of the contributions at the value of the voxel.
+
+This data can also have additional smoothing applied. While the minimum delocalization implied when generating a profile is one half the bin separation, an additional delocalization can be applied in a subsequent step. The amount of delocalization is controlled by the user-settable parameter  "GridProjectionDelocalization"
+
+In the code, this parameter is the "oneDProjectionDelocalization", and is set from the Property "GridProjectionDelocalization", because, currently, the same delocation is used for both 1D and 2D projections.
+
+If the delocalization amount is in fact larger than the default delocalization of one half the binsize, then an addition Gaussian Convolution is applied to the array, so that the resulting profile is approximately equal to what would result from applying a Gaussian delocalization to each voxel point individually.
+
+### Partition Finding in a 1D Profile -- First Mode 
+
+Once the 1D profile is made, the first step is to identify its most prominent peak. The applicable part of the code is the class "OneDGridPartitionFinder". The bin with the highest population is identified as the basis of a "peak region", and then neighboring bins are added to the peak region as long as 
+
+- The value in the neighboring peak is a decrease from its neighbor in the peak region
+- The value in the neighboring peak is above a "noise floor"
+
+The "noise floor" value is currently hard coded at 5% of the population of the most-populated bin.  Making this a user-settable parameter is a possibility for future work.
+
+If an increase is detected in a next bin, the bin neighboring the bin with the increase is not considered part of the peak, and a new search for a new peak region, as there must be a bin with a higher population that the currently known boundaries of the first peak region. 
+
+If a second peak is in fact identified, then the "First 1D mode" is used for partitioning -- i.e. each peak corresponds to a partition.
+
+The boundary between the peaks, where voxels would not be added to either partition, is currently one bin wide.  This is not ideal, because if there are indeak peaks, the overlapping region between them likely spans more than one bin. Implementing an expanded border region (as is done for the 2D case) is worth additional effort, and is a possibility for future work.  
+
+### Partition Finding in a 1D Profile -- Second Mode 
+
+If only one peak is identified in the profile, it is still possible to designate voxels that are well away from the peak as being part of a second partition. In this Second mode, a second partition is made from all the voxels which have a PCA score higher than 0.5 plus the PCA score of the bin above but not included in the peak.  So, for example, if the binsize is 0.1, and a single peak is identified over the range -1.0 to 2.0 (30 bins), the bin just above and outside the peak is the bin centered at 2.05.  Any voxel with a score above 2.55 will be consided part of a second partition.
+
+The value of 0.5 is currently hard-coded. Making this a user-settable parameter is a possibility for future work.
+
 ## Identifying Partitions in Two Dimensional Data
 
 ## Identifying Voxels for Consideration when Growing the Core Regions
 
-## Evaluating Voxels Similarity when Growing the Core Regions
+## Evaluating Voxel Similarity when Growing the Core Regions
 
 
 ## Why Use Concentrations as Input for PCA
