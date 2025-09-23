@@ -100,7 +100,7 @@ If at this stage we advance to the next tab, "PCA phases" , we are presented wit
 
 ![image](PCAPhasesFigA.png "PCA Phases Tab Displaying 4 Voxel Partitions")
  
-For a deeper dive into the algorithm, see the companion document [SpatialPartitioningAlgorithm.md](SpatialPartitioningAlgorithm.md). The algorithm goes as follows: 
+For a deeper dive into the algorithm, see the companion document [docs/SpatialPartitioningAlgorithm.md](SpatialPartitioningAlgorithm.md). The algorithm goes as follows: 
 
 First, voxels that are unambiguously in each of the peaks identified in Grid AB are assigned as part of the core regions.  
 
