@@ -8,18 +8,29 @@ There are a number of user-settable parameters used in the PCA calculation.  The
 
 These parameters is explained here 
 
-
 ## Parameter: Grid Method
+
+<needs documentation>
 
 ## Parameter: Bin Size
 
+<needs documentation>
+
 ## Parameter: Bin Start Value
+
+<needs documentation>
 
 ## Parameter: Bin End Value
 
+<needs documentation>
+
 ## Parameter: Voxel Size
 
+<needs documentation>
+
 ## Parameter: Voxel Grid Edge Buffer
+
+<needs documentation>
 
 ## Parameter: Gaps
 
@@ -27,11 +38,15 @@ This parameter is used in estimating the rank implied by the eigenvalues -- this
 
 Automatic rank-estimation is based on either the largest noise eigenvalue, if gaps is zero, or the gap between the largest and nth largest noise eigenvalues if gaps is greater than zero.
 
+In this case, "rank" is used to nake a first estimate of the number of PCA components to be calculated in the next step of the analysis.
+
 ## Parameter: Significance
 
 This parameter is the Bornemann Table Significance used in estimating the rank of implied by the eigenvalues.  
 
 ## Parameter: Refine
+
+This is another parameter used in estimating the rank of implied by the eigenvalues.  If checked, the eigenvalues initially calculated are recalculated using the first iteration's estimated rank as a parameter, and a new estimate of rank is performed based on the new eigenvalues. If the new rank estimate changes, the recalculation is done up to two more times.
 
 ## Parameter: Components
 
@@ -49,7 +64,11 @@ This parameter controls the threshold used to export a region of interest based 
 
 ## Parameter: Min
 
+<needs documentation>
+
 ## Parameter: Max
+
+<needs documentation>
 
 ## Parameter: Grid Projection Bin Size
 
