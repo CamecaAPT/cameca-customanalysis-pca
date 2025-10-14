@@ -8,28 +8,30 @@ public class OneDGridPartitionFinder
 {
     readonly DensityLine line;
     List<BinID> unplacedBinIds;
-    readonly List<BinID> rejectedBinIds;
-    readonly List<BinID> foundIncreaseBinIds;
+    // readonly List<BinID> rejectedBinIds;
+    // readonly List<BinID> foundIncreaseBinIds;
     List<BinID> longTailBinList;
     readonly Dictionary<RangeID, OneDPeak> peaks;
     PcaPhaseIdentificationProperties properties;
+    readonly float borderExclusionRatio;
 
     public OneDGridPartitionFinder(DensityLine densityLine, PcaPhaseIdentificationProperties props)
     {
         this.line = densityLine;
         this.peaks = new Dictionary<RangeID, OneDPeak> ();
-        this.rejectedBinIds = new List<BinID>();
-        this.foundIncreaseBinIds = new List<BinID>();
+        // this.rejectedBinIds = new List<BinID>();
+        // this.foundIncreaseBinIds = new List<BinID>();
         this.longTailBinList = new List<BinID>();
         this.unplacedBinIds = densityLine.GridPointIds();
         this.properties = props;
+        this.borderExclusionRatio = 0.2f;
     }
  
 
     public void Clear()
     {
         peaks.Clear();
-        rejectedBinIds.Clear();
+        // rejectedBinIds.Clear();
         unplacedBinIds.Clear();
         unplacedBinIds = line.GridPointIds();
     }
@@ -69,12 +71,13 @@ public class OneDGridPartitionFinder
         if (maybeMaximumBinId != null)
         {
             float firstMaximum = line.ValueAtBin(maybeMaximumBinId.Value);
-            float noiseLevel = firstMaximum * 0.05f;
+            float noiseLevel = firstMaximum * properties.noiseFloorFraction;
+            float borderExclusionRatio = properties.borderExclusionRatio;
             while ((maybeMaximumBinId != null) && (line.ValueAtBin(maybeMaximumBinId.Value) > noiseLevel))
             {
                 BinID binId = maybeMaximumBinId.Value;
                 OneDPeak peak = new(this, line, binId);
-                peak.IdentifyBins(noiseLevel, unplacedBinIds);
+                peak.IdentifyBins(noiseLevel, borderExclusionRatio, unplacedBinIds);
                 List<BinID> binList = peak.BinList();
                 partitions.Add(binList);
                 binList.ForEach(bin => { unplacedBinIds.Remove(bin); });
@@ -135,5 +138,9 @@ public class OneDGridPartitionFinder
     public float NoiseFloorFraction()
     {
         return properties.noiseFloorFraction;
+    }
+    public float BorderExclusionRatio()
+    {
+        return properties.borderExclusionRatio;
     }
 }   

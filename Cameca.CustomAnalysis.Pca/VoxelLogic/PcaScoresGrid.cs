@@ -567,43 +567,50 @@ public class PcaScoresGrid
         foreach (string s in oneDGridsToInclude)
         {
             OneDGridID gridId = new(s);
-            DensityLine oneDGrid = oneDGrids[gridId];
-            List<List<BinID>> partitionedIndices = oneDPartitions[gridId];
-            int pcaDimension = gridId.PCAIndex();
-            Dictionary<BinID, List<VoxelID>> voxelLists = AggregateVoxelsIntoListsPerBin(voxelIds, oneDGrid, pcaVoxels, pcaDimension);
-            int peakIndex = 1; 
-            foreach (List<BinID> binIdList in partitionedIndices)
-            {
-                string pcaCode = gridId.ToString() + "." + peakIndex.ToString();
-                // the pixelIdList contains a list of pixelIds identified as being part of the Nth partition
-                foreach (BinID binId in binIdList)
-                {
-                    // Lookup for all the voxels bucketed under this binId
-                    if (voxelLists.ContainsKey(binId))
-                    {
-                        List<VoxelID> voxelIdsForThisBin = voxelLists[binId];
-                        foreach (VoxelID voxelId in voxelIdsForThisBin)
-                        {
-                            pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(pcaCode);
-                        }
-                        // remove that entry from voxelLists
-                        voxelLists.Remove(binId);
-                    }
-                }
-                peakIndex += 1;
-            }
-            // now, all the remaining entries in voxelLists are unassigned :  
-            // assign these to component 0
-            string unassignedPcaCode = gridId.ToString() + ".0";
-            List<BinID> unassignedBins = voxelLists.Keys.ToList();
 
-            foreach (BinID binID in unassignedBins)
+            // it is possible that previously there were more components than there are now, and 
+            // one of the components that no longer exists was added to oneDGridsToInclude
+            // in this case, oneDGrids.ContainsKey(gridId) will return false, and we won't run into trouble
+            if (oneDGrids.ContainsKey(gridId))
             {
-                // Lookup for all the voxels bucketed under this pixelId
-                List<VoxelID> voxelIdsForThisBin = voxelLists[binID];
-                foreach (VoxelID voxelId in voxelIdsForThisBin)
+                DensityLine oneDGrid = oneDGrids[gridId];
+                List<List<BinID>> partitionedIndices = oneDPartitions[gridId];
+                int pcaDimension = gridId.PCAIndex();
+                Dictionary<BinID, List<VoxelID>> voxelLists = AggregateVoxelsIntoListsPerBin(voxelIds, oneDGrid, pcaVoxels, pcaDimension);
+                int peakIndex = 1;
+                foreach (List<BinID> binIdList in partitionedIndices)
                 {
-                    pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(unassignedPcaCode);
+                    string pcaCode = gridId.ToString() + "." + peakIndex.ToString();
+                    // the pixelIdList contains a list of pixelIds identified as being part of the Nth partition
+                    foreach (BinID binId in binIdList)
+                    {
+                        // Lookup for all the voxels bucketed under this binId
+                        if (voxelLists.ContainsKey(binId))
+                        {
+                            List<VoxelID> voxelIdsForThisBin = voxelLists[binId];
+                            foreach (VoxelID voxelId in voxelIdsForThisBin)
+                            {
+                                pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(pcaCode);
+                            }
+                            // remove that entry from voxelLists
+                            voxelLists.Remove(binId);
+                        }
+                    }
+                    peakIndex += 1;
+                }
+                // now, all the remaining entries in voxelLists are unassigned :  
+                // assign these to component 0
+                string unassignedPcaCode = gridId.ToString() + ".0";
+                List<BinID> unassignedBins = voxelLists.Keys.ToList();
+
+                foreach (BinID binID in unassignedBins)
+                {
+                    // Lookup for all the voxels bucketed under this pixelId
+                    List<VoxelID> voxelIdsForThisBin = voxelLists[binID];
+                    foreach (VoxelID voxelId in voxelIdsForThisBin)
+                    {
+                        pcaCodes[voxelId] = pcaCodes[voxelId].AppendCode(unassignedPcaCode);
+                    }
                 }
             }
         }

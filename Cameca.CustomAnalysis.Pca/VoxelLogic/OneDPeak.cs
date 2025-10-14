@@ -1,4 +1,6 @@
+using Cameca.CustomAnalysis.Utilities;
 using System.Collections.Generic;
+using System.IO;
 
 namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 
@@ -23,6 +25,7 @@ public class OneDPeak
     readonly float peakValue;
     readonly float summitAllowance;  // the value above which to ignore 'second peak'
     readonly float noiseFloorFraction;  // the value below which to stop looking for peak bins
+    readonly float borderExclusionRatio;  // the value below which to stop looking for peak bins
 
     public OneDPeak(OneDGridPartitionFinder partitionFinder, DensityLine line, BinID peakMaxBinId)
     {
@@ -32,8 +35,9 @@ public class OneDPeak
         this.inPeakBinIds = new List<BinID>();
         this.referenceLine = line;
         this.borderBinIds = new List<BinID>();
-        this.summitAllowance = partitionFinder.PeakSummitAllowance(); // hard code this value
-        this.noiseFloorFraction = partitionFinder.NoiseFloorFraction(); // hard code this value
+        this.summitAllowance = partitionFinder.PeakSummitAllowance();  
+        this.noiseFloorFraction = partitionFinder.NoiseFloorFraction();  
+        this.borderExclusionRatio = partitionFinder.BorderExclusionRatio();  
 
         this.peakValue = line.ValueAtBin(peakMaxBinId);
     }
@@ -47,11 +51,54 @@ public class OneDPeak
         return borderBinIds;
     }
 
+    internal void PartitionBinsForBorder(List<BinID> candidates, BinID borderBin)
+    {
+        float peakToBorderDistance = (float)this.peakMaxBinId.DistanceTo(borderBin);
+        float borderProximityThreshold = peakToBorderDistance * borderExclusionRatio;
+        foreach (BinID bin in candidates)
+        {
+            float binToBorderDistance = (float)bin.DistanceTo(borderBin);
+            if (binToBorderDistance > borderProximityThreshold)
+            {
+                inPeakBinIds.Add(bin);
+            }
+            else
+            {
+                borderBinIds.Add(bin);
+            }
+        }
+    }
+
+    internal void AddToInPeakBinIds(List<BinID> candidates, List<BinID> availableBins, BinID borderBin, float currentValue, float noiseLevel)
+    {
+        float borderValue = referenceLine.ValueAtBin(borderBin);
+        // now add all binsInDescentRegion to inPeakBinIds if we found a noise floor
+        // or if the bin is not in the border exclusion zone if we found an increase
+        if (availableBins.Contains(borderBin) && (borderValue > noiseLevel) && (borderValue >= currentValue))
+        {
+            // this is the case where the next bins looks like an increase
+            // apply the boderExclusionZone test
+            PartitionBinsForBorder(candidates, borderBin);
+        }
+        else
+        {
+            // no borderExclusionZone test needed --
+            // add all the bins in binsInDescentRegion to inPeakBinIds
+            foreach (BinID bin in candidates)
+            {
+                inPeakBinIds.Add(bin);
+            }
+        }
+    }
+    
     // Strategy -- just go from the peakMaxBinId to the left and right until 
     // increase is found or noise level reached
-
-    public void IdentifyBins(float noiseLevel, List<BinID> availableBins)
+    // if an increase is found, exclude bins near the border bin if 
+    // the distance to the border is less than borderExclusionRatio times
+    // distance to the peak
+    public void IdentifyBins(float noiseLevel, float borderExclusionRatio, List<BinID> availableBins)
     {
+
         inPeakBinIds.Add(peakMaxBinId);
         float peakValue = referenceLine.ValueAtBin(this.peakMaxBinId);
         float summitThreshhold = peakValue * summitAllowance;
@@ -60,27 +107,32 @@ public class OneDPeak
         BinID nextBin = peakMaxBinId.NextLowerBin();
         float nextValue = referenceLine.ValueAtBin(nextBin);
         float currentValue = peakValue;
+        List<BinID> binsInDescentRegion = new List<BinID>();
         while (availableBins.Contains(nextBin) && (nextValue > noiseLevel) && ((nextValue > summitThreshhold) || (nextValue < currentValue)))
         {
             currentValue = nextValue;
-            inPeakBinIds.Add(nextBin);
+            binsInDescentRegion.Add(nextBin);
             nextBin = nextBin.NextLowerBin();
             nextValue = referenceLine.ValueAtBin(nextBin);
         }
         borderBinIds.Add(nextBin);
+        AddToInPeakBinIds(binsInDescentRegion, availableBins, nextBin, currentValue, noiseLevel);
+ 
 
         // now, find bins on the upper side
         nextBin = peakMaxBinId.NextHigherBin();
         nextValue = referenceLine.ValueAtBin(nextBin);
+        binsInDescentRegion.Clear();
         currentValue = peakValue;
         while (availableBins.Contains(nextBin) && (nextValue > noiseLevel) && ((nextValue > summitThreshhold) || (nextValue < currentValue)))
         {
             currentValue = nextValue;
-            inPeakBinIds.Add(nextBin);
+            binsInDescentRegion.Add(nextBin);
             nextBin = nextBin.NextHigherBin();
             nextValue = referenceLine.ValueAtBin(nextBin);
         }
         borderBinIds.Add(nextBin);
+        AddToInPeakBinIds(binsInDescentRegion, availableBins, nextBin, currentValue, noiseLevel);
     }
 }
 

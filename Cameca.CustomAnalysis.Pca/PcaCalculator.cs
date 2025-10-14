@@ -13,12 +13,14 @@ public struct PcaPhaseIdentificationProperties
     public float gridProjectionBinSize;
     public float gridProjectionDelocalization;
     public float noiseFloorFraction;
+    public float borderExclusionRatio;
     public float peakSummitAllowance;
     public int numDimsForPCAPhaseId;
 
     public PcaPhaseIdentificationProperties(float gridProjectionBinSize,
           float gridProjectionDelocalization,
-          float noiseFloor, 
+          float noiseFloor,
+          float borderExclusionRatio,
           float peakSummitAllowance, 
           int numDimsForPCAPhaseId)
     {
@@ -27,6 +29,7 @@ public struct PcaPhaseIdentificationProperties
         this.gridProjectionBinSize = gridProjectionBinSize;
         this.gridProjectionDelocalization = gridProjectionDelocalization;
         this.noiseFloorFraction = noiseFloor;
+        this.borderExclusionRatio = borderExclusionRatio;
         this.peakSummitAllowance = peakSummitAllowance;
         this.numDimsForPCAPhaseId = numDimsForPCAPhaseId;
     }

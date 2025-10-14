@@ -548,7 +548,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         var compResults = PcaComponentsResults;
         if (compResults != null)
         {
-            var pcaPhaseIdProperties = new PcaPhaseIdentificationProperties(Properties.GridProjectionBinSize, Properties.GridProjectionDelocalization, Properties.NoiseFloorFraction, Properties.PeakSummitAllowance, Properties.NumberOfComponents);
+            var pcaPhaseIdProperties = new PcaPhaseIdentificationProperties(Properties.GridProjectionBinSize, Properties.GridProjectionDelocalization, Properties.NoiseFloorFraction, Properties.BorderExclusionRatio, Properties.PeakSummitAllowance, Properties.NumberOfComponents);
             ScoresGrid = PcaCalculator.GenerateScoresGrid(compResults, pcaPhaseIdProperties);
             PcaTwoDGridsResults = PcaCalculator.CalculateTwoDGrids(ScoresGrid, pcaPhaseIdProperties);
             PcaOneDGridsResults = PcaCalculator.CalculateOneDGrids(ScoresGrid, pcaPhaseIdProperties);
@@ -647,7 +647,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
         if ((scoresGrid != null) && (oneDGridsResults != null) && (twoDGridsResults != null))
         {
-            var pcaPhaseIdProperties = new PcaPhaseIdentificationProperties(Properties.GridProjectionBinSize, Properties.GridProjectionDelocalization, Properties.NoiseFloorFraction, Properties.PeakSummitAllowance, Properties.NumberOfComponents);
+            var pcaPhaseIdProperties = new PcaPhaseIdentificationProperties(Properties.GridProjectionBinSize, Properties.GridProjectionDelocalization, Properties.NoiseFloorFraction, Properties.BorderExclusionRatio, Properties.PeakSummitAllowance, Properties.NumberOfComponents);
             PcaPhaseIDResults = scoresGrid.GetPhasesStrategyF(pcaPhaseIdProperties, gridsToUseForPCA, histogramsToUseForPCA);
         }
     }
@@ -1193,8 +1193,11 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
                 break;
             case nameof(PcaProperties.GridProjectionDelocalization):
                 InvalidatePcaGrids();
-                break; 
+                break;
             case nameof(PcaProperties.NoiseFloorFraction):
+                InvalidatePcaGrids();
+                break;
+            case nameof(PcaProperties.BorderExclusionRatio):
                 InvalidatePcaGrids();
                 break;
             case nameof(PcaProperties.PeakSummitAllowance):

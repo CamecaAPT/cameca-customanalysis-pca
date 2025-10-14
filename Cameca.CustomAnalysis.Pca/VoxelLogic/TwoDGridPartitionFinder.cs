@@ -23,7 +23,6 @@ public class TwoDGridPartitionFinder
     List<PixelID> foundIncreasePixelIds;   
     readonly Dictionary<PeakID, TwoDPeak> peaks;
     PcaPhaseIdentificationProperties properties;
-    readonly float borderExclusionRatio;
 
     // These are the return codes returned by IterateIdentifyingPeaks()
     // Depending on this result, the Logic in FindPartitions will either
@@ -49,7 +48,6 @@ public class TwoDGridPartitionFinder
         this.longTailPixelIds = new List<PixelID>();
         this.unplacedPixelIds = twoDGrid.GridPointIds();
         this.properties = props;
-        this.borderExclusionRatio = 0.2f;
     }
 
     // for each iteration step,
@@ -353,7 +351,7 @@ public class TwoDGridPartitionFinder
             List<PixelID> excludedPixelIDs = new List<PixelID>();
             foreach (var peak in peaks.Values)
             {
-                List<PixelID> peakExcludedPixelIds = peak.ExcludePixelsNear(peakBorderPixelIds, borderExclusionRatio);
+                List<PixelID> peakExcludedPixelIds = peak.ExcludePixelsNear(peakBorderPixelIds, properties.borderExclusionRatio);
                 excludedPixelIDs.AddRange(peakExcludedPixelIds);
             }
         }

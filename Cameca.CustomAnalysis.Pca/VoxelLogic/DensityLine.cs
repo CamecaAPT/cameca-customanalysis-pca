@@ -4,6 +4,8 @@ using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Cameca.CustomAnalysis.Utilities;
+using System.ComponentModel.DataAnnotations;
 
 namespace Cameca.CustomAnalysis.Pca.VoxelLogic;
 
@@ -14,6 +16,11 @@ public readonly struct BinID : IComparable<BinID>
     public BinID(int binId)
     {
         this.binId = binId;
+    }
+    public int DistanceTo(BinID otherBinId)
+    {
+        var diff = binId - otherBinId.binId;
+        return (Math.Abs(diff));
     }
 
     public int XCoord()

@@ -106,6 +106,10 @@ public partial class PcaProperties : ObservableObject
     private float noiseFloorFraction = 0.05f;
 
     [ObservableProperty]
+    [field: Display(Name = "Border Exclusion Ratio")]
+    private float borderExclusionRatio = 0.2f;
+
+    [ObservableProperty]
     [field: Display(Name = "Peak Summit Allowance")]
     private float peakSummitAllowance = 0.8f;
 
