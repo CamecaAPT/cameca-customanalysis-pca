@@ -120,7 +120,7 @@ public class TwoDPeak
 
     // this gets called at the final step of PartitionFinder -- 
     // the algorithm says we should have a zone around the border between peaks
-    // such that pixel closer that PMD * W to a borderPixel should not be considered
+    // such that pixel closer than PMD * W to a borderPixel should not be considered
     // part of the peak, where W is the borderExclusionRatio, and 
     // PMD is the distance of the pixel to its peak maximum pixel.
     public List<PixelID> ExcludePixelsNear(HashSet<PixelID> allBorderPixelIds, float borderExclusionRatio)

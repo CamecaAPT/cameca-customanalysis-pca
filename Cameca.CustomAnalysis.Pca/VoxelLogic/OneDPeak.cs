@@ -53,11 +53,11 @@ public class OneDPeak
 
     internal void PartitionBinsForBorder(List<BinID> candidates, BinID borderBin)
     {
-        float peakToBorderDistance = (float)this.peakMaxBinId.DistanceTo(borderBin);
-        float borderProximityThreshold = peakToBorderDistance * borderExclusionRatio;
         foreach (BinID bin in candidates)
         {
             float binToBorderDistance = (float)bin.DistanceTo(borderBin);
+            float binToPeakMaximumDistance = (float)bin.DistanceTo(peakMaxBinId);
+            float borderProximityThreshold = binToPeakMaximumDistance * borderExclusionRatio;
             if (binToBorderDistance > borderProximityThreshold)
             {
                 inPeakBinIds.Add(bin);

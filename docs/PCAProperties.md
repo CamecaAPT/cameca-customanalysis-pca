@@ -90,6 +90,16 @@ This parameter governs where the algorithm "gives up" when looking for pixels to
 
 As an example, if this value is 0.05, then for any grid point to be included in a peak, it must have a population of at least 0.05 times the population of the grid point with the maximum population.
 
+## Parameter: Border Exclusion Ratio
+
+This parameter controls the width of the boder zone between overlapping peaks identified in 1D or 2D PCA space.
+
+Pixels (2D) or Bins (1D) close to a border with another peak will not be associated with the peak -- this parameter is sets the threshold for drawing this line.  Specifically, it is the ratio between the distance of a candidate pixel or bin to the border vs. its distance to the peak maximum.
+
+As an example, if the distance of a bin to its border is B pixels, and its distance to the peak maximum is M pixels, that bin is included in the peak if the border exclusion ratio is less than B/M
+
+The default value of this parameter is 0.2
+
 ## Parameter: Peak Summit Allowance
 
 This parameter controls the allowance given for treating two nearby maxima from being treated as separate peaks.  Statistical noise or some other condition might cause what appears to be a single peak to have two local maxima. This parameter is expressed as a fraction of the value in the more populated maximum grid point. As an example, if this parameter is 0.8, then if the value at the saddle point between the local maxima is greater than 0.8 times the value at the greater local maximum, then both maxima are considered to be part of the same peak.  That is, there are two different summits of the same peak.
