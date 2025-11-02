@@ -14,6 +14,7 @@ public class PcaModule : IModule
     {
         containerRegistry.AddCustomAnalysisUtilities(options => options.UseStandardBaseClasses = true);
 
+        containerRegistry.RegisterSegmentedRoi();
         containerRegistry.Register<object, PrincipalComponentAnalysis>(PrincipalComponentAnalysis.UniqueId);
         containerRegistry.RegisterInstance(PrincipalComponentAnalysis.DisplayInfo, PrincipalComponentAnalysis.UniqueId);
         containerRegistry.Register<IAnalysisMenuFactory, PcaNodeMenuFactory>(nameof(PcaNodeMenuFactory));

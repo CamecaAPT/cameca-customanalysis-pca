@@ -113,9 +113,12 @@ public partial class PcaProperties : ObservableObject
     [field: Display(Name = "PCA Phase Index")]
     private int pcaPhaseIndex = 0;
 
+    [Display(AutoGenerateField = false)]
+    private bool UsePCAPhaseForDetatchedROI { get; set; } = true;
+
     [ObservableProperty]
-    [field: Display(Name = "Use PCA Phase for Detatched ROI")]
-    private bool usePCAPhaseForDetatchedROI = true;
+    [field: Display(Name = "ROI Mode")]
+    private RoiMode usePhaseRois = RoiMode.UsePhaseRois;
 
     [Display(AutoGenerateField = false)]
     public SerializableColorMap? PcaColorMap { get; set; }
@@ -126,6 +129,16 @@ public partial class PcaProperties : ObservableObject
     [Display(AutoGenerateField = false)]
     [ObservableProperty]
     private bool logScaleY = true;
+}
+
+public enum RoiMode
+{
+    [Display(Name = "Use PCA Phase for Detatched ROI")]
+    UsePhaseRois = 0,
+    [Display(Name = "Use Component Score Isovalue")]
+    UseComponentScoreIsovalue = 1,
+    [Display(Name = "Use PCA Phase Child ROIs")]
+    UseChildPhaseRois = 2,
 }
 
 public class SerializableColorMap

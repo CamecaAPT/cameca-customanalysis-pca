@@ -23,6 +23,8 @@ using Cameca.CustomAnalysis.Pca.Models;
 using Cameca.CustomAnalysis.Pca.VoxelLogic;
 using Cameca.CustomAnalysis.PcaLib.Interface;
 using PcaLibPrincipalComponentAnalysis = Cameca.CustomAnalysis.PcaLib.Interface.PrincipalComponentAnalysis;
+using Cameca.CustomAnalysis.Utilities.Segmentation;
+using System.Text.Json;
 
 namespace Cameca.CustomAnalysis.Pca;
 
@@ -31,6 +33,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 {
     private readonly INodeDataProvider nodeDataProvider;
     private readonly IOptionsAccessor optionsAccessor;
+    private readonly SegmentedRoiManager<IStandardAnalysisFilterNodeBaseServices> segmentedManager;
     public const string UniqueId = "Cameca.CustomAnalysis.Pca.PcaNode";
 
     public static INodeDisplayInfo DisplayInfo { get; } = new NodeDisplayInfo("Principal Component Analysis");
@@ -170,6 +173,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         this.gridsUsageDelegate = this;
         this.gridsColorMapProvider = new PcaGridsColorMapProvider(null);
         this.histogramsUsageDelegate = this;
+        segmentedManager = SegmentedRoiManager.Create(this);
     }
 
     private async Task<PcaLibPrincipalComponentAnalysis> GetAnalysis(CancellationToken cancellationToken = default)
@@ -648,7 +652,8 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         if ((scoresGrid != null) && (oneDGridsResults != null) && (twoDGridsResults != null))
         {
             var pcaPhaseIdProperties = new PcaPhaseIdentificationProperties(Properties.GridProjectionBinSize, Properties.GridProjectionDelocalization, Properties.NoiseFloorFraction, Properties.PeakSummitAllowance, Properties.NumberOfComponents);
-            PcaPhaseIDResults = scoresGrid.GetPhasesStrategyF(pcaPhaseIdProperties, gridsToUseForPCA, histogramsToUseForPCA);
+            var results = scoresGrid.GetPhasesStrategyF(pcaPhaseIdProperties, gridsToUseForPCA, histogramsToUseForPCA);
+            SetPcaPhaseIDResults(results);
         }
     }
 
@@ -1064,6 +1069,15 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
   
     protected override async IAsyncEnumerable<ReadOnlyMemory<ulong>> GetIndicesDelegateAsync(IIonData ionData, IProgress<double>? progress, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        if (Properties.UsePhaseRois == RoiMode.UseChildPhaseRois)
+        {
+            foreach (var chunk in ionData.AllowAllFilter(progress, cancellationToken))
+            {
+                yield return chunk;
+            }
+            yield break;
+        }
+
         DataStateIsError = false;
         if (PcaComponentsResults is null)
         {
@@ -1086,7 +1100,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         var binner = new PositionToVoxels(minVector, voxelSize, xBinStride, yBinStride);
         var phaseIds = PcaPhaseIDResults;
 
-        if (Properties.UsePCAPhaseForDetatchedROI && (phaseIds != null))
+        if (Properties.UsePhaseRois == RoiMode.UsePhaseRois && (phaseIds != null))
         {
             int pcaPhaseOfInterest = Properties.PcaPhaseIndex;
 
@@ -1155,6 +1169,17 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         CanSave = true;
         switch (e.PropertyName)
         {
+            case nameof(PcaProperties.UsePhaseRois):
+                if (Properties.UsePhaseRois == RoiMode.UseChildPhaseRois)
+                {
+                    UpdateSegmentedChildrenRois();
+                }
+                else
+                {
+                    segmentedManager.RemoveChildren(DeleteChildPrompt.IfNotEmpty);
+                }
+                DataStateIsValid = false; // Need to recalucated filter indices for either allowing all for phase ROIs or the custom direct filter
+                break;
             case nameof(PcaProperties.GridMethod):
                 InvalidateAll();
                 break;
@@ -1252,7 +1277,106 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             Properties.PcaColorMap = SerializeColorMap(PcaColorMap);
             PcaColorMap = null;
         }
-        PcaPhaseIDResults = null;
+        ClearPcaPhaseIDResults();
+    }
+
+    private void SetPcaPhaseIDResults(PhaseIdResults results)
+    {
+        PcaPhaseIDResults = results;
+        WritePhaseDataSection(results);
+        if (Properties.UsePhaseRois == RoiMode.UseChildPhaseRois)
+        {
+            UpdateSegmentedChildrenRois();
+        }
+    }
+
+    private void UpdateSegmentedChildrenRois()
+    {
+        var phaseNameMap = GetPhaseNamesMapFromExtraData();
+
+        segmentedManager.UpdateSync(
+            getSegmentTitle: GetSegmentTitle,
+            excludeIds: new[] { byte.MaxValue },
+            cancellationToken: default);
+
+        string GetSegmentTitle(byte id)
+        {
+            return phaseNameMap?.GetValueOrDefault(id) ?? $"Phase {id}";
+        }
+    }
+
+    private Dictionary<int, string>? GetPhaseNamesMapFromExtraData()
+    {
+        if (Resources.GetValidIonData() is { } ionData && ionData.Sections.ContainsKey(Resources.DataSectionName))
+        {
+            var extraDataBytes = ionData.Sections[Resources.DataSectionName].ExtraData;
+            var utf8Reader = new Utf8JsonReader(extraDataBytes);
+            return JsonSerializer.Deserialize<Dictionary<int, string>>(ref utf8Reader);
+        }
+        return null;
+    }
+
+    private void ClearPcaPhaseIDResults()
+    {
+        if (PcaPhaseIDResults is not null)
+        {
+            // Top level ion data should alway be valid, so we can use that to ensure the delete works even if our current
+            // ROI IIonData instance might now be extracted. This doesn't matter as it's just deleting a section for the APT file
+            Resources.TopLevelNode.GetValidIonData()!.DeleteSection(Resources.DataSectionName);
+
+            PcaPhaseIDResults = null;
+            segmentedManager.InvalidateChildren();
+        }
+    }
+
+    private void DeleteDataSection()
+    {
+        if (Resources.TopLevelNode.GetValidIonData() is { } ionData)
+        {
+            ionData.DeleteSection(Resources.DataSectionName);
+        }
+    }
+    
+    private bool WritePhaseDataSection(PhaseIdResults results)
+    {
+        if (Resources.GetValidIonData() is not { } ionData
+            || Analysis?.GridParams is not { } gridParams)
+        {
+            return false;
+        }
+
+        var minVector = gridParams.GetMinVector();
+        var voxelSize = gridParams.GetVoxelSizeDimensions();
+        int xBinStride = gridParams.VoxelCount[0];
+        int yBinStride = gridParams.VoxelCount[1];
+
+        var binner = new PositionToVoxels(minVector, voxelSize, xBinStride, yBinStride);
+
+        // Clear old section data
+        DeleteDataSection();
+
+        // Re-add new empty section
+        ionData.AddSection<byte>(Resources.DataSectionName);
+         
+        // Add json mapping of ID to user display names as extra data section
+        var serializableNameMap = results.PhaseNamesMap().ToDictionary(x => x.Key, x => x.Value.UserDisplayableName());
+        ionData.Sections[Resources.DataSectionName].UpdateExtraData(JsonSerializer.SerializeToUtf8Bytes(serializableNameMap));
+
+        // Map all ions to their corresponding voxels, then then map that voxel to a phase ID
+        foreach (var chunk in ionData.CreateSectionDataEnumerable(IonDataSectionName.Position, Resources.DataSectionName))
+        {
+            byte[] buffer = new byte[chunk.Length];
+            var positionsMem = chunk.ReadSectionData<Vector3>(IonDataSectionName.Position);
+            for (var i = 0; i < chunk.Length; i++)
+            {
+                Vector3 pos = positionsMem.Span[i];
+                int voxel = binner.ToVoxel(pos);
+                byte phase = (byte)(results.PhaseForVoxel(new VoxelID(voxel)) ?? byte.MaxValue);
+                buffer[i] = phase;
+            }
+            chunk.WriteSectionData<byte>(Resources.DataSectionName, buffer);
+        }
+        return true;
     }
 
     public async Task IncrementComponentIndex(int incr, CancellationToken token)
@@ -1268,20 +1392,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             newIndex = Properties.NumberOfComponents - 1;
         }
         Properties.ComponentIndex = newIndex;
-        UpdateSelectedComponent(token);
-    }
-    // Should actually be implemented in the base class CoreNodeBase along with existing DataStateIsValid.
-    // Remove after a Cameca.CustomAnalysis.Utilities updates adds this functionality
-    protected bool DataStateIsError
-    {
-        get => DataState?.IsErrorState ?? false;
-        set
-        {
-            if (DataState is not null)
-            {
-                DataState.IsErrorState = value;
-            }
-        }
+        await UpdateSelectedComponent(token);
     }
 
     protected override void Dispose(bool disposing)

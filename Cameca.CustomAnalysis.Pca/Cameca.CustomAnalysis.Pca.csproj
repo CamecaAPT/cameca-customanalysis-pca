@@ -34,7 +34,7 @@
 	</PropertyGroup>
 
 	<ItemGroup Label="Package Dependencies">
-		<PackageReference Include="Cameca.CustomAnalysis.Utilities" Version="4.1.0-alpha.1" />
+		<PackageReference Include="Cameca.CustomAnalysis.Utilities" Version="5.0.0-alpha.8" />
 		<PackageReference Include="LiveCharts.Wpf.NetCore3" Version="0.9.8" />
 		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
 	</ItemGroup>
