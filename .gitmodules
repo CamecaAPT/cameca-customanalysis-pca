@@ -1,0 +1,3 @@
+[submodule "Cameca.CustomAnalysis.PcaLib/lib/eigen"]
+	path = Cameca.CustomAnalysis.PcaLib/lib/eigen
+	url = https://gitlab.com/libeigen/eigen

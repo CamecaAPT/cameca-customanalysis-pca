@@ -71,11 +71,11 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)packages\intelmkl.devel.win-x64.2025.0.1.5\build\native\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)packages\intelmkl.devel.win-x64.2025.0.1.5\build\native\include;$(SolutionDir)Cameca.CustomAnalysis.PcaLib\lib\eigen;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)packages\intelmkl.devel.win-x64.2025.0.1.5\build\native\win-x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(SolutionDir)packages\intelmkl.devel.win-x64.2025.0.1.5\build\native\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)packages\intelmkl.devel.win-x64.2025.0.1.5\build\native\include;$(SolutionDir)Cameca.CustomAnalysis.PcaLib\lib\eigen;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)packages\intelmkl.devel.win-x64.2025.0.1.5\build\native\win-x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -181,7 +181,6 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="..\packages\Eigen3.3.3.9\build\native\Eigen3.targets" Condition="Exists('..\packages\Eigen3.3.3.9\build\native\Eigen3.targets')" />
     <Import Project="..\packages\intelopenmp.redist.win.2025.0.0.1162\build\native\intelopenmp.redist.win.targets" Condition="Exists('..\packages\intelopenmp.redist.win.2025.0.0.1162\build\native\intelopenmp.redist.win.targets')" />
     <Import Project="..\packages\intelopenmp.devel.win.2025.0.0.1162\build\native\intelopenmp.devel.win.targets" Condition="Exists('..\packages\intelopenmp.devel.win.2025.0.0.1162\build\native\intelopenmp.devel.win.targets')" />
     <Import Project="..\packages\inteltbb.redist.win.2022.0.0.396\build\native\inteltbb.redist.win.targets" Condition="Exists('..\packages\inteltbb.redist.win.2022.0.0.396\build\native\inteltbb.redist.win.targets')" />
@@ -193,7 +192,6 @@
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\Eigen3.3.3.9\build\native\Eigen3.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Eigen3.3.3.9\build\native\Eigen3.targets'))" />
     <Error Condition="!Exists('..\packages\intelopenmp.redist.win.2025.0.0.1162\build\native\intelopenmp.redist.win.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\intelopenmp.redist.win.2025.0.0.1162\build\native\intelopenmp.redist.win.targets'))" />
     <Error Condition="!Exists('..\packages\intelopenmp.devel.win.2025.0.0.1162\build\native\intelopenmp.devel.win.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\intelopenmp.devel.win.2025.0.0.1162\build\native\intelopenmp.devel.win.targets'))" />
     <Error Condition="!Exists('..\packages\inteltbb.redist.win.2022.0.0.396\build\native\inteltbb.redist.win.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\inteltbb.redist.win.2022.0.0.396\build\native\inteltbb.redist.win.targets'))" />
