@@ -1,9 +1,12 @@
 #pragma once
 
+using namespace System::Text::Json::Serialization;
+
 namespace Cameca::CustomAnalysis::PcaLib::Interface {
 	public ref class GridParameters
 	{
 	public:
+		[JsonConstructor]
 		GridParameters(cli::array<double>^ gridStart, double voxelSize, cli::array<int>^ voxelCount)
 			: gridStart(gridStart), voxelSize(voxelSize), voxelCount(voxelCount) { }
 

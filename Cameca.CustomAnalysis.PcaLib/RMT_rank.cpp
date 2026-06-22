@@ -37,16 +37,16 @@ std::pair<double, double> EigenvalueAdjustment(MatrixBase<derived>& evals, int n
 
     // Compute the MP noise-eigenvalude distribution given the rank
     MarchenkoPasturDist<T> MPdist(nObs, nEvals - rank);
-    Vector<T, Dynamic> RandEvals(nEvals - rank);
-    Map<Vector<T, Dynamic>> RandEvalsMap(RandEvals.data(), nEvals - rank);
+    Eigen::Vector<T, Dynamic> RandEvals(nEvals - rank);
+    Map<Eigen::Vector<T, Dynamic>> RandEvalsMap(RandEvals.data(), nEvals - rank);
     MPdist.NoiseEvals(0, RandEvalsMap);  // all of the eigenvalues
 
     // Perform least squares fit of actual eigenvalues vs predicted noise eigenvalues
     Matrix<T, Dynamic, Dynamic> A(number2fit, 2);
     A.col(0) = RandEvals.head(number2fit);
     A.col(1).fill((T)1.0);
-    Vector<T, Dynamic> b = evals.segment(rank, number2fit);
-    Vector<T, Dynamic> x = A.colPivHouseholderQr().solve(b);
+    Eigen::Vector<T, Dynamic> b = evals.segment(rank, number2fit);
+    Eigen::Vector<T, Dynamic> x = A.colPivHouseholderQr().solve(b);
 
     std::pair<double, double> lineParams;
     lineParams.first = (double)x(0); // slope
@@ -146,7 +146,7 @@ template <typename derived>
 int EstimateRank(MatrixBase<derived>& evals, int nObs, int nGaps, int P, bool refine) {
     using T = typename MatrixBase<derived>::Scalar;
     int nEvals = evals.size();
-    Vector<T, Dynamic> gaps;
+    Eigen::Vector<T, Dynamic> gaps;
     if (nGaps > 0)
         gaps = evals.head(nEvals - nGaps) - evals.tail(nEvals - nGaps);
     else
@@ -171,7 +171,7 @@ int EstimateRank(MatrixBase<derived>& evals, int nObs, int nGaps, int P, bool re
         int oldrank;
         int iter = 0;
         std::pair<double, double> linfit;
-        Vector<T, Dynamic> adjustedEvals(nEvals);
+        Eigen::Vector<T, Dynamic> adjustedEvals(nEvals);
         do {
             oldrank = rank;
             // Adjust the eigenvalues based on the rank

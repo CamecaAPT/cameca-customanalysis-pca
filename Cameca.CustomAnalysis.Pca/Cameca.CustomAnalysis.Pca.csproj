@@ -9,6 +9,7 @@
 		<RuntimeIdentifier>win10-x64</RuntimeIdentifier>
 		<SelfContained>false</SelfContained>
 		<AssemblyName>Cameca.CustomAnalysis.Pca</AssemblyName>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 
 	<PropertyGroup Label="Direct Output" Condition="'$(Configuration)' == 'Debug'">

@@ -11,6 +11,7 @@ namespace Cameca::CustomAnalysis::PcaLib
 
 		const int GetVoxelCount() const { return static_cast<int>(matrix.rows()); }
 		const int GetFeatureCount() const { return static_cast<int>(matrix.cols()); }
+		const int GetDataLength() const { return static_cast<int>(matrix.size()); }
 		
 		const Eigen::MatrixXf& GetMatrix() const { return matrix; }
 		const std::vector<int> GetVoxelIndices() const { return voxelIndices; }

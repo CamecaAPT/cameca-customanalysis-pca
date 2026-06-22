@@ -19,6 +19,10 @@ public class PcaModule : IModule
         containerRegistry.RegisterInstance(PrincipalComponentAnalysis.DisplayInfo, PrincipalComponentAnalysis.UniqueId);
         containerRegistry.Register<IAnalysisMenuFactory, PcaNodeMenuFactory>(nameof(PcaNodeMenuFactory));
         containerRegistry.Register<object, PcaViewModel>(PcaViewModel.UniqueId);
+
+        containerRegistry.Register<object, VoxelizationAnalysis>(VoxelizationAnalysis.UniqueId);
+        containerRegistry.RegisterInstance(VoxelizationAnalysis.DisplayInfo, VoxelizationAnalysis.UniqueId);
+        containerRegistry.Register<IAnalysisMenuFactory, VoxelizationMenuFactory>(nameof(VoxelizationMenuFactory));
     }
 
     public void OnInitialized(IContainerProvider containerProvider)

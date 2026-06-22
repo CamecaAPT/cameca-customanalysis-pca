@@ -13,6 +13,14 @@ namespace Cameca::CustomAnalysis::PcaLib {
 		VoxelFeatureMatrix(std::shared_ptr<const VoxelFeatureMatrixImpl> impl);
 		~VoxelFeatureMatrix();
 
+		static VoxelFeatureMatrix FromData(
+			const float* matrixData,
+			int rows,
+			int cols,
+			const int* voxelIndicesData,
+			int voxelIndicesLength);
+
+
 		VoxelFeatureMatrix(const VoxelFeatureMatrix&) = delete;
 		VoxelFeatureMatrix& operator=(const VoxelFeatureMatrix&) = delete;
 		VoxelFeatureMatrix(VoxelFeatureMatrix&&) noexcept;
@@ -20,6 +28,8 @@ namespace Cameca::CustomAnalysis::PcaLib {
 
 		const int GetVoxelCount() const;
 		const int GetFeatureCount() const;
+		const float* GetData() const;
+		const int GetDataLength() const;
 
 		const std::vector<int> GetVoxelIndices() const;
 
