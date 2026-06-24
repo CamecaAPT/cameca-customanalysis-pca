@@ -5,13 +5,12 @@ namespace Cameca.CustomAnalysis.Pca;
 
 public sealed class VoxelFeatureMatrixExtraData
 {
+    [JsonPropertyName("grid_parameters")]
     public GridParameters GridParameters { get; }
-    public int NonEmptyVoxels { get; }
 
     [JsonConstructor]
-    public VoxelFeatureMatrixExtraData(GridParameters gridParameters, int nonEmptyVoxels)
+    public VoxelFeatureMatrixExtraData(GridParameters gridParameters)
     {
         GridParameters = gridParameters;
-        NonEmptyVoxels = nonEmptyVoxels;
     }
 }
