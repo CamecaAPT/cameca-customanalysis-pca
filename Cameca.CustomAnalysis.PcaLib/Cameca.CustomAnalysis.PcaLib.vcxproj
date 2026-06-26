@@ -151,11 +151,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="blas_wrapper.h" />
+    <ClInclude Include="ClusterData.h" />
+    <ClInclude Include="ClustererKMeans.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="kmeans.h" />
     <ClInclude Include="PcaLibExport.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="PrincipalComponentAnalysis.h" />
     <ClInclude Include="RMT_rank.h" />
+    <ClInclude Include="utilities.h" />
     <ClInclude Include="VoxelFeatureMatrix.h" />
     <ClInclude Include="VoxelFeatureMatrixBuilder.h" />
     <ClInclude Include="VoxelFeatureMatrixFrom3DGridBuilder.h" />
@@ -163,6 +168,7 @@
     <ClInclude Include="VoxelFeatureMatrixIon.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ClustererKMeans.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

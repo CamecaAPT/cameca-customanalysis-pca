@@ -23,6 +23,10 @@ public class PcaModule : IModule
         containerRegistry.Register<object, VoxelizationAnalysis>(VoxelizationAnalysis.UniqueId);
         containerRegistry.RegisterInstance(VoxelizationAnalysis.DisplayInfo, VoxelizationAnalysis.UniqueId);
         containerRegistry.Register<IAnalysisMenuFactory, VoxelizationMenuFactory>(nameof(VoxelizationMenuFactory));
+
+        containerRegistry.Register<object, KMeansAnalysis>(KMeansAnalysis.UniqueId);
+        containerRegistry.RegisterInstance(KMeansAnalysis.DisplayInfo, KMeansAnalysis.UniqueId);
+        containerRegistry.Register<IAnalysisMenuFactory, KMeansMenuFactory>(nameof(KMeansMenuFactory));
     }
 
     public void OnInitialized(IContainerProvider containerProvider)

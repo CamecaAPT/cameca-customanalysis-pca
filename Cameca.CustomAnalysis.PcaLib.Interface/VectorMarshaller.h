@@ -23,10 +23,28 @@ namespace Cameca::CustomAnalysis::PcaLib::Interface
 		static std::vector<T> ToVector(System::Collections::Generic::IEnumerable<T>^ in)
 		{
 			std::vector<T> out;
-			for each (float item in in)
+			for each (T item in in)
 			{
 				out.push_back(item);
 			}
+			return out;
+		}
+
+		template<typename T>
+		static const std::vector<std::vector<T>> ToNestedVector(System::Collections::Generic::IEnumerable<System::Collections::Generic::IEnumerable<T>^>^ in)
+		{
+			std::vector<std::vector<T>> out;
+
+			for each (System::Collections::Generic::IEnumerable<T> ^ innerEnumerable in in)
+			{
+				std::vector<T> innerVector;
+				for each (T item in innerEnumerable)
+				{
+					innerVector.push_back(item);
+				}
+				out.push_back(innerVector);
+			}
+
 			return out;
 		}
 	};

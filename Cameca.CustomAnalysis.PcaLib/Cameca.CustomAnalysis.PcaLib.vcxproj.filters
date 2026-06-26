@@ -45,6 +45,21 @@
     <ClInclude Include="VoxelFeatureMatrixFrom3DGridBuilder.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="blas_wrapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="kmeans.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ClusterData.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ClustererKMeans.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -66,6 +81,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="VoxelFeatureMatrixFrom3DGridBuilder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ClustererKMeans.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
