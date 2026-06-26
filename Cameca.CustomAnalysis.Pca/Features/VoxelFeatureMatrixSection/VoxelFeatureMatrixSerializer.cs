@@ -24,7 +24,7 @@ internal static class VoxelFeatureMatrixSerializer
         int cols = voxelFeatureMatrix.FeatureCount;
         var matrixData = GetVoxelFeatureMatrixData(voxelFeatureMatrix);
 
-        var packedData = new PackedDataBuilder<VoxelFeatureMatrixExtraData>(data.ExtraData)
+        var packedData = new PackedDataDefinitionBuilder<VoxelFeatureMatrixExtraData>(data.ExtraData)
             .AddPackedData<int>("voxel_indices", voxelIndices, new int[] { voxelIndices.Length })
             .AddPackedData<float>("matrix", matrixData, new int[] { rows, cols }, StorageOrder.F)
             .Build();
