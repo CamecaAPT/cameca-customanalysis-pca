@@ -17,6 +17,5 @@ internal class VoxelizationMenuFactory : ConditionalMenuFactoryBase
     public override string[]? DisallowedTypes { get; } = new string[]
     {
         VoxelizationAnalysis.UniqueId,
-        KMeansAnalysis.UniqueId,
     };
 }

@@ -126,7 +126,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     {
         get
         {
-            return Properties.GridMethod == GridMethod.Bins
+            return SelectedGridMethod == GridMethod.Bins
                 ? !LoadingHistogramRenderData.Any()
                 : !LoadingsSeries.Any() || !LoadingsLabels.Any() || !ScoresHistogramRenderData.Any();
         }
@@ -176,6 +176,10 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         segmentedManager = SegmentedRoiManager.Create(this);
     }
 
+    private GridMethod? SelectedGridMethod => Resources.GetValidIonData() is { } ionData
+        ? GetVoxelFeatureData(ionData).ExtraData.GridMethod
+        : null;
+
     private async Task<PcaLibPrincipalComponentAnalysis> GetAnalysis(CancellationToken cancellationToken = default)
     {
         if (Analysis is null)
@@ -184,105 +188,32 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             {
                 throw new InvalidOperationException($"IonData is required to create {nameof(VoxelFeatureMatrix)}");
             }
-            if (Properties.GridMethod == GridMethod.Grid3D)
-            {
-                Analysis = CreateAnalysisFrom3DGrid(ionData);
-            }
-            else
-            {
-                var featureResolver = CreateFeatureResolver();
-                Analysis = CreateAnalysis(ionData, featureResolver);
-            }
+            Analysis = CreateAnalysis(ionData);
         }
         return Analysis;
     }
-    private IFeatureResolver CreateFeatureResolver()
+
+    private VoxelFeatureMatrixSectionData GetVoxelFeatureData(IIonData ionData)
     {
-        switch (Properties.GridMethod)
+        // This isn't the top level -- .Parent! is safe
+        if (VoxelFeatureMatrixSerializer.ReadFromIonDataSection(ionData, Resources.Parent!.DataSectionName) is not { } data)
         {
-            case GridMethod.IonTypes:
-                return new IonTypeFeatureResolver();
-            case GridMethod.Peaks:
-                var ionRanges = Resources.RangeManager?.GetIonRanges()
-                    ?? throw new InvalidOperationException("Requires range information");
-                return new PeakFeatureResolver(ionRanges);
-            case GridMethod.Bins:
-                return new BinnedFeatureResolver(Properties.BinSize, Properties.BinStart, Properties.BinEnd);
-            default:
-                throw new NotSupportedException($"Grid Method is not supported: {Properties.GridMethod.ToString()}");
+            throw new InvalidOperationException("Parent must define a VoxelFeatureMatrix");
         }
+        return data;
     }
 
-    private PcaLibPrincipalComponentAnalysis CreateAnalysisFrom3DGrid(IIonData ionData)
+    private PcaLibPrincipalComponentAnalysis CreateAnalysis(IIonData ionData)
     {
-        if (Resources.GetGrid() is not { } grid)
+        if (GetVoxelFeatureData(ionData) is not { } data)
         {
-            throw new InvalidOperationException("3D Grid Method requires presence of 3D Grid node");
-        }
-        var hostGridData = grid.GetData<IGrid3DData>()!;
-        double voxelSize = hostGridData.VoxelSize[0];
-        if (voxelSize != hostGridData.VoxelSize[1] || voxelSize != hostGridData.VoxelSize[2])
-        {
-            throw new InvalidOperationException("All 3D Grid voxel dimensions must be the same");
+            throw new InvalidOperationException("Parent must define a VoxelFeatureMatrix");
         }
 
-        var gridStart = new double[]{
-            hostGridData.GridRange[0, 0],
-            hostGridData.GridRange[1, 0],
-            hostGridData.GridRange[2, 0],
-        };
-        var gridParams = new GridParameters(gridStart, voxelSize, hostGridData.NumVoxels);
+        var gridParams = data.ExtraData.GridParameters;
+        var matrix = data.VoxelFeatureMatrix;
 
-        int totalVoxelCount = gridParams.VoxelCount.Aggregate(1, (accu, next) => accu *= next);
-        int nFeatureCount = ionData.Ions.Count();
-        using var builder = new VoxelFeatureMatrixFrom3DGridBuilder(totalVoxelCount, nFeatureCount);
-
-        for (int i = 0; i < nFeatureCount; i++)
-        {
-            builder.Update(hostGridData.GetDataForIon(i));
-        }
-
-        return new PcaLibPrincipalComponentAnalysis(gridParams, builder.Build());
-    }
-
-    private PcaLibPrincipalComponentAnalysis CreateAnalysis(IIonData ionData, IFeatureResolver featureResolver)
-    {
-        var gridParams = Grid3DUtils.CreateGridParameters(
-            ionData.Extents,
-            Properties.VoxelSize,
-            Properties.VoxelGridEdgeBuffer);
-
-        int totalVoxelCount = gridParams.VoxelCount.Aggregate(1, (accu, next) => accu *= next);
-        using var builder = new VoxelFeatureMatrixBuilder(totalVoxelCount, ionData.IonCount);
-        var sectionNames = featureResolver.RequiredSections
-            .Concat(new string[] { IonDataSectionName.Position })
-            .ToArray();
-        int voxelsX = gridParams.VoxelCount[0];
-        int voxelsY = gridParams.VoxelCount[1];
-        int voxelsAll = voxelsX * voxelsY * gridParams.VoxelCount[2];
-
-        foreach (var chunk in ionData.CreateSectionDataEnumerable(sectionNames))
-        {
-            var buffer = new VoxelFeatureMatrixIon[chunk.Length];
-            var positions = chunk.ReadSectionData<Vector3>(IonDataSectionName.Position);
-            featureResolver.LoadChunk(chunk);
-
-            for (var i = 0; i < chunk.Length; i++)
-            {
-                var position = positions.Span[i];
-
-                int voxX = (int)Math.Floor((position.X - gridParams.GridStart[0]) / gridParams.VoxelSize);
-                int voxY = (int)Math.Floor((position.Y - gridParams.GridStart[1]) / gridParams.VoxelSize);
-                int voxZ = (int)Math.Floor((position.Z - gridParams.GridStart[2]) / gridParams.VoxelSize);
-
-                int voxIndex = voxX + (voxY * voxelsX) + (voxZ * voxelsX * voxelsY);
-
-                int feature = featureResolver.GetFeature(i);
-                buffer[i] = new VoxelFeatureMatrixIon(voxIndex, feature);
-            }
-            builder.Update(buffer);
-        }
-        return new PcaLibPrincipalComponentAnalysis(gridParams, builder.Build());
+        return new PcaLibPrincipalComponentAnalysis(gridParams, matrix);
     }
 
     public bool UsesGridForPca(string gridID)
@@ -387,34 +318,6 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         return new EigenvalueResults(scores);
     }
 
-    /// <summary>
-    /// <see cref="IGrid3DData"/> assumes number of Ions defined the max index, but as we're repurposing
-    /// it a bit, we need to use some other method of identifying how many channels it supports.
-    /// A naive solution is just try until we get an exception and use that max value.
-    /// </summary>
-    /// <param name="gridData"></param>
-    /// <returns></returns>
-    private static int GetMaxGrid3DDataIndex(IGrid3DData gridData)
-    {
-        int max = 0;
-        try
-        {
-            while (true)
-            {
-                gridData.GetDataForIon(max);
-                max++;
-            }
-        }
-        catch (ArgumentOutOfRangeException)
-        {
-            return max;
-        }
-        catch
-        {
-            throw;
-        }
-    }
-
     [RelayCommand(CanExecute = nameof(UpdateRankEstimationCanExecute))]
     public async Task UpdateRankEstimation(CancellationToken cancellationToken)
     {
@@ -424,7 +327,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
         if ((Analysis ??= await GetAnalysis(cancellationToken)) is { } pca)
         {
-            if (Properties.GridMethod != GridMethod.Grid3D)
+            if (SelectedGridMethod != GridMethod.Grid3D)
             {
                 int estimatedRank = pca.EstimateRank(
                     Properties.Gaps,
@@ -595,7 +498,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             Values = new ChartValues<float>(loadingData),
         };
 
-        switch (Properties.GridMethod)
+        switch (SelectedGridMethod)
         {
             case GridMethod.IonTypes:
             case GridMethod.Grid3D:
@@ -638,7 +541,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             default:
                 break;
         }
-   }
+    }
 
     // PCA Phases can be updated independently of the Components and grids   if the number of grids to use changes
     // or if any of the properties to use in the calculation change
@@ -1179,24 +1082,6 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
                     segmentedManager.RemoveChildren(DeleteChildPrompt.IfNotEmpty);
                 }
                 DataStateIsValid = false; // Need to recalucated filter indices for either allowing all for phase ROIs or the custom direct filter
-                break;
-            case nameof(PcaProperties.GridMethod):
-                InvalidateAll();
-                break;
-            case nameof(PcaProperties.VoxelSize):
-            case nameof(PcaProperties.VoxelGridEdgeBuffer):
-                if (Properties.GridMethod != GridMethod.Grid3D)
-                {
-                    InvalidateAll();
-                }
-                break;
-            case nameof(PcaProperties.BinSize):
-            case nameof(PcaProperties.BinStart):
-            case nameof(PcaProperties.BinEnd):
-                if (Properties.GridMethod == GridMethod.Bins)
-                {
-                    InvalidateAll();
-                }
                 break;
             case nameof(PcaProperties.NumberOfComponents):
                 if (Properties.NumberOfComponents == 0)

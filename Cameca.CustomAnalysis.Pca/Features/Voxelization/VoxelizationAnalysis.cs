@@ -1,11 +1,14 @@
 ﻿using Cameca.CustomAnalysis.Interface;
 using Cameca.CustomAnalysis.PcaLib.Interface;
 using Cameca.CustomAnalysis.Utilities;
+using Cameca.CustomAnalysis.Utilities.Segmentation;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 
@@ -24,19 +27,12 @@ internal partial class VoxelizationAnalysis : StandardAnalysisFilterNodeBase<Vox
 
     private void Update(IIonData ionData)
     {
-        var gridParams = Grid3DUtils.CreateGridParameters(
-            ionData.Extents,
-            Properties.VoxelSize,
-            Properties.VoxelGridEdgeBuffer);
-        var featureResolver = CreateFeatureResolver();
-        var voxelFeatureMatrix = CreateVoxelFeatureMatrix(ionData, gridParams, featureResolver);
+        var (gridParams, voxelFeatureMatrix) = CreateVoxelFeatureMatrix(ionData);
 
-        VoxelFeatureMatrixSerializer.WriteToIonDataSection(
-            ionData,
-            Resources.DataSectionName,
-            gridParams,
-            voxelFeatureMatrix.GetVoxelIndices(),
-            voxelFeatureMatrix);
+        var extraData = new VoxelFeatureMatrixExtraData(gridParams, Properties.GridMethod);
+        var data = new VoxelFeatureMatrixSectionData(extraData, voxelFeatureMatrix);
+
+        VoxelFeatureMatrixSerializer.WriteToIonDataSection(ionData, Resources.DataSectionName, data);
     }
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
@@ -52,6 +48,46 @@ internal partial class VoxelizationAnalysis : StandardAnalysisFilterNodeBase<Vox
             yield return chunk;
         }
     }
+
+    protected override void OnPropertiesChanged(PropertyChangedEventArgs e)
+    {
+        base.OnPropertiesChanged(e); CanSave = true;
+        switch (e.PropertyName)
+        {
+            case nameof(VoxelizationProperties.GridMethod):
+                InvalidateAll();
+                break;
+            case nameof(VoxelizationProperties.VoxelSize):
+            case nameof(VoxelizationProperties.VoxelGridEdgeBuffer):
+                //if (Properties.GridMethod != GridMethod.Grid3D)
+                //{
+                    InvalidateAll();
+                //}
+                break;
+            case nameof(VoxelizationProperties.BinSize):
+            case nameof(VoxelizationProperties.BinStart):
+            case nameof(VoxelizationProperties.BinEnd):
+                if (Properties.GridMethod == GridMethod.Bins)
+                {
+                    InvalidateAll();
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void InvalidateAll()
+    {
+        DataStateIsValid = false;
+        //Properties.NumberOfComponents = 0;
+        //Analysis = null;
+        //NoiseEigenvalueResults = null;
+        //EigenvalueResults = null;
+        //InvalidatePcaComponents();
+        //InvalidatePcaPhases();
+    }
+
     private IFeatureResolver CreateFeatureResolver()
     {
         switch (Properties.GridMethod)
@@ -69,9 +105,58 @@ internal partial class VoxelizationAnalysis : StandardAnalysisFilterNodeBase<Vox
         }
     }
 
-    private static VoxelFeatureMatrix CreateVoxelFeatureMatrix(IIonData ionData, GridParameters gridParams, IFeatureResolver featureResolver)
+    private (GridParameters GridParams, VoxelFeatureMatrix Matrix) CreateVoxelFeatureMatrix(IIonData ionData)
     {
+        if (Properties.GridMethod == GridMethod.Grid3D)
+        {
+            return CreateVoxelFeatureMatrixFrom3DGrid(ionData);
+        }
+        else
+        {
+            var featureResolver = CreateFeatureResolver();
+            return CreateVoxelFeatureMatrixFromFeatures(ionData, featureResolver);
+        }
+    }
 
+    private (GridParameters GridParams, VoxelFeatureMatrix Matrix) CreateVoxelFeatureMatrixFrom3DGrid(IIonData ionData)
+    {
+        if (Resources.GetGrid() is not { } grid)
+        {
+            throw new InvalidOperationException("3D Grid Method requires presence of 3D Grid node");
+        }
+        var hostGridData = grid.GetData<IGrid3DData>()!;
+        double voxelSize = hostGridData.VoxelSize[0];
+        if (voxelSize != hostGridData.VoxelSize[1] || voxelSize != hostGridData.VoxelSize[2])
+        {
+            throw new InvalidOperationException("All 3D Grid voxel dimensions must be the same");
+        }
+
+        var gridStart = new double[]{
+                hostGridData.GridRange[0, 0],
+                hostGridData.GridRange[1, 0],
+                hostGridData.GridRange[2, 0],
+            };
+        var gridParams = new GridParameters(gridStart, voxelSize, hostGridData.NumVoxels);
+
+        int totalVoxelCount = gridParams.VoxelCount.Aggregate(1, (accu, next) => accu *= next);
+        int nFeatureCount = ionData.Ions.Count();
+        using var builder = new VoxelFeatureMatrixFrom3DGridBuilder(totalVoxelCount, nFeatureCount);
+
+        for (int i = 0; i < nFeatureCount; i++)
+        {
+            builder.Update(hostGridData.GetDataForIon(i));
+        }
+
+        return (gridParams, builder.Build());
+
+    }
+
+    private (GridParameters GridParams, VoxelFeatureMatrix Matrix) CreateVoxelFeatureMatrixFromFeatures(IIonData ionData, IFeatureResolver featureResolver)
+    {
+        GridParameters gridParams = Grid3DUtils.CreateGridParameters(
+            ionData.Extents,
+            Properties.VoxelSize,
+            Properties.VoxelGridEdgeBuffer);
         int totalVoxelCount = gridParams.VoxelCount.Aggregate(1, (accu, next) => accu *= next);
         using var builder = new VoxelFeatureMatrixBuilder(totalVoxelCount, ionData.IonCount);
         var sectionNames = featureResolver.RequiredSections
@@ -102,7 +187,7 @@ internal partial class VoxelizationAnalysis : StandardAnalysisFilterNodeBase<Vox
             }
             builder.Update(buffer);
         }
-        return builder.Build();
+        return (gridParams, builder.Build());
     }
 }
 
