@@ -40,6 +40,7 @@ T costFcn(const VectorT<T>& minVal) {
 
 // dist is nSamples x nComponents, the squared distance from each point to each centroid
 // If the optional diagCV is provided, the squared mahalnobis distance is computed
+// Note diagCV.value() has type Eigen::VectorT<T>
 template <typename T, typename derived>
 void distance(const MatrixT<T>& C, const MatrixBase<derived>& X, MatrixT<T>& dist,
     std::optional<VectorT<T>> diagCV = std::nullopt) {
@@ -170,14 +171,10 @@ T updateCentroid(MatrixT<T>& C, const MatrixBase<derived>& X, VectorXi& indexVec
     return totalCost;
 }
 
-template <typename derived, typename derivedM, typename derivedV,
+template <typename derived, typename derivedI,
     typename T = typename MatrixBase<derived>::Scalar >
-T doKmeans(const MatrixBase<derived>& X,
-    const int nComp,
-    const int nReplicates,
-    MatrixBase<derivedM>& Centroid,
-    MatrixBase<derivedV>& indx,
-    bool doWeighting = true)
+T trainModel(const MatrixBase<derived>& X, const int nClust, const int nReplicates,
+    MatrixBase<derived>& Centroid, MatrixBase<derivedI>& clustID, bool doWeighting = true)
 {
     int nSamples = X.cols();
     int nFeatures = X.rows();
@@ -185,12 +182,16 @@ T doKmeans(const MatrixBase<derived>& X,
     int maxIter = 200, iter;
     VectorXi idxClust(nSamples);   // Cluster labels assigned to each column of X
     VectorXi oldIdxClust;
-    MatrixT<T> Cntr(nFeatures, nComp);  // Cluster centroids
+    MatrixT<T> Cntr(nFeatures, nClust);  // Cluster centroids
     VectorXi idxSample;  // randomly chosen initial rows of Cntr
     T cost = std::numeric_limits<T>::infinity();
 
     // Get the covariance vector = mean spectrum, if desired
     std::optional<VectorT<T>> diagCV = getDiagCV(X, doWeighting);
+    // We need the scaling vector sqrt(diagCV)
+    if (diagCV)
+        diagCV.value() = diagCV.value().array().sqrt();
+
 
     // Perform nReplicates and return the lowest cost clustering
 
@@ -219,22 +220,22 @@ T doKmeans(const MatrixBase<derived>& X,
         if (thiscost < cost) {
             cost = thiscost;
             Centroid = Cntr;
-            indx = idxClust;
+            clustID = idxClust;
         }
     }  // replicates
     return cost;
 }
 
 // Overloaded function for analyzing PCA representation of data
-template <typename derived, typename derivedV,
+template <typename derived, typename derivedI,
     typename T = typename MatrixBase<derived>::Scalar >
-T doKmeans(const MatrixBase<derived>& scores, const MatrixBase<derived>& loadings, const int nComp, const int nReplicates,
-    MatrixBase<derived>& Centroid, MatrixBase<derivedV>& indx, bool doWeighting = false)
+T trainModel(const MatrixBase<derived>& scores, const MatrixBase<derived>& loadings, const int nClust, const int nReplicates,
+    MatrixBase<derived>& Centroid, MatrixBase<derivedI>& clustID, bool doWeighting = false)
 {
-    MatrixT<T> centroidsOfPCs = MatrixT<T>::Zero(scores.rows(), nComp);
-    MatrixT<T> scoresT = scores.transpose();
+    Matrix<T, Dynamic, Dynamic> centroidsOfPCs = MatrixT<T>::Zero(scores.cols(), nClust);
+    Matrix<T, Dynamic, Dynamic> scoresT = scores.transpose();
 
-    T cost = doKmeans(scoresT, nComp, nReplicates, centroidsOfPCs, indx, false);
+    T cost = trainModel(scoresT, nClust, nReplicates, centroidsOfPCs, clustID, doWeighting);
     Centroid = loadings * centroidsOfPCs; // Centroids in the data space
     // Centroid = loadings*centroidsOfPCs.completeOrthogonalDecomposition().pseudoInverse().transpose(); // Centroids in the data space
     return cost;

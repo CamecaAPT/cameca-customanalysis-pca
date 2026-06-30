@@ -18,5 +18,6 @@ internal class KMeansMenuFactory : ConditionalMenuFactoryBase
     public override string[]? AllowedTypes { get; } = new string[]
     {
         VoxelizationAnalysis.UniqueId,
+        PrincipalComponentAnalysis.UniqueId,
     };
 }

@@ -31,12 +31,12 @@ ClusterData ClustererKMeans::Cluster(const int nClust, const int nReplicates, co
             P.row(i) = Map<const RowVectorXf>(loads[i].data(), loads[i].size());
         }
 
-        cost = doKmeans(X, P, nClust, nReplicates, Centroid, indx, weighted);
+        cost = trainModel(X, P, nClust, nReplicates, Centroid, indx, weighted);
     }
     // Standard
     else {
-        auto transX = X.transpose().eval();
-        cost = doKmeans(transX, nClust, nReplicates, Centroid, indx, weighted);
+        MatrixXf transX = X.transpose().eval();
+        cost = trainModel(transX, nClust, nReplicates, Centroid, indx, weighted);
     }
 
     std::vector<int> voxelIndex(indx.data(), indx.data() + indx.size());
