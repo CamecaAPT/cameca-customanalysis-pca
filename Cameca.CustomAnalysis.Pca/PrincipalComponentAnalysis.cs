@@ -29,14 +29,14 @@ using System.Text.Json;
 namespace Cameca.CustomAnalysis.Pca;
 
 [DefaultView(PcaViewModel.UniqueId, typeof(PcaViewModel))]
-internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaProperties>, IGridsUsageDelegate, IHistogramsUsageDelegate
+internal partial class PrincipalComponentAnalysisOld : BasicCustomAnalysisBase<PcaProperties>, IGridsUsageDelegate, IHistogramsUsageDelegate
 {
     private readonly INodeDataProvider nodeDataProvider;
     private readonly IOptionsAccessor optionsAccessor;
     private readonly SegmentedRoiManager<IStandardAnalysisFilterNodeBaseServices> segmentedManager;
-    public const string UniqueId = "Cameca.CustomAnalysis.Pca.PcaNode";
+    public const string UniqueId = "Cameca.CustomAnalysis.Pca.PrincipalComponentAnalysisOld";
 
-    public static INodeDisplayInfo DisplayInfo { get; } = new NodeDisplayInfo("Principal Component Analysis");
+    public static INodeDisplayInfo DisplayInfo { get; } = new NodeDisplayInfo("Principal Component Analysis (old)");
 
     public ObservableCollection<IRenderData> EigenvalueRenderData { get; } = new();
 
@@ -103,18 +103,25 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(UpdateSelectedComponentCanExecute))]
-    [NotifyCanExecuteChangedFor(nameof(UpdateSelectedComponentCommand))]
     private SeriesCollection loadingsSeries = new();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(UpdateSelectedComponentCanExecute))]
-    [NotifyCanExecuteChangedFor(nameof(UpdateSelectedComponentCommand))]
     public ICollection<string> loadingsLabels = Array.Empty<string>();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(UpdateSelectedComponentCanExecute))]
-    [NotifyCanExecuteChangedFor(nameof(UpdateSelectedComponentCommand))]
     public double loadingsLabelsRotation = 0d;
+
+    [ObservableProperty]
+    //[NotifyPropertyChangedFor(nameof(UpdateSelectedComponentCanExecute))]
+    //[NotifyCanExecuteChangedFor(nameof(UpdateSelectedComponentCommand))]
+    public int selectedLoadingsIndex = 0;
+
+    [ObservableProperty]
+    //[NotifyPropertyChangedFor(nameof(UpdateSelectedComponentCanExecute))]
+    //[NotifyCanExecuteChangedFor(nameof(UpdateSelectedComponentCommand))]
+    public ICollection<string> components = Array.Empty<string>();
 
     public bool UpdateComponentsCanExecute => PcaComponentsResults is null;
     public bool UpdateGridsCanExecute => PcaTwoDGridsResults is null;
@@ -136,12 +143,10 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(UpdateSelectedComponentCanExecute))]
-    [NotifyCanExecuteChangedFor(nameof(UpdateSelectedComponentCommand))]
     private string loadingsChartTitle = "Loadings";
     
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(UpdateSelectedComponentCanExecute))]
-    [NotifyCanExecuteChangedFor(nameof(UpdateSelectedComponentCommand))]
     private ICollection<IRenderData> loadingHistogramRenderData = Array.Empty<IRenderData>();
 
     internal HashSet<string> gridsToUseForPCA = new();
@@ -161,7 +166,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
     }
 
-    public PrincipalComponentAnalysis(
+    public PrincipalComponentAnalysisOld(
         IStandardAnalysisFilterNodeBaseServices services,
         ResourceFactory resourceFactory,
         INodeDataProvider nodeDataProvider,
@@ -394,7 +399,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
         await UpdateHistograms(cancellationToken);
         await UpdateGrids(cancellationToken);
-        await UpdateSelectedComponent(cancellationToken);
+        SelectedLoadingsIndex = 0;
     }
 
     [RelayCommand(CanExecute = nameof(UpdateGridsCanExecute))]
@@ -462,27 +467,21 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
     }
 
-    // Uses the component data (or computes for all components if necessary) to generate plots for the selected component by index
-    [RelayCommand(CanExecute = nameof(UpdateSelectedComponentCanExecute))]
-    public async Task UpdateSelectedComponent(CancellationToken cancellationToken)
+    partial void OnSelectedLoadingsIndexChanged(int value)
     {
         LoadingsLabels = Array.Empty<string>();
 
-        if (await Resources.GetIonData(cancellationToken: cancellationToken) is not { } ionData)
+        if (Resources.GetValidIonData() is not { } ionData
+            || PcaComponentsResults is not { Components: { Length: > 0 } })
         {
             DataStateIsError = true;
             return;
         }
 
         int numComponents = Properties.NumberOfComponents;
-        int selectedIndex = Properties.ComponentIndex;
+        int selectedIndex = value;
 
-        if ((PcaComponentsResults is null) || (PcaComponentsResults.Components.Count() == 0))
-        {
-            await UpdateComponents(cancellationToken);
-        }
-
-        if (PcaComponentsResults?.Components.ElementAtOrDefault(selectedIndex) is not { Scores: { } scores, Loads: { } loadingData })
+        if (PcaComponentsResults.Components.ElementAtOrDefault(selectedIndex) is not { Scores: { } scores, Loads: { } loadingData })
         {
             return;
         }
@@ -1262,22 +1261,6 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             chunk.WriteSectionData<byte>(Resources.DataSectionName, buffer);
         }
         return true;
-    }
-
-    public async Task IncrementComponentIndex(int incr, CancellationToken token)
-    {
-        var currentIndex = Properties.ComponentIndex;
-        var newIndex = currentIndex + incr;
-        if (newIndex >= Properties.NumberOfComponents)
-        {
-            newIndex = 0;
-        }
-        if (newIndex < 0)
-        {
-            newIndex = Properties.NumberOfComponents - 1;
-        }
-        Properties.ComponentIndex = newIndex;
-        await UpdateSelectedComponent(token);
     }
 
     protected override void Dispose(bool disposing)

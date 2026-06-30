@@ -80,12 +80,6 @@ internal partial class VoxelizationAnalysis : StandardAnalysisFilterNodeBase<Vox
     private void InvalidateAll()
     {
         DataStateIsValid = false;
-        //Properties.NumberOfComponents = 0;
-        //Analysis = null;
-        //NoiseEigenvalueResults = null;
-        //EigenvalueResults = null;
-        //InvalidatePcaComponents();
-        //InvalidatePcaPhases();
     }
 
     private IFeatureResolver CreateFeatureResolver()

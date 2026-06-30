@@ -1,5 +1,4 @@
 ﻿using Cameca.CustomAnalysis.Interface;
-using Cameca.CustomAnalysis.Utilities;
 using Prism.Events;
 
 namespace Cameca.CustomAnalysis.Pca;

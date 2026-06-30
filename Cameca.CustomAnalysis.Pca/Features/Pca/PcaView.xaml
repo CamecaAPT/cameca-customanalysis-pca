@@ -11,7 +11,7 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800"
              DataContext="{Binding Node}"
-             d:DataContext="{d:DesignInstance Type={x:Type local:PrincipalComponentAnalysis}}">
+             d:DataContext="{d:DesignInstance Type={x:Type local:PrincipalComponentAnalysisOld}}">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     </UserControl.Resources>
@@ -101,51 +101,8 @@
                     </Grid>
                 </utils:ButtonOverlayControl>
             </TabItem>
-            
-            <TabItem Header="Scores">
-                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateComponentsCommand}"
-                            ButtonContent="Update"
-                            OverlayVisibility="{Binding UpdateComponentsCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <local:ScoresHistogramsView HistogramsSource="{Binding ScoresHistogramRenderData}"   
-                                               HistogramsUsageDelegate="{Binding HistogramsUsageDelegate}" />
-                </utils:ButtonOverlayControl>
-            </TabItem>
-            
-            <TabItem Header="Grids">
-                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateGridsCommand}"
-                               ButtonContent="Update"
-                               OverlayVisibility="{Binding UpdateGridsCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <local:ProjectionGridsView GridsSourceTinted="{Binding SelectedGridRenderDataTinted}" 
-                                               GridsSourceUntinted="{Binding SelectedGridRenderDataUntinted}"  
-                                               GridsUsageDelegate="{Binding GridsUsageDelegate}" />
-                </utils:ButtonOverlayControl>
-            </TabItem>
 
-            <TabItem Header="PCA Phases">
-                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdatePCAPhasesCommand}"
-                                ButtonContent="Update"
-                                OverlayVisibility="{Binding UpdatePCAPhasesCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-
-                        <local:ComponentsTileView Grid.Column="0"
-                                                  Grid.Row="0"
-                                                  Grid.RowSpan="3"
-                                                  IsPcaPhases="true" 
-                                                  ItemsSource="{Binding PcaPhasesRenderData}" />
-
-                    </Grid>
-                </utils:ButtonOverlayControl>
-            </TabItem>
-
-            <TabItem Header="Loading">
+            <!--<TabItem Header="Loading">
                 <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateSelectedComponentCommand}"
                                 ButtonContent="Update"
                                 OverlayVisibility="{Binding UpdateSelectedComponentCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -156,27 +113,16 @@
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="36" />
-                            <RowDefinition Height="36" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
-                        <Button x:Name="PreviousComponentButton" 
-                                Content="Go to Previous Component" 
-                                Grid.Column="0" 
-                                Grid.Row="0"
-                                Height="32" 
-                                Width="180"
-                                Click="PreviousComponentButton_Click" 
-                                Margin="2,2,2,2">
-                        </Button>
-                        <Button x:Name="AdvanceComponentButton" 
-                                Content="Advance To Next Component" 
-                                Grid.Column="0" 
-                                Grid.Row="1"
-                                Height="32" 
-                                Width="180"
-                                Click="AdvanceComponentButton_Click" 
-                                Margin="2,2,2,2">
-                        </Button>
+                        <ListBox x:Name="LoadingsData"
+                                  Grid.Column="0"
+                                 Grid.Row="0"
+                                 Grid.RowSpan="2"
+                                  SelectedIndex="{Binding SelectedLoadingsIndex}"
+                                  ItemsSource="{Binding Components}"
+                                  />
+
                         <Label x:Name="GridLabel" 
                             Grid.Column="1" 
                             Grid.Row="0" 
@@ -191,7 +137,6 @@
                         </Label>
                         <lvc:CartesianChart Grid.Column="1"
                                             Grid.Row="1"
-                                            Grid.RowSpan="2"
                                             Series="{Binding LoadingsSeries}"
                                             DisableAnimations="True"
                                             LegendLocation="None"
@@ -219,13 +164,12 @@
                                           Grid.Row="1"
                                           Grid.RowSpan="2"
                                           DataSource="{Binding LoadingHistogramRenderData}"
-                                          Projection="XZ"
                                           AxisYLabel="Loadings"
                                           AxisXLabel="Bin Index"
                                           Visibility="{Binding LoadingHistogramRenderData, Converter={local:CollectionVisibilityConverter}}" />
                     </Grid>
                 </utils:ButtonOverlayControl>
-            </TabItem>
+            </TabItem>-->
 
         </TabControl>
     </utils:ButtonOverlayControl>
