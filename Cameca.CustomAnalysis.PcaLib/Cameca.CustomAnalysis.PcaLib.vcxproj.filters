@@ -45,19 +45,34 @@
     <ClInclude Include="VoxelFeatureMatrixFrom3DGridBuilder.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="blas_wrapper.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="kmeans.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="utilities.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ClusterData.h">
+    <ClInclude Include="blas_wrapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Progress.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ClustererKMeans.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MultinomialMixtureModel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ClusterData.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="multinomialMM.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NegMultinomialMixtureModel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="negmultinomialMM.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -84,6 +99,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ClustererKMeans.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MultinomialMixtureModel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="NegMultinomialMixtureModel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

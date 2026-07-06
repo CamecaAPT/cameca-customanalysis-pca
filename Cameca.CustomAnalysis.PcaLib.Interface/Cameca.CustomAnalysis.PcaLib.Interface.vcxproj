@@ -124,9 +124,13 @@
   <ItemGroup>
     <ClInclude Include="ClusterData.h" />
     <ClInclude Include="ClustererKMeans.h" />
+    <ClInclude Include="MultinomialMixtureModel.h" />
     <ClInclude Include="ComponentData.h" />
     <ClInclude Include="GridParameters.h" />
     <ClInclude Include="ManagedWrapper.h" />
+    <ClInclude Include="NegMultinomialMixtureModel.h" />
+    <ClInclude Include="Progress.h" />
+    <ClInclude Include="ProgressReporter.h" />
     <ClInclude Include="VectorMarshaller.h" />
     <ClInclude Include="PrincipalComponentAnalysis.h" />
     <ClInclude Include="VoxelFeatureMatrix.h" />
@@ -136,8 +140,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ClustererKMeans.cpp" />
+    <ClCompile Include="MultinomialMixtureModel.cpp" />
     <ClCompile Include="Interface.cpp" />
     <ClCompile Include="ManagedWrapper.cpp" />
+    <ClCompile Include="NegMultinomialMixtureModel.cpp" />
     <ClCompile Include="PrincipalComponentAnalysis.cpp" />
     <ClCompile Include="VoxelFeatureMatrix.cpp" />
     <ClCompile Include="VoxelFeatureMatrixBuilder.cpp" />

@@ -121,7 +121,6 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -141,7 +140,6 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -156,11 +154,16 @@
     <ClInclude Include="blas_wrapper.h" />
     <ClInclude Include="ClusterData.h" />
     <ClInclude Include="ClustererKMeans.h" />
+    <ClInclude Include="MultinomialMixtureModel.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="kmeans.h" />
+    <ClInclude Include="multinomialMM.h" />
+    <ClInclude Include="NegMultinomialMixtureModel.h" />
+    <ClInclude Include="negmultinomialMM.h" />
     <ClInclude Include="PcaLibExport.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="PrincipalComponentAnalysis.h" />
+    <ClInclude Include="Progress.h" />
     <ClInclude Include="RMT_rank.h" />
     <ClInclude Include="utilities.h" />
     <ClInclude Include="VoxelFeatureMatrix.h" />
@@ -171,6 +174,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ClustererKMeans.cpp" />
+    <ClCompile Include="MultinomialMixtureModel.cpp" />
+    <ClCompile Include="NegMultinomialMixtureModel.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
