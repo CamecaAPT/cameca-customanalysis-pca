@@ -1,19 +1,14 @@
 ﻿using Cameca.CustomAnalysis.Interface;
 using Cameca.CustomAnalysis.PcaLib.Interface;
 using Cameca.CustomAnalysis.Utilities;
-using Cameca.CustomAnalysis.Utilities.Segmentation;
-using LiveCharts.Wpf;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Controls;
 
 
 namespace Cameca.CustomAnalysis.Pca;
@@ -26,7 +21,7 @@ internal partial class VoxelizationAnalysis : StandardAnalysisFilterNodeBase<Vox
     {
     }
 
-    public static INodeDisplayInfo DisplayInfo { get; } = new NodeDisplayInfo("Voxelization");
+    public static INodeDisplayInfo DisplayInfo { get; } = new NodeDisplayInfo("Create 3D Grid");
 
 
     private async Task Update(IIonData ionData, IProgress<double>? progress = null, CancellationToken cancellationToken = default)
@@ -76,7 +71,8 @@ internal partial class VoxelizationAnalysis : StandardAnalysisFilterNodeBase<Vox
 
     protected override void OnPropertiesChanged(PropertyChangedEventArgs e)
     {
-        base.OnPropertiesChanged(e); CanSave = true;
+        base.OnPropertiesChanged(e);
+        CanSave = true;
         switch (e.PropertyName)
         {
             case nameof(VoxelizationProperties.GridMethod):

@@ -95,4 +95,15 @@ internal static class VoxelFeatureMatrixSerializer
         int dataLength = voxelFeatureMatrix.DataLength;
         return (new UnmanagedMemoryManager<float>(nativePtr, dataLength)).Memory;
     }
+
+    public unsafe static ReadOnlyMemory<float> GetFeatureData(VoxelFeatureMatrix voxelFeatureMatrix, int featureIndex)
+    {
+        if (voxelFeatureMatrix.FeatureCount <= featureIndex)
+        {
+            throw new ArgumentOutOfRangeException(nameof(featureIndex), "Feature index is out of range.");
+        }
+        int dataLength = voxelFeatureMatrix.VoxelCount;
+        float* nativePtr = ((float*)voxelFeatureMatrix.DataPointer.ToPointer()) + (featureIndex * dataLength);
+        return (new UnmanagedMemoryManager<float>(nativePtr, dataLength)).Memory;
+    }
 }
