@@ -1,4 +1,5 @@
 ﻿using Cameca.CustomAnalysis.PcaLib.Interface;
+using System.Linq;
 
 namespace Cameca.CustomAnalysis.Pca.Models;
 
@@ -8,13 +9,15 @@ public sealed class ComponentsResults
 
     public int[] VoxelIndices { get; }
 
-    public ComponentData[] Components { get; }
+    public ComponentDataModel[] Components { get; }
 
     public ComponentsResults(GridParameters gridParams, int[] voxelIndices, ComponentData[] components)
     {
         GridParams = gridParams;
         VoxelIndices = voxelIndices;
-        Components = components;
+        Components = components
+            .Select((x, i) => new ComponentDataModel($"Component {i+1}", x.Scores, x.Loads))
+            .ToArray();
     }
 
 }

@@ -102,13 +102,37 @@
                 </utils:ButtonOverlayControl>
             </TabItem>
 
-            <!--<TabItem Header="Loading">
-                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateSelectedComponentCommand}"
-                                ButtonContent="Update"
-                                OverlayVisibility="{Binding UpdateSelectedComponentCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <TabItem Header="Scores">
+                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateComponentsCommand}"
+                            ButtonContent="Update"
+                            OverlayVisibility="{Binding UpdateComponentsCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="188" />
+                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <ListBox x:Name="ComponentSelector"
+                                 Grid.Column="0"
+                                 DisplayMemberPath="Name"
+                                 SelectedIndex="{Binding SelectedLoadingsIndex}"
+                                 ItemsSource="{Binding PcaComponentsResults.Components}" />
+                        <controls:Chart2D x:Name="ScoresHistogram" 
+                                          DataSource="{Binding ScoresHistogramRenderData}"
+                                          Grid.Column="1"
+                                          AxisXLabel="Score"
+                                          IsLegendVisible="False"
+                                          AxisYLabel="Voxels per PCA Unit"/>
+                    </Grid>
+                </utils:ButtonOverlayControl>
+            </TabItem>
+
+            <TabItem Header="Loading">
+                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateComponentsCommand}"
+                                            ButtonContent="Update"
+                                            OverlayVisibility="{Binding UpdateComponentsCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
@@ -116,12 +140,12 @@
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
                         <ListBox x:Name="LoadingsData"
-                                  Grid.Column="0"
+                                 Grid.Column="0"
                                  Grid.Row="0"
                                  Grid.RowSpan="2"
-                                  SelectedIndex="{Binding SelectedLoadingsIndex}"
-                                  ItemsSource="{Binding Components}"
-                                  />
+                                 DisplayMemberPath="Name"
+                                 SelectedIndex="{Binding SelectedLoadingsIndex}"
+                                 ItemsSource="{Binding PcaComponentsResults.Components}" />
 
                         <Label x:Name="GridLabel" 
                             Grid.Column="1" 
@@ -169,7 +193,7 @@
                                           Visibility="{Binding LoadingHistogramRenderData, Converter={local:CollectionVisibilityConverter}}" />
                     </Grid>
                 </utils:ButtonOverlayControl>
-            </TabItem>-->
+            </TabItem>
 
         </TabControl>
     </utils:ButtonOverlayControl>

@@ -2,6 +2,7 @@
 using Cameca.CustomAnalysis.PcaLib.Interface;
 using Cameca.CustomAnalysis.Utilities;
 using Cameca.CustomAnalysis.Utilities.Segmentation;
+using LiveCharts.Wpf;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -9,7 +10,10 @@ using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Controls;
 
 
 namespace Cameca.CustomAnalysis.Pca;
@@ -25,14 +29,35 @@ internal partial class VoxelizationAnalysis : StandardAnalysisFilterNodeBase<Vox
     public static INodeDisplayInfo DisplayInfo { get; } = new NodeDisplayInfo("Voxelization");
 
 
-    private void Update(IIonData ionData)
+    private async Task Update(IIonData ionData, IProgress<double>? progress = null, CancellationToken cancellationToken = default)
     {
-        var (gridParams, voxelFeatureMatrix) = CreateVoxelFeatureMatrix(ionData);
+        await Task.Run(() =>
+        {
+            var (gridParams, voxelFeatureMatrix) = CreateVoxelFeatureMatrix(ionData, progress);
 
-        var extraData = new VoxelFeatureMatrixExtraData(gridParams, Properties.GridMethod);
-        var data = new VoxelFeatureMatrixSectionData(extraData, voxelFeatureMatrix);
+            var extraData = new VoxelFeatureMatrixExtraData(gridParams, Properties.GridMethod);
+            var data = new VoxelFeatureMatrixSectionData(extraData, voxelFeatureMatrix);
 
-        VoxelFeatureMatrixSerializer.WriteToIonDataSection(ionData, Resources.DataSectionName, data);
+            VoxelFeatureMatrixSerializer.WriteToIonDataSection(ionData, Resources.DataSectionName, data);
+        }, cancellationToken);
+    }
+
+    protected override void OnDataIsValidChanged(bool isValid)
+    {
+        if (!isValid)
+        {
+            if(Resources.GetValidIonData() is { } ionData)
+            {
+                ionData.DeleteSection(Resources.DataSectionName);
+            }
+            foreach (var child in Resources.Children)
+            {
+                if (Services.DataStateProvider.Resolve(child.Id) is { } childDataState)
+                {
+                    childDataState.IsValid = false;
+                }
+            }
+        }
     }
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
@@ -42,7 +67,7 @@ internal partial class VoxelizationAnalysis : StandardAnalysisFilterNodeBase<Vox
         IProgress<double>? progress,
         [EnumeratorCancellation] CancellationToken token)
     {
-        Update(ownerIonData);
+        await Update(ownerIonData, progress, token);
         foreach (var chunk in ownerIonData.AllowAllFilter(progress, token))
         {
             yield return chunk;
@@ -99,7 +124,7 @@ internal partial class VoxelizationAnalysis : StandardAnalysisFilterNodeBase<Vox
         }
     }
 
-    private (GridParameters GridParams, VoxelFeatureMatrix Matrix) CreateVoxelFeatureMatrix(IIonData ionData)
+    private (GridParameters GridParams, VoxelFeatureMatrix Matrix) CreateVoxelFeatureMatrix(IIonData ionData, IProgress<double>? progress = null)
     {
         if (Properties.GridMethod == GridMethod.Grid3D)
         {
@@ -108,7 +133,7 @@ internal partial class VoxelizationAnalysis : StandardAnalysisFilterNodeBase<Vox
         else
         {
             var featureResolver = CreateFeatureResolver();
-            return CreateVoxelFeatureMatrixFromFeatures(ionData, featureResolver);
+            return CreateVoxelFeatureMatrixFromFeatures(ionData, featureResolver, progress);
         }
     }
 
@@ -145,7 +170,7 @@ internal partial class VoxelizationAnalysis : StandardAnalysisFilterNodeBase<Vox
 
     }
 
-    private (GridParameters GridParams, VoxelFeatureMatrix Matrix) CreateVoxelFeatureMatrixFromFeatures(IIonData ionData, IFeatureResolver featureResolver)
+    private (GridParameters GridParams, VoxelFeatureMatrix Matrix) CreateVoxelFeatureMatrixFromFeatures(IIonData ionData, IFeatureResolver featureResolver, IProgress<double>? progress = null)
     {
         GridParameters gridParams = Grid3DUtils.CreateGridParameters(
             ionData.Extents,
@@ -160,6 +185,10 @@ internal partial class VoxelizationAnalysis : StandardAnalysisFilterNodeBase<Vox
         int voxelsY = gridParams.VoxelCount[1];
         int voxelsAll = voxelsX * voxelsY * gridParams.VoxelCount[2];
 
+        ulong total = ionData.IonCount;
+        ulong reportCent = total / 100;  // Report every 1%
+        ulong globalIndex = 0;
+        double progressCent = 0;
         foreach (var chunk in ionData.CreateSectionDataEnumerable(sectionNames))
         {
             var buffer = new VoxelFeatureMatrixIon[chunk.Length];
@@ -168,6 +197,11 @@ internal partial class VoxelizationAnalysis : StandardAnalysisFilterNodeBase<Vox
 
             for (var i = 0; i < chunk.Length; i++)
             {
+                if (globalIndex++ % reportCent == 0)
+                {
+                    progressCent += 0.01;
+                    progress?.Report(progressCent);
+                }
                 var position = positions.Span[i];
 
                 int voxX = (int)Math.Floor((position.X - gridParams.GridStart[0]) / gridParams.VoxelSize);
@@ -181,7 +215,8 @@ internal partial class VoxelizationAnalysis : StandardAnalysisFilterNodeBase<Vox
             }
             builder.Update(buffer);
         }
-        return (gridParams, builder.Build());
+        var matrix = builder.Build();
+        return (gridParams, matrix);
     }
 }
 

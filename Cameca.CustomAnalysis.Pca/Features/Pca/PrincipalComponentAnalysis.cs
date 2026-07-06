@@ -1,9 +1,14 @@
 ﻿using Cameca.CustomAnalysis.Interface;
 using Cameca.CustomAnalysis.Pca.Models;
+using Cameca.CustomAnalysis.Pca.Utils;
+using Cameca.CustomAnalysis.Pca.VoxelLogic;
 using Cameca.CustomAnalysis.PcaLib.Interface;
 using Cameca.CustomAnalysis.Utilities;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LiveCharts;
+using LiveCharts.Configurations;
+using LiveCharts.Wpf;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -23,9 +28,14 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 {
     public const string UniqueId = "Cameca.CustomAnalysis.Pca.PrincipalComponentAnalysis";
 
+    private readonly IOptionsAccessor optionsAccessor;
+
     public static INodeDisplayInfo DisplayInfo { get; } = new NodeDisplayInfo("Principal Component Analysis");
 
     public ObservableCollection<IRenderData> EigenvalueRenderData { get; } = new();
+
+    [ObservableProperty]
+    private ICollection<IRenderData> componentRenderData = Array.Empty<IRenderData>();
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(UpdateCommand))]
@@ -42,7 +52,30 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     private ComponentsResults? pcaComponentsResults;
 
     [ObservableProperty]
+    public ICollection<IRenderData> scoresHistogramRenderData = Array.Empty<IRenderData>();
+
+    [ObservableProperty]
     private IColorMap? componentsColorMap = null;
+
+    [ObservableProperty]
+    private SeriesCollection loadingsSeries = new();
+
+    [ObservableProperty]
+    public ICollection<string> loadingsLabels = Array.Empty<string>();
+
+    [ObservableProperty]
+    public double loadingsLabelsRotation = 0d;
+
+    [ObservableProperty]
+    public int selectedLoadingsIndex = 0;
+
+    public Func<double, string> AxisYLabelFormatter { get; } = (double value) => value.ToString("F3");
+
+    [ObservableProperty]
+    private string loadingsChartTitle = "Loadings";
+
+    [ObservableProperty]
+    private ICollection<IRenderData> loadingHistogramRenderData = Array.Empty<IRenderData>();
 
     private PcaLibPrincipalComponentAnalysis? principalComponentAnalysis = null;
     public PcaLibPrincipalComponentAnalysis? Analysis
@@ -68,9 +101,11 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
     public PrincipalComponentAnalysis(
         IStandardAnalysisFilterNodeBaseServices services,
-        ResourceFactory resourceFactory)
+        ResourceFactory resourceFactory,
+        IOptionsAccessor optionsAccessor)
         : base(services, resourceFactory)
     {
+        this.optionsAccessor = optionsAccessor;
     }
 
     protected override async Task<bool> Update(CancellationToken cancellationToken)
@@ -159,9 +194,10 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
 
         PcaComponentsResults = new ComponentsResults(pca.GridParams, pca.Matrix.GetVoxelIndices(), components);
 
-        //await UpdateHistograms(cancellationToken);
+        //await DisplayComponentResults(PcaComponentsResults, cancellationToken);
         //await UpdateGrids(cancellationToken);
-        //SelectedLoadingsIndex = 0;
+        SelectedLoadingsIndex = 0;
+        UpdateSelected();
     }
 
     // After setting the number of components, the components data can be computed. We can follow up with the current
@@ -171,6 +207,14 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     {
         await UpdatePcaResults(Properties.NumberOfComponents, cancellationToken);
     }
+
+    //public async Task DisplayComponentResults(ComponentsResults componentResults, CancellationToken cancellationToken)
+    //{
+    //    var pcaPhaseIdProperties = new PcaPhaseIdentificationProperties(Properties.GridProjectionBinSize, Properties.GridProjectionDelocalization, Properties.NoiseFloorFraction, Properties.PeakSummitAllowance, Properties.NumberOfComponents);
+    //    ScoresGrid = PcaCalculator.GenerateScoresGrid(compResults, pcaPhaseIdProperties);
+    //    PcaTwoDGridsResults = PcaCalculator.CalculateTwoDGrids(ScoresGrid, pcaPhaseIdProperties);
+    //    PcaOneDGridsResults = PcaCalculator.CalculateOneDGrids(ScoresGrid, pcaPhaseIdProperties);
+    //}
 
     private async Task<EigenvalueResults?> GetEigenvalueResults(CancellationToken cancellationToken)
     {
@@ -258,7 +302,231 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
     }
 
-    static private SerializableColorMap SerializeColorMap(IColorMap colorMap)
+    partial void OnPcaComponentsResultsChanged(ComponentsResults? value)
+    {
+        ComponentRenderData = Array.Empty<IRenderData>();
+
+        if (PcaComponentsResults is not
+            {
+                GridParams: { } gridParams,
+                Components: { } components,
+                VoxelIndices: { } voxelIndices
+            }
+         || Resources.GetValidIonData() is not { } ionData)
+        {
+            return;
+        }
+
+        int numComponents = Properties.NumberOfComponents;
+        int selectedIndex = Properties.ComponentIndex;
+
+        var jitterStdDev = optionsAccessor.GetOptions<PcaGlobalOptions>().JitterStdDev;
+
+        var newComponentsData = new IRenderData[numComponents];
+        IValuePointsRenderData? rootValuePoints = null;
+        for (int compIndex = 0; compIndex < numComponents; compIndex++)
+        {
+            var scores = components[compIndex].Scores;
+            var positionsWithValues = PositionScores.GetScoredPositions(gridParams, voxelIndices, scores, jitterStdDev: jitterStdDev);
+
+            var valuePoints = Resources.ChartObjects.CreateValuePoints();
+            valuePoints.Name = $"Component {compIndex}";
+            valuePoints.PositionsWithValues = positionsWithValues;
+            if (rootValuePoints is null)
+            {
+                rootValuePoints = valuePoints;
+                rootValuePoints.ColorMap = DeserializeColorMap(Properties.ComponentsColorMap);
+            }
+            else
+            {
+                valuePoints.ColorMap = rootValuePoints.ColorMap;
+            }
+
+            newComponentsData[compIndex] = valuePoints;
+        }
+
+        if (rootValuePoints?.ColorMap is not null)
+        {
+            ComponentsColorMap = rootValuePoints.ColorMap;
+            var range = GetRange(components.Select(x => x.Scores));
+            ComponentsColorMap.BottomValue = range.Low;
+            ComponentsColorMap.TopValue = range.High;
+        }
+
+        ComponentRenderData = newComponentsData;
+    }
+
+    protected override void OnDataIsValidChanged(bool isValid)
+    {
+        if (!isValid)
+        {
+            EigenvalueResults = null;
+            NoiseEigenvalueResults = null;
+            Analysis = null;
+            PcaComponentsResults = null;
+            if (Resources.GetValidIonData() is { } ionData)
+            {
+                ionData.DeleteSection(Resources.DataSectionName);
+            }
+            foreach (var child in Resources.Children)
+            {
+                if (Services.DataStateProvider.Resolve(child.Id) is { } childDataState)
+                {
+                    childDataState.IsValid = false;
+                }
+            }
+        }
+    }
+
+    partial void OnSelectedLoadingsIndexChanged(int value) => UpdateSelected();
+
+    private void UpdateSelected()
+    {
+        UpdateSelectedLoadings();
+        UpdateSelectedScores();
+    }
+
+    private void UpdateSelectedLoadings()
+    {
+        LoadingsLabels = Array.Empty<string>();
+
+        if (Resources.GetValidIonData() is not { } ionData
+            || PcaComponentsResults is not { Components: { Length: > 0 } })
+        {
+            DataStateIsError = true;
+            return;
+        }
+
+        int numComponents = Properties.NumberOfComponents;
+        int selectedIndex = SelectedLoadingsIndex;
+
+        if (PcaComponentsResults.Components.ElementAtOrDefault(selectedIndex) is not { Scores: { } scores, Loads: { } loadingData })
+        {
+            return;
+        }
+
+        // Loading
+        int features = loadingData.Length;
+        var series = new ColumnSeries
+        {
+            Name = "",
+            Title = "",
+            DataLabels = true,
+            LabelPoint = x => x.Y.ToString("F3"),
+            Values = new ChartValues<float>(loadingData),
+        };
+
+        switch (SelectedGridMethod)
+        {
+            case GridMethod.IonTypes:
+            case GridMethod.Grid3D:
+                var ions = ionData.Ions;
+                var ionBrushes = ions.Select(ionInfo => new SolidColorBrush(Resources.IonDisplayInfo.GetColor(ionInfo))).ToArray();
+                var ionMapper = new CartesianMapper<float>()
+                    .X((_, i) => i)
+                    .Y(value => value)
+                    .Fill((_, i) => ionBrushes[i]);
+                LoadingsSeries = new SeriesCollection(ionMapper)
+                {
+                    series
+                };
+                LoadingsLabels = ions.Select(x => x.Name).ToList();
+                LoadingsLabelsRotation = 0d;
+                break;
+            case GridMethod.Peaks:
+                var ionRanges = Resources.RangeManager!.GetIonRanges();
+                var peakBrushes = ionRanges.Select(x => new SolidColorBrush(x.Color)).ToArray();
+                var peakMapper = new CartesianMapper<float>()
+                    .X((_, i) => i)
+                    .Y(value => value)
+                    .Fill((_, i) => peakBrushes[i]);
+                LoadingsSeries = new SeriesCollection(peakMapper)
+                {
+                    series
+                };
+                LoadingsLabels = ionRanges
+                    .Select(x => $"{x.Name} ({x.Min.ToString("f3")}, {x.Max.ToString("f3")})")
+                    .ToList();
+                LoadingsLabelsRotation = 45d;
+                break;
+            case GridMethod.Bins:
+                var histogram = Resources.ChartObjects.CreateHistogram(
+                    loadingData.Select((y, x) => new Vector2(x, y)).ToArray(),
+                    Colors.Black,
+                    1f);
+                LoadingHistogramRenderData = new IRenderData[] { histogram };
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void UpdateSelectedScores()
+    {
+        int selectedIndex = SelectedLoadingsIndex;
+        if (Resources.GetValidIonData() is not { } ionData
+            || PcaComponentsResults is not { Components: { Length: > 0 } components }
+            || selectedIndex >= components.Length)
+        {
+            DataStateIsError = true;
+            return;
+        }
+
+        // Scores Histogram
+        List<IRenderData> newHistogramsData = new();
+
+        // TODO: don't recreate all the time
+
+        var componentResults = components[selectedIndex];
+        float[] scores = componentResults.Scores;
+        int voxels = scores.Length;
+        float binSize = 0.02f;
+        float invBinSize = 1.0f / binSize;
+        float min = scores.Min();
+        float max = scores.Max();
+        int binCount = (int)Math.Ceiling((max - min) / binSize);
+        var binnedScores = new int[binCount]; // the y axis of the histogram should be in units of Voxels/PCA Unit
+                                                // so that changing the binsize doesn't change the score
+        var normalizedScores = new float[binCount];
+        for (int i = 0; i < scores.Length; i++)
+        {
+            int index = (int)((scores[i] - min) / binSize);
+            binnedScores[index] += 1;
+        }
+        var scoreData = binnedScores.Select((y, i) => new Vector2(min + (i * binSize), y * invBinSize)).ToArray();
+        var scoresHistogram = Resources.ChartObjects.CreateHistogram(
+            scoreData,
+            color: Colors.Blue
+            //name: GridID.GridLetterForIndex(componentIndex)
+            );
+        newHistogramsData.Add(scoresHistogram);
+        ScoresHistogramRenderData = newHistogramsData;
+    }
+
+    private IColorMap DeserializeColorMap(SerializableColorMap? serializedColorMap)
+    {
+        if (serializedColorMap is not null)
+        {
+            var colorMap = Resources.ColorMap.CreateColorMap(
+                serializedColorMap.Bottom,
+                serializedColorMap.NanColor,
+                serializedColorMap.OutOfRangeBottom,
+                serializedColorMap.OutOfRangeTop,
+                serializedColorMap.Top,
+                serializedColorMap.ColorStops.Select(x =>
+                    Resources.ColorMap.CreateColorStop(x.RelativePosition, x.TopColor, x.BottomColor)));
+            colorMap.BottomValue = serializedColorMap.BottomValue;
+            colorMap.TopValue = serializedColorMap.TopValue;
+            return colorMap;
+        }
+        else
+        {
+            var preset = optionsAccessor.GetOptions<PcaGlobalOptions>().ColorMapPreset;
+            return Resources.ColorMap.GetPresetColorMap(preset);
+        }
+    }
+
+    private static SerializableColorMap SerializeColorMap(IColorMap colorMap)
     {
         return new SerializableColorMap
         {
@@ -289,5 +557,25 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             offset += x.Length;
         }
         return flattened;
+    }
+
+    private static (float Low, float High) GetRange(IEnumerable<float[]> scores)
+    {
+        // Flatten scores to single array
+        var size = scores.Sum(x => x.Length);
+        float[] allScores = new float[size];
+        int offset = 0;
+        foreach (var componentScores in scores)
+        {
+            int srcSize = componentScores.Length;
+            Array.Copy(componentScores, 0, allScores, offset, srcSize);
+            offset += srcSize;
+        }
+
+        // Get range
+        float mean = allScores.Average();
+        float stdDev = MathF.Sqrt(allScores.Average(v => MathF.Pow(v - mean, 2)));
+
+        return new(mean - 2 * stdDev, mean + 2 * stdDev);
     }
 }

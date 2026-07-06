@@ -26,7 +26,8 @@ VoxelFeatureMatrix VoxelFeatureMatrixBuilder::Build() {
 	using FeatureType = decltype(VoxelFeatureMatrixIon::Feature);
 
 	// Thread-local sets and max feature trackers
-	std::vector<bool>voxelUsed(voxelCount);
+	//std::vector<bool>voxelUsed(voxelCount);
+	std::vector<char> voxelUsed(voxelCount, 0);
 	tbb::enumerable_thread_specific<FeatureType> localMaxFeatures(-1);
 
 	tbb::parallel_for(tbb::blocked_range<std::size_t>(0, length),
@@ -35,10 +36,20 @@ VoxelFeatureMatrix VoxelFeatureMatrixBuilder::Build() {
 			for (std::size_t i = r.begin(); i < r.end(); ++i) {
 				auto feature = allMatrixIonData[i].Feature;
 				if (feature >= 0) {
-					voxelUsed[allMatrixIonData[i].Voxel] = true;
+
+					// Multiple threads writing '1' to the same byte is safe (idempotent)
+					// Use relaxed memory order to eliminate CPU fencing overhead
+					reinterpret_cast<std::atomic<char>&>(voxelUsed[allMatrixIonData[i].Voxel])
+						.store(1, std::memory_order_relaxed);
+
 					if (feature > localMax) {
 						localMax = feature;
 					}
+
+					//voxelUsed[allMatrixIonData[i].Voxel] = true;
+					//if (feature > localMax) {
+					//	localMax = feature;
+					//}
 				}
 			}
 		}

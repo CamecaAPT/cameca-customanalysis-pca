@@ -957,7 +957,7 @@ internal partial class PrincipalComponentAnalysisOld : BasicCustomAnalysisBase<P
         var selectedResult = PcaComponentsResults?.Components.ElementAtOrDefault(Properties.ComponentIndex);
         if (selectedResult != null)
         {
-            var nonnullSelectedResult = (ComponentData)selectedResult;
+            var nonnullSelectedResult = selectedResult;
             if (nonnullSelectedResult.Scores != null)
             {
                 Properties.Min = nonnullSelectedResult.Scores.Min();
