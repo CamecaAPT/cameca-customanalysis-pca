@@ -54,6 +54,14 @@ internal class CommonMenuFactory : IAnalysisMenuFactory
             {
                 menuItems.Add(CreateChildMenuItem(SelectComponentIsovalueAnalysis.UniqueId, SelectComponentIsovalueAnalysis.DisplayInfo));
             }
+            if (IsMnMMEnabled(nodeType))
+            {
+                menuItems.Add(CreateChildMenuItem(MnMMAnalysis.UniqueId, MnMMAnalysis.DisplayInfo));
+            }
+            if (IsNegMnMMEnabled(nodeType))
+            {
+                menuItems.Add(CreateChildMenuItem(NegMnMMAnalysis.UniqueId, NegMnMMAnalysis.DisplayInfo));
+            }
 
             return new SubMenu(SubMenuTitle, isEnabled: true, toolTip: SubMenuToolTip)
             {
@@ -74,6 +82,8 @@ internal class CommonMenuFactory : IAnalysisMenuFactory
     private bool IsVoxelizationEnabled(string nodeType) => !nodeType.StartsWith("Cameca.CustomAnalysis.Pca.");
     private CheckEnabled IsPcaEnabled = IsAnyOf(VoxelizationAnalysis.UniqueId);
     private CheckEnabled IsKMeansEnabled = IsAnyOf(VoxelizationAnalysis.UniqueId, PrincipalComponentAnalysis.UniqueId);
+    private CheckEnabled IsMnMMEnabled = IsAnyOf(VoxelizationAnalysis.UniqueId);
+    private CheckEnabled IsNegMnMMEnabled = IsAnyOf(VoxelizationAnalysis.UniqueId);
     private CheckEnabled IsSelectComponentIsovalueEnabled = IsAnyOf(PrincipalComponentAnalysis.UniqueId);
 
     private static CheckEnabled IsAnyOf(params string[] allowedNodeTypes) => (string nodeType) => allowedNodeTypes.Contains(nodeType);

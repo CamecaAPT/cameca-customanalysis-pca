@@ -26,8 +26,15 @@ public class PcaModule : IModule
         containerRegistry.Register<object, KMeansAnalysis>(KMeansAnalysis.UniqueId);
         containerRegistry.RegisterInstance(KMeansAnalysis.DisplayInfo, KMeansAnalysis.UniqueId);
 
+        containerRegistry.Register<object, MnMMAnalysis>(MnMMAnalysis.UniqueId);
+        containerRegistry.RegisterInstance(MnMMAnalysis.DisplayInfo, MnMMAnalysis.UniqueId);
+
+        containerRegistry.Register<object, NegMnMMAnalysis>(NegMnMMAnalysis.UniqueId);
+        containerRegistry.RegisterInstance(NegMnMMAnalysis.DisplayInfo, NegMnMMAnalysis.UniqueId);
+
         containerRegistry.Register<object, SelectComponentIsovalueAnalysis>(SelectComponentIsovalueAnalysis.UniqueId);
         containerRegistry.RegisterInstance(SelectComponentIsovalueAnalysis.DisplayInfo, SelectComponentIsovalueAnalysis.UniqueId);
+
 
         containerRegistry.Register<IAnalysisMenuFactory, CommonMenuFactory>(nameof(CommonMenuFactory));
     }

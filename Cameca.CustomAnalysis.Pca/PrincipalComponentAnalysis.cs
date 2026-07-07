@@ -199,22 +199,11 @@ internal partial class PrincipalComponentAnalysisOld : BasicCustomAnalysisBase<P
     }
 
     private VoxelFeatureMatrixSectionData GetVoxelFeatureData(IIonData ionData)
-    {
-        // This isn't the top level -- .Parent! is safe
-        if (VoxelFeatureMatrixSerializer.ReadFromIonDataSection(ionData, Resources.Parent!.DataSectionName) is not { } data)
-        {
-            throw new InvalidOperationException("Parent must define a VoxelFeatureMatrix");
-        }
-        return data;
-    }
+        => ionData.GetVoxelFeatureMatrixSectionData(Resources.Parent!.DataSectionName);
 
     private PcaLibPrincipalComponentAnalysis CreateAnalysis(IIonData ionData)
     {
-        if (GetVoxelFeatureData(ionData) is not { } data)
-        {
-            throw new InvalidOperationException("Parent must define a VoxelFeatureMatrix");
-        }
-
+        var data = GetVoxelFeatureData(ionData);
         var gridParams = data.ExtraData.GridParameters;
         var matrix = data.VoxelFeatureMatrix;
 

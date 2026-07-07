@@ -1,4 +1,5 @@
 ﻿using Cameca.CustomAnalysis.Interface;
+using Cameca.CustomAnalysis.Pca;
 using Cameca.CustomAnalysis.PcaLib.Interface;
 using Cameca.CustomAnalysis.Utilities;
 using Cameca.CustomAnalysis.Utilities.Segmentation;
@@ -6,27 +7,26 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Resources;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
-namespace Cameca.CustomAnalysis.Pca;
+namespace Cameca.CustomAnalysis;
 
-internal partial class KMeansAnalysis : StandardAnalysisFilterNodeBase<KMeansProperties>
+internal partial class MnMMAnalysis : StandardAnalysisFilterNodeBase<MnMMProperties>
 {
-    public const string UniqueId = "Cameca.CustomAnalysis.Pca.KMeansAnalysis";
+    public const string UniqueId = "Cameca.CustomAnalysis.Pca.MnMMAnalysis";
+
+    public static INodeDisplayInfo DisplayInfo { get; } = new NodeDisplayInfo("Multinomial Mixture Model");
 
     private readonly SegmentedRoiManager<IStandardAnalysisFilterNodeBaseServices> segmentedManager;
 
-    public KMeansAnalysis(
+    public MnMMAnalysis(
         IStandardAnalysisFilterNodeBaseServices services,
         ResourceFactory resourceFactory)
         : base(services, resourceFactory)
     {
         segmentedManager = SegmentedRoiManager.Create(this);
     }
-
-    public static INodeDisplayInfo DisplayInfo { get; } = new NodeDisplayInfo("K-Means Clustering");
 
     protected override void OnPropertiesChanged(PropertyChangedEventArgs e)
     {
@@ -62,8 +62,8 @@ internal partial class KMeansAnalysis : StandardAnalysisFilterNodeBase<KMeansPro
         int clusters = Properties.ClusterCount;
         var data = ionData.GetVoxelFeatureMatrixSectionData(Resources.Parent!.DataSectionName);
 
-        var clusterer = new ClustererKMeans(data.VoxelFeatureMatrix);
-        var clusterResults = clusterer.Cluster(clusters, Properties.Replicates, Properties.Weighted);
+        var clusterer = new MultinomialMixtureModel(data.VoxelFeatureMatrix);
+        var clusterResults = clusterer.TrainModel(clusters, Properties.Replicates);
 
         // If for whatever reason, there are more assignments than clusteres, eliminated extras (floating point errors?)
         // and represent them as ignored byte.MaxValue

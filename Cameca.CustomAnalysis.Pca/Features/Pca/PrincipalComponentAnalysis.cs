@@ -18,6 +18,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Markup;
 using System.Windows.Media;
 using PcaLibPrincipalComponentAnalysis = Cameca.CustomAnalysis.PcaLib.Interface.PrincipalComponentAnalysis;
 
@@ -250,14 +251,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     }
 
     private VoxelFeatureMatrixSectionData GetVoxelFeatureData(IIonData ionData)
-    {
-        // This isn't the top level -- .Parent! is safe
-        if (VoxelFeatureMatrixSerializer.ReadFromIonDataSection(ionData, Resources.Parent!.DataSectionName) is not { } data)
-        {
-            throw new InvalidOperationException("Parent must define a VoxelFeatureMatrix");
-        }
-        return data;
-    }
+        => ionData.GetVoxelFeatureMatrixSectionData(Resources.Parent!.DataSectionName);
 
     // Updates the noise eigenvalues tab plot when the computed eigenvalue data changes
     partial void OnEigenvalueResultsChanged(EigenvalueResults? value)

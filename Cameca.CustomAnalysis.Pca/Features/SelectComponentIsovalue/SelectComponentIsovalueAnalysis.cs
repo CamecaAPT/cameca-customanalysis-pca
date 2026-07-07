@@ -27,7 +27,7 @@ internal partial class SelectComponentIsovalueAnalysis : StandardAnalysisFilterN
         IProgress<double>? progress,
         [EnumeratorCancellation] CancellationToken token)
     {
-        var data = GetVoxelFeatureData(ownerIonData);
+        var data = ownerIonData.GetVoxelFeatureMatrixSectionData(Resources.Parent!.DataSectionName);
         DataStateIsError = false;
 
         var gridParams = data.ExtraData.GridParameters;
@@ -43,7 +43,7 @@ internal partial class SelectComponentIsovalueAnalysis : StandardAnalysisFilterN
             yield break;
         }
 
-        var scores = VoxelFeatureMatrixSerializer.GetFeatureData(scoresMatrix, componentIndex);
+        var scores = scoresMatrix.GetFeatureData(componentIndex);
 
         var minVector = gridParams.GetMinVector();
         var voxelSize = gridParams.GetVoxelSizeDimensions();
@@ -81,16 +81,6 @@ internal partial class SelectComponentIsovalueAnalysis : StandardAnalysisFilterN
         }
 
         DataStateIsValid = true;
-    }
-
-    private VoxelFeatureMatrixSectionData GetVoxelFeatureData(IIonData ionData)
-    {
-        // This isn't the top level -- .Parent! is safe
-        if (VoxelFeatureMatrixSerializer.ReadFromIonDataSection(ionData, Resources.Parent!.DataSectionName) is not { } data)
-        {
-            throw new InvalidOperationException("Parent must define a VoxelFeatureMatrix");
-        }
-        return data;
     }
 
     protected override void OnPropertiesChanged(PropertyChangedEventArgs e)

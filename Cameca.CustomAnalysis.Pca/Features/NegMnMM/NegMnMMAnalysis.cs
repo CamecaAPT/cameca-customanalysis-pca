@@ -6,27 +6,26 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Resources;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace Cameca.CustomAnalysis.Pca;
 
-internal partial class KMeansAnalysis : StandardAnalysisFilterNodeBase<KMeansProperties>
+internal partial class NegMnMMAnalysis : StandardAnalysisFilterNodeBase<NegMnMMProperties>
 {
-    public const string UniqueId = "Cameca.CustomAnalysis.Pca.KMeansAnalysis";
+    public const string UniqueId = "Cameca.CustomAnalysis.Pca.NegMnMMAnalysis";
+
+    public static INodeDisplayInfo DisplayInfo { get; } = new NodeDisplayInfo("Negative Multinomial Mixture Model");
 
     private readonly SegmentedRoiManager<IStandardAnalysisFilterNodeBaseServices> segmentedManager;
 
-    public KMeansAnalysis(
+    public NegMnMMAnalysis(
         IStandardAnalysisFilterNodeBaseServices services,
         ResourceFactory resourceFactory)
         : base(services, resourceFactory)
     {
         segmentedManager = SegmentedRoiManager.Create(this);
     }
-
-    public static INodeDisplayInfo DisplayInfo { get; } = new NodeDisplayInfo("K-Means Clustering");
 
     protected override void OnPropertiesChanged(PropertyChangedEventArgs e)
     {
@@ -62,8 +61,8 @@ internal partial class KMeansAnalysis : StandardAnalysisFilterNodeBase<KMeansPro
         int clusters = Properties.ClusterCount;
         var data = ionData.GetVoxelFeatureMatrixSectionData(Resources.Parent!.DataSectionName);
 
-        var clusterer = new ClustererKMeans(data.VoxelFeatureMatrix);
-        var clusterResults = clusterer.Cluster(clusters, Properties.Replicates, Properties.Weighted);
+        var clusterer = new NegMultinomialMixtureModel(data.VoxelFeatureMatrix);
+        var clusterResults = clusterer.TrainModel(clusters, Properties.Replicates);
 
         // If for whatever reason, there are more assignments than clusteres, eliminated extras (floating point errors?)
         // and represent them as ignored byte.MaxValue
