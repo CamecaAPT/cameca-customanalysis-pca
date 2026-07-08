@@ -3,12 +3,15 @@ using Cameca.CustomAnalysis.Utilities;
 using CommunityToolkit.HighPerformance.Buffers;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace Cameca.CustomAnalysis.Pca;
+
+internal delegate bool CompareIsovalue(float score, float threshold);
 
 internal partial class SelectComponentIsovalueAnalysis : StandardAnalysisFilterNodeBase<SelectComponentIsovalueProperties>
 {
@@ -17,6 +20,15 @@ internal partial class SelectComponentIsovalueAnalysis : StandardAnalysisFilterN
     public SelectComponentIsovalueAnalysis(IStandardAnalysisFilterNodeBaseServices services, ResourceFactory resourceFactory) : base(services, resourceFactory)
     {
     }
+
+    private static ReadOnlyDictionary<IsovalueComparison, CompareIsovalue> ComparisonFunctions { get; } = new ReadOnlyDictionary<IsovalueComparison, CompareIsovalue>(
+        new Dictionary<IsovalueComparison, CompareIsovalue>
+        {
+            { IsovalueComparison.GreaterOrEqual, (score, threshold) => score >= threshold },
+            { IsovalueComparison.GreaterThan, (score, threshold) => score > threshold },
+            { IsovalueComparison.LessOrEqual, (score, threshold) => score <= threshold },
+            { IsovalueComparison.LessThan, (score, threshold) => score < threshold },
+        });
 
     public static INodeDisplayInfo DisplayInfo { get; } = new NodeDisplayInfo("Select Component by Isovalue");
 
@@ -63,6 +75,7 @@ internal partial class SelectComponentIsovalueAnalysis : StandardAnalysisFilterN
         // Iterating through each point (to determine inclusion) is a bit of a complex chunked iterator code to support >Int32.MaxValue number of ions in a data set
         ulong index = 0ul;
         float threshold = Properties.Isovalue;
+        var comparisonFunc = ComparisonFunctions[Properties.Comparison];
         foreach (var chunk in ownerIonData.CreateSectionDataEnumerable(IonDataSectionName.Position))
         {
             int bufferIndex = 0;
@@ -71,7 +84,7 @@ internal partial class SelectComponentIsovalueAnalysis : StandardAnalysisFilterN
             for (int chunkIndex = 0; chunkIndex < chunk.Length; chunkIndex++)
             {
                 var bin = binner.ToVoxel(positions.Span[chunkIndex]);
-                if (scoredVoxels.TryGetValue(bin, out float score) && score >= threshold)
+                if (scoredVoxels.TryGetValue(bin, out float score) && comparisonFunc(score, threshold))
                 {
                     buffer.Span[bufferIndex++] = index;
                 }

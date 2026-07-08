@@ -54,68 +54,6 @@ public partial class PcaProperties : ObservableObject
     [field: Display(Name = "Components")]
     private int numberOfComponents = 0;
 
-    #region Obsolete
-    [ObservableProperty]
-    [field: Obsolete]
-    private float isovalue = 0;
-
-    [ObservableProperty]
-    [field: Obsolete]
-    private int componentIndex = 0;
-
-    [ObservableProperty]
-    [field: Obsolete]
-    [field: ReadOnly(true)]
-    private float? min = null;
-
-    [ObservableProperty]
-    [field: Obsolete]
-    [field: ReadOnly(true)]
-    private float? max = null;
-
-    [ObservableProperty]
-    [field: Obsolete]
-    private bool invert = false;
-
-    [ObservableProperty]
-    [field: Obsolete]
-    [field: Display(Name = "Grid Projection Bin Size")]
-    private float gridProjectionBinSize = 0.5f;
-
-    [ObservableProperty]
-    [field: Obsolete]
-    [field: Display(Name = "Grid Projection Delocalization")]
-    private float gridProjectionDelocalization = 0.25f;
-
-    [ObservableProperty]
-    [field: Obsolete]
-    [field: Display(Name = "Peak ID Noise Floor")]
-    private float noiseFloorFraction = 0.05f;
-
-    [ObservableProperty]
-    [field: Obsolete]
-    [field: Display(Name = "Peak Summit Allowance")]
-    private float peakSummitAllowance = 0.8f;
-
-    [ObservableProperty]
-    [field: Obsolete]
-    [field: Display(Name = "PCA Phase Index")]
-    private int pcaPhaseIndex = 0;
-
-    [Display(AutoGenerateField = false)]
-    [Obsolete]
-    private bool UsePCAPhaseForDetatchedROI { get; set; } = true;
-
-    [ObservableProperty]
-    [field: Obsolete]
-    [field: Display(Name = "ROI Mode")]
-    private RoiMode usePhaseRois = RoiMode.UsePhaseRois;
-
-    [Display(AutoGenerateField = false)]
-    [Obsolete]
-    public SerializableColorMap? PcaColorMap { get; set; }
-    #endregion Obsolete
-
     [Display(AutoGenerateField = false)]
     public SerializableColorMap? ComponentsColorMap { get; set; }
 

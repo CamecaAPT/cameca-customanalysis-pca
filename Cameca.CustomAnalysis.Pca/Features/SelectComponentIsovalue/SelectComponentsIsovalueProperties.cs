@@ -3,6 +3,14 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Cameca.CustomAnalysis.Pca;
 
+public enum IsovalueComparison
+{
+    GreaterOrEqual = 0,
+    GreaterThan = 1,
+    LessOrEqual = 2,
+    LessThan = 3,
+}
+
 public partial class SelectComponentIsovalueProperties : ObservableValidator
 {
     [ObservableProperty]
@@ -12,5 +20,9 @@ public partial class SelectComponentIsovalueProperties : ObservableValidator
 
     [ObservableProperty]
     private float isovalue = 1f;
+
+    [ObservableProperty]
+    [field: Display(Name = "Comparison")]
+    private IsovalueComparison comparison = IsovalueComparison.GreaterOrEqual;
 }
 

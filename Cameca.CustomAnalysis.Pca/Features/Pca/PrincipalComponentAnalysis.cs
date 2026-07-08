@@ -312,7 +312,6 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         }
 
         int numComponents = Properties.NumberOfComponents;
-        int selectedIndex = Properties.ComponentIndex;
 
         var jitterStdDev = optionsAccessor.GetOptions<PcaGlobalOptions>().JitterStdDev;
 
@@ -320,11 +319,12 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         IValuePointsRenderData? rootValuePoints = null;
         for (int compIndex = 0; compIndex < numComponents; compIndex++)
         {
-            var scores = components[compIndex].Scores;
+            var componentModel = components[compIndex];
+            var scores = componentModel.Scores;
             var positionsWithValues = PositionScores.GetScoredPositions(gridParams, voxelIndices, scores, jitterStdDev: jitterStdDev);
 
             var valuePoints = Resources.ChartObjects.CreateValuePoints();
-            valuePoints.Name = $"Component {compIndex}";
+            valuePoints.Name = componentModel.Name;
             valuePoints.PositionsWithValues = positionsWithValues;
             if (rootValuePoints is null)
             {

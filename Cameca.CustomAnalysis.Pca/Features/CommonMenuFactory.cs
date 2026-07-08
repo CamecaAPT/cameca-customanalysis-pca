@@ -83,8 +83,7 @@ internal class CommonMenuFactory : IAnalysisMenuFactory
     }
 
     // Voxelization is the root - enabled only when not a child of a PCA Suite analysis node
-    //private bool IsVoxelizationEnabled(string nodeType) => !nodeType.StartsWith("Cameca.CustomAnalysis.Pca.");
-    private bool IsVoxelizationEnabled(string nodeType) => true;
+    private bool IsVoxelizationEnabled(string nodeType) => !nodeType.StartsWith("Cameca.CustomAnalysis.Pca.");
     private CheckEnabled IsPcaEnabled = IsAnyOf(VoxelizationAnalysis.UniqueId);
     private CheckEnabled IsKMeansEnabled = IsAnyOf(VoxelizationAnalysis.UniqueId, PrincipalComponentAnalysis.UniqueId);
     private CheckEnabled IsMnMMEnabled = IsAnyOf(VoxelizationAnalysis.UniqueId);
