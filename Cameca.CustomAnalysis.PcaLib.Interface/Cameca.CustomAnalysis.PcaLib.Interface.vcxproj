@@ -124,6 +124,7 @@
   <ItemGroup>
     <ClInclude Include="ClusterData.h" />
     <ClInclude Include="ClustererKMeans.h" />
+    <ClInclude Include="GaussianMixtureModel.h" />
     <ClInclude Include="MultinomialMixtureModel.h" />
     <ClInclude Include="ComponentData.h" />
     <ClInclude Include="GridParameters.h" />
@@ -140,6 +141,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ClustererKMeans.cpp" />
+    <ClCompile Include="GaussianMixtureModel.cpp" />
     <ClCompile Include="MultinomialMixtureModel.cpp" />
     <ClCompile Include="Interface.cpp" />
     <ClCompile Include="ManagedWrapper.cpp" />

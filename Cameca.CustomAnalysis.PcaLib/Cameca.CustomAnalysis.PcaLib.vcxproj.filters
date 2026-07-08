@@ -75,6 +75,12 @@
     <ClInclude Include="negmultinomialMM.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GMM.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GaussianMixtureModel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -105,6 +111,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="NegMultinomialMixtureModel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GaussianMixtureModel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

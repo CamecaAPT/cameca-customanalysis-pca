@@ -154,6 +154,8 @@
     <ClInclude Include="blas_wrapper.h" />
     <ClInclude Include="ClusterData.h" />
     <ClInclude Include="ClustererKMeans.h" />
+    <ClInclude Include="GaussianMixtureModel.h" />
+    <ClInclude Include="GMM.h" />
     <ClInclude Include="MultinomialMixtureModel.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="kmeans.h" />
@@ -174,6 +176,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ClustererKMeans.cpp" />
+    <ClCompile Include="GaussianMixtureModel.cpp" />
     <ClCompile Include="MultinomialMixtureModel.cpp" />
     <ClCompile Include="NegMultinomialMixtureModel.cpp" />
     <ClCompile Include="pch.cpp">

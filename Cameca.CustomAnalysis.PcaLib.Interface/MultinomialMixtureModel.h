@@ -3,7 +3,6 @@
 #include "VoxelFeatureMatrix.h"
 #include "Cameca.CustomAnalysis.PcaLib/MultinomialMixtureModel.h"
 #include "VectorMarshaller.h"
-#include "ClusterData.h"
 
 namespace Cameca::CustomAnalysis::PcaLib::Interface {
 

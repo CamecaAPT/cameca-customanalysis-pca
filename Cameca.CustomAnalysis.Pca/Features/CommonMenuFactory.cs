@@ -62,6 +62,10 @@ internal class CommonMenuFactory : IAnalysisMenuFactory
             {
                 menuItems.Add(CreateChildMenuItem(NegMnMMAnalysis.UniqueId, NegMnMMAnalysis.DisplayInfo));
             }
+            if (IsGMMEnabled(nodeType))
+            {
+                menuItems.Add(CreateChildMenuItem(GaussianMixtureModelAnalysis.UniqueId, GaussianMixtureModelAnalysis.DisplayInfo));
+            }
 
             return new SubMenu(SubMenuTitle, isEnabled: true, toolTip: SubMenuToolTip)
             {
@@ -79,12 +83,14 @@ internal class CommonMenuFactory : IAnalysisMenuFactory
     }
 
     // Voxelization is the root - enabled only when not a child of a PCA Suite analysis node
-    private bool IsVoxelizationEnabled(string nodeType) => !nodeType.StartsWith("Cameca.CustomAnalysis.Pca.");
+    //private bool IsVoxelizationEnabled(string nodeType) => !nodeType.StartsWith("Cameca.CustomAnalysis.Pca.");
+    private bool IsVoxelizationEnabled(string nodeType) => true;
     private CheckEnabled IsPcaEnabled = IsAnyOf(VoxelizationAnalysis.UniqueId);
     private CheckEnabled IsKMeansEnabled = IsAnyOf(VoxelizationAnalysis.UniqueId, PrincipalComponentAnalysis.UniqueId);
     private CheckEnabled IsMnMMEnabled = IsAnyOf(VoxelizationAnalysis.UniqueId);
     private CheckEnabled IsNegMnMMEnabled = IsAnyOf(VoxelizationAnalysis.UniqueId);
     private CheckEnabled IsSelectComponentIsovalueEnabled = IsAnyOf(PrincipalComponentAnalysis.UniqueId);
+    private CheckEnabled IsGMMEnabled = IsAnyOf(VoxelizationAnalysis.UniqueId);
 
     private static CheckEnabled IsAnyOf(params string[] allowedNodeTypes) => (string nodeType) => allowedNodeTypes.Contains(nodeType);
 }

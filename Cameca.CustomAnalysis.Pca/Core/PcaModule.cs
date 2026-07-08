@@ -32,6 +32,9 @@ public class PcaModule : IModule
         containerRegistry.Register<object, NegMnMMAnalysis>(NegMnMMAnalysis.UniqueId);
         containerRegistry.RegisterInstance(NegMnMMAnalysis.DisplayInfo, NegMnMMAnalysis.UniqueId);
 
+        containerRegistry.Register<object, GaussianMixtureModelAnalysis>(GaussianMixtureModelAnalysis.UniqueId);
+        containerRegistry.RegisterInstance(GaussianMixtureModelAnalysis.DisplayInfo, GaussianMixtureModelAnalysis.UniqueId);
+
         containerRegistry.Register<object, SelectComponentIsovalueAnalysis>(SelectComponentIsovalueAnalysis.UniqueId);
         containerRegistry.RegisterInstance(SelectComponentIsovalueAnalysis.DisplayInfo, SelectComponentIsovalueAnalysis.UniqueId);
 
