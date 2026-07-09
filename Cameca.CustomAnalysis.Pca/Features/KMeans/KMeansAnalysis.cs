@@ -1,6 +1,8 @@
 ﻿using Cameca.CustomAnalysis.Interface;
 using Cameca.CustomAnalysis.PcaLib.Interface;
 using Cameca.CustomAnalysis.Utilities;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace Cameca.CustomAnalysis.Pca;
 
@@ -17,10 +19,20 @@ internal partial class KMeansAnalysis : BaseClusteringAnalysis<KMeansProperties>
 
     public static INodeDisplayInfo DisplayInfo { get; } = new NodeDisplayInfo("K-Means Clustering");
     
-    protected override int[] Cluster(IIonData ionData, VoxelFeatureMatrixSectionData voxelFeatureMatrixSectionData)
+    protected override int[] Cluster(IIonData ionData, VoxelFeatureMatrixSectionData data)
     {
-        var clusterer = new ClustererKMeans(voxelFeatureMatrixSectionData.VoxelFeatureMatrix);
+        var clusterer = data.LoadingsMatrix is not null
+                ? new ClustererKMeans(data.VoxelFeatureMatrix, ToNested(data.LoadingsMatrix))
+                : new ClustererKMeans(data.VoxelFeatureMatrix);
         var clusterResults = clusterer.Cluster(Properties.ClusterCount, Properties.Replicates, Properties.Weighted);
         return clusterResults.VoxelIndex;
+    }
+
+    private static IEnumerable<IEnumerable<float>> ToNested(VoxelFeatureMatrix matrix)
+    {
+        for (var i = 0; i < matrix.FeatureCount; i++)
+        {
+            yield return matrix.GetFeatureData(i).ToArray();
+        }
     }
 }

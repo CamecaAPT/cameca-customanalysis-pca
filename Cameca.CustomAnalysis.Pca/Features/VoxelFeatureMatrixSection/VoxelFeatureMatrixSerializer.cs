@@ -12,7 +12,7 @@ using System.Text.Json;
 
 namespace Cameca.CustomAnalysis.Pca;
 
-public record VoxelFeatureMatrixSectionData(VoxelFeatureMatrixExtraData ExtraData, VoxelFeatureMatrix VoxelFeatureMatrix);
+public record VoxelFeatureMatrixSectionData(VoxelFeatureMatrixExtraData ExtraData, VoxelFeatureMatrix VoxelFeatureMatrix, VoxelFeatureMatrix? LoadingsMatrix = null);
 
 internal static class VoxelFeatureMatrixSerializer
 {
@@ -45,8 +45,19 @@ internal static class VoxelFeatureMatrixSerializer
 
         var indicesData = indicesInfo.GetDataAsType<int>();
         var matrixData = matrixInfo.GetDataAsType<float>();
-
         var matrix = VoxelFeatureMatrix.FromData(matrixData, matrixInfo.Shape[0], matrixInfo.Shape[1], indicesData);
+
+        if (definition.PackedData.TryGetValue("loadings", out var loadingsInfo))
+        {
+            if (loadingsInfo is not { DType: "<f4", Shape: { Length: 2 }, Order: StorageOrder.F })
+            {
+                throw new InvalidOperationException($"Expected 'loadings' to be a 2D float32 array in Fortran order, but got DType: {loadingsInfo.DType}, Shape: [{string.Join(", ", loadingsInfo.Shape)}], Order: {loadingsInfo.Order}");
+            }
+            var loadingsData = loadingsInfo.GetDataAsType<float>();
+            var loadings = VoxelFeatureMatrix.FromData(loadingsData, loadingsInfo.Shape[0], loadingsInfo.Shape[1], indicesData);
+            return new VoxelFeatureMatrixSectionData(definition.ExtraData, matrix, loadings);
+        }
+
         return new VoxelFeatureMatrixSectionData(definition.ExtraData, matrix);
 
 

@@ -23,8 +23,9 @@ ClusterData ClustererKMeans::Cluster(const int nClust, const int nReplicates, co
 
     float cost;
     // Weighted
-    if (has_loads) {
-        int rows = loads.size();
+    if (has_loads && loads.size() > 0) {
+        // All rows will be same length
+        int rows = loads[0].size();
         int cols = nFeatures;
         MatrixXf P(rows, cols);
         for (int i = 0; i < rows; ++i) {
