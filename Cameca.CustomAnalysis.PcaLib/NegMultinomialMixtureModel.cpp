@@ -1,5 +1,4 @@
 #include "pch.h"
-#include "pch.h"
 #include <Eigen/Dense>
 #include "VoxelFeatureMatrixImpl.h"
 #include "NegMultinomialMixtureModel.h"

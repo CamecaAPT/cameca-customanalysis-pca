@@ -66,7 +66,11 @@ internal class CommonMenuFactory : IAnalysisMenuFactory
             {
                 menuItems.Add(CreateChildMenuItem(GaussianMixtureModelAnalysis.UniqueId, GaussianMixtureModelAnalysis.DisplayInfo));
             }
-
+            if (IsONMFEnabled(nodeType))
+            {
+                menuItems.Add(CreateChildMenuItem(OrthNonNegMatrixFactorizationAnalysis.UniqueId, OrthNonNegMatrixFactorizationAnalysis.DisplayInfo));
+            }
+            
             return new SubMenu(SubMenuTitle, isEnabled: true, toolTip: SubMenuToolTip)
             {
                 MenuItems = menuItems,
@@ -90,6 +94,7 @@ internal class CommonMenuFactory : IAnalysisMenuFactory
     private CheckEnabled IsNegMnMMEnabled = IsAnyOf(VoxelizationAnalysis.UniqueId);
     private CheckEnabled IsSelectComponentIsovalueEnabled = IsAnyOf(PrincipalComponentAnalysis.UniqueId);
     private CheckEnabled IsGMMEnabled = IsAnyOf(VoxelizationAnalysis.UniqueId);
+    private CheckEnabled IsONMFEnabled = IsAnyOf(VoxelizationAnalysis.UniqueId);
 
     private static CheckEnabled IsAnyOf(params string[] allowedNodeTypes) => (string nodeType) => allowedNodeTypes.Contains(nodeType);
 }

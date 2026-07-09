@@ -38,6 +38,8 @@ public class PcaModule : IModule
         containerRegistry.Register<object, SelectComponentIsovalueAnalysis>(SelectComponentIsovalueAnalysis.UniqueId);
         containerRegistry.RegisterInstance(SelectComponentIsovalueAnalysis.DisplayInfo, SelectComponentIsovalueAnalysis.UniqueId);
 
+        containerRegistry.Register<object, OrthNonNegMatrixFactorizationAnalysis>(OrthNonNegMatrixFactorizationAnalysis.UniqueId);
+        containerRegistry.RegisterInstance(OrthNonNegMatrixFactorizationAnalysis.DisplayInfo, OrthNonNegMatrixFactorizationAnalysis.UniqueId);
 
         containerRegistry.Register<IAnalysisMenuFactory, CommonMenuFactory>(nameof(CommonMenuFactory));
     }

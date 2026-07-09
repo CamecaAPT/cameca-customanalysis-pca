@@ -130,6 +130,7 @@
     <ClInclude Include="GridParameters.h" />
     <ClInclude Include="ManagedWrapper.h" />
     <ClInclude Include="NegMultinomialMixtureModel.h" />
+    <ClInclude Include="OrthNonNegMatrixFactorization.h" />
     <ClInclude Include="Progress.h" />
     <ClInclude Include="ProgressReporter.h" />
     <ClInclude Include="VectorMarshaller.h" />
@@ -146,6 +147,7 @@
     <ClCompile Include="Interface.cpp" />
     <ClCompile Include="ManagedWrapper.cpp" />
     <ClCompile Include="NegMultinomialMixtureModel.cpp" />
+    <ClCompile Include="OrthNonNegMatrixFactorization.cpp" />
     <ClCompile Include="PrincipalComponentAnalysis.cpp" />
     <ClCompile Include="VoxelFeatureMatrix.cpp" />
     <ClCompile Include="VoxelFeatureMatrixBuilder.cpp" />

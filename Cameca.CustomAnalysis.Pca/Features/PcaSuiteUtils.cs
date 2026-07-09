@@ -1,13 +1,6 @@
 ﻿using Cameca.CustomAnalysis.Interface;
 using Cameca.CustomAnalysis.PcaLib.Interface;
-using Cameca.CustomAnalysis.Utilities;
-using Cameca.CustomAnalysis.Utilities.Segmentation;
-using LiveCharts.Wpf;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.Metadata.Ecma335;
-using System.Resources;
 
 namespace Cameca.CustomAnalysis.Pca;
 

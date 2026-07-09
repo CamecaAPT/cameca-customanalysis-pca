@@ -162,6 +162,7 @@
     <ClInclude Include="multinomialMM.h" />
     <ClInclude Include="NegMultinomialMixtureModel.h" />
     <ClInclude Include="negmultinomialMM.h" />
+    <ClInclude Include="OrthNonNegMatrixFactorization.h" />
     <ClInclude Include="PcaLibExport.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="PrincipalComponentAnalysis.h" />
@@ -179,6 +180,7 @@
     <ClCompile Include="GaussianMixtureModel.cpp" />
     <ClCompile Include="MultinomialMixtureModel.cpp" />
     <ClCompile Include="NegMultinomialMixtureModel.cpp" />
+    <ClCompile Include="OrthNonNegMatrixFactorization.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
