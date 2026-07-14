@@ -4,6 +4,7 @@ using Cameca.CustomAnalysis.Utilities;
 
 namespace Cameca.CustomAnalysis.Pca;
 
+[DefaultView(ONMFViewModel.UniqueId, typeof(ONMFViewModel))]
 internal partial class OrthNonNegMatrixFactorizationAnalysis : BaseClusteringAnalysis<OrthNonNegMatrixFactorizationProperties>
 {
     public const string UniqueId = "Cameca.CustomAnalysis.Pca.OrthNonNegMatrixFactorizationAnalysis";

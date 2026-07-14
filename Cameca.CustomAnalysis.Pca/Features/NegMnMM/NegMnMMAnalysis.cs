@@ -4,6 +4,7 @@ using Cameca.CustomAnalysis.Utilities;
 
 namespace Cameca.CustomAnalysis.Pca;
 
+[DefaultView(NegMnMMViewModel.UniqueId, typeof(NegMnMMViewModel))]
 internal partial class NegMnMMAnalysis : BaseClusteringAnalysis<NegMnMMProperties>
 {
     public const string UniqueId = "Cameca.CustomAnalysis.Pca.NegMnMMAnalysis";

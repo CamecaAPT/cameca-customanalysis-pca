@@ -5,6 +5,7 @@ using Cameca.CustomAnalysis.Utilities;
 
 namespace Cameca.CustomAnalysis;
 
+[DefaultView(MnMMViewModel.UniqueId, typeof(MnMMViewModel))]
 internal partial class MnMMAnalysis : BaseClusteringAnalysis<MnMMProperties>
 {
     public const string UniqueId = "Cameca.CustomAnalysis.Pca.MnMMAnalysis";

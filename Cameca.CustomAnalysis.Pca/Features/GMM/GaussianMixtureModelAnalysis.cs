@@ -4,6 +4,7 @@ using Cameca.CustomAnalysis.Utilities;
 
 namespace Cameca.CustomAnalysis.Pca;
 
+[DefaultView(GMMViewModel.UniqueId, typeof(GMMViewModel))]
 internal partial class GaussianMixtureModelAnalysis : BaseClusteringAnalysis<GaussianMixtureModelProperties>
 {
     public const string UniqueId = "Cameca.CustomAnalysis.Pca.GaussianMixtureModelAnalysis";

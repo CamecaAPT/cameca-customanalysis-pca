@@ -458,7 +458,8 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     private void UpdateSelectedScores()
     {
         int selectedIndex = SelectedLoadingsIndex;
-        if (Resources.GetValidIonData() is not { } ionData
+        if (selectedIndex < 0
+            || Resources.GetValidIonData() is not { } ionData
             || PcaComponentsResults is not { Components: { Length: > 0 } components }
             || selectedIndex >= components.Length)
         {
