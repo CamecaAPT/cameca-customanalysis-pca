@@ -4,9 +4,6 @@ using Prism.Events;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Controls;
 
 namespace Cameca.CustomAnalysis.Pca;
 
@@ -40,7 +37,7 @@ internal class CommonMenuFactory : IAnalysisMenuFactory
             var menuItems = new List<IMenuItem>();
             if (IsVoxelizationEnabled(nodeType))
             {
-                menuItems.Add(CreateChildMenuItem(VoxelizationAnalysis.UniqueId, VoxelizationAnalysis.DisplayInfo));
+                menuItems.Add(CreateChildMenuItem(VoxelizationAnalysis.UniqueId, VoxelizationAnalysis.DisplayInfo, menuTitle: $"Create {VoxelizationAnalysis.DisplayInfo.Title}"));
             }
             if (IsPcaEnabled(nodeType))
             {
@@ -77,9 +74,9 @@ internal class CommonMenuFactory : IAnalysisMenuFactory
             };
         }
 
-        IMenuItem CreateChildMenuItem(string targetType, INodeDisplayInfo targetDisplayInfo, CheckEnabled? resolveEnabled = null, string? toolTip = null)
+        IMenuItem CreateChildMenuItem(string targetType, INodeDisplayInfo targetDisplayInfo, CheckEnabled? resolveEnabled = null, string? toolTip = null, string? menuTitle = null)
         {
-            return new MenuAction(targetDisplayInfo.Title, new DelegateCommand(() =>
+            return new MenuAction(menuTitle ?? targetDisplayInfo.Title, new DelegateCommand(() =>
             {
                 eventAggregator.PublishCreateNode(targetType, sourceNodeId, targetDisplayInfo.Title, targetDisplayInfo.Icon);
             }), targetDisplayInfo.Icon, resolveEnabled?.Invoke(nodeType) ?? true, toolTip);

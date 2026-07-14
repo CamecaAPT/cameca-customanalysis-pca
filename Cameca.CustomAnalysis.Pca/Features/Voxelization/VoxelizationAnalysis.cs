@@ -21,7 +21,7 @@ internal partial class VoxelizationAnalysis : StandardAnalysisFilterNodeBase<Vox
     {
     }
 
-    public static INodeDisplayInfo DisplayInfo { get; } = new NodeDisplayInfo("Create 3D Grid");
+    public static INodeDisplayInfo DisplayInfo { get; } = new NodeDisplayInfo("3D Grid");
 
 
     private async Task Update(IIonData ionData, IProgress<double>? progress = null, CancellationToken cancellationToken = default)
