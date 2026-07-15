@@ -1,20 +1,15 @@
 ﻿using Cameca.CustomAnalysis.Interface;
-using Cameca.CustomAnalysis.Pca.VoxelLogic;
 using Cameca.CustomAnalysis.PcaLib.Interface;
 using Cameca.CustomAnalysis.Utilities;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Resources;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Cameca.CustomAnalysis.Pca;
 
 internal static class IonAssignmentSerializer
 {
-    public static void WriteToDataSection(
+    public static void WriteToIonDataSection(
         IIonData ionData,
         string sectionName,
         GridParameters gridParams,
@@ -63,5 +58,14 @@ internal static class IonAssignmentSerializer
             }
             chunk.WriteSectionData<byte>(sectionName, buffer);
         }
+    }
+
+    public static byte[]? ReadFromIonDataSection(IIonData ionData, string sectionName)
+    {
+        if (ionData.Sections.ContainsKey(sectionName))
+        {
+            return ionData.ReadSectionToArray<byte>(sectionName);
+        }
+        return null;
     }
 }

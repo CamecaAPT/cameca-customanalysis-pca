@@ -109,6 +109,16 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         this.optionsAccessor = optionsAccessor;
     }
 
+    protected override void OnAdded(NodeAddedEventArgs eventArgs)
+    {
+        base.OnAdded(eventArgs);
+        if (eventArgs.Trigger == Interface.EventTrigger.Load
+            && Resources.TopLevelNode.GetValidIonData()!.Sections.ContainsKey(Resources.DataSectionName))
+        {
+            DataStateIsValid = true;
+        }
+    }
+
     protected override async Task<bool> Update(CancellationToken cancellationToken)
     {
         await UpdateRankEstimation(cancellationToken);
@@ -358,10 +368,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
             NoiseEigenvalueResults = null;
             Analysis = null;
             PcaComponentsResults = null;
-            if (Resources.GetValidIonData() is { } ionData)
-            {
-                ionData.DeleteSection(Resources.DataSectionName);
-            }
+            Resources.TopLevelNode.GetValidIonData()!.DeleteSection(Resources.DataSectionName);
             foreach (var child in Resources.Children)
             {
                 if (Services.DataStateProvider.Resolve(child.Id) is { } childDataState)

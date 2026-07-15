@@ -59,33 +59,6 @@ internal static class VoxelFeatureMatrixSerializer
         }
 
         return new VoxelFeatureMatrixSectionData(definition.ExtraData, matrix);
-
-
-        //data = null;
-        //var packedExtraData = JsonSerializer.Deserialize<PackedExtraData<VoxelFeatureMatrixExtraData>>(ionData.Sections[sectionName].ExtraData);
-        //// Extract extra data, and parse and validate the expected data manifest
-        //if (packedExtraData is not { Manifest: { } manifest, ExtraData: { } extraData }
-        //    || !(manifest.TryGetValue("voxel_indices", out var voxelIndicesInfo) && voxelIndicesInfo is { Shape: { Length: 1 }, DType: "i32", Order: StorageOrder.C })
-        //    || !(manifest.TryGetValue("matrix", out var matrixInfo) && matrixInfo is { Shape: { Length: 2 }, DType: "f32", Order: StorageOrder.F }))
-        //{
-        //    return false;
-        //}
-
-        //// Shouldn't have to iterated everything when only getting initial pointer.
-        //// Just getting the first should ensure the entire section is memory mapped
-        //var enumerator = ionData.CreateSectionDataEnumerator(sectionName);
-        //if (!enumerator.MoveNext())
-        //{
-        //    return false;
-        //}
-        //var bytesData = enumerator.Current.ReadSectionData<byte>(sectionName);
-        //var pinnedData = bytesData.Pin();
-
-        //ReadOnlySpan<int> indiciesSpan = ReadPackedData<int>(pinnedData, voxelIndicesInfo);
-        //ReadOnlySpan<float> dataSpan = ReadPackedData<float>(pinnedData, matrixInfo);
-        //var voxelFeature = VoxelFeatureMatrix.FromData(dataSpan, (int)matrixInfo.Shape[0], (int)matrixInfo.Shape[1], indiciesSpan);
-        //data = new VoxelFeatureMatrixSectionData(extraData.GridParameters, indiciesSpan.ToArray(), voxelFeature);
-        //return true;
     }
 
     private static ReadOnlySpan<T> ReadPackedData<T>(MemoryHandle handle, PackedDataInfo dataInfo) where T : unmanaged

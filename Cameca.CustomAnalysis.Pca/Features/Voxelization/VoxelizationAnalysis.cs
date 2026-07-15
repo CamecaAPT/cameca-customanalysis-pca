@@ -23,9 +23,22 @@ internal partial class VoxelizationAnalysis : StandardAnalysisFilterNodeBase<Vox
 
     public static INodeDisplayInfo DisplayInfo { get; } = new NodeDisplayInfo("3D Grid");
 
+    protected override void OnAdded(NodeAddedEventArgs eventArgs)
+    {
+        base.OnAdded(eventArgs);
+        if (eventArgs.Trigger == EventTrigger.Load
+            && Resources.TopLevelNode.GetValidIonData()!.Sections.ContainsKey(Resources.DataSectionName))
+        {
+            DataStateIsValid = true;
+        }
+    }
 
     private async Task Update(IIonData ionData, IProgress<double>? progress = null, CancellationToken cancellationToken = default)
     {
+        if (ionData.Sections.ContainsKey(Resources.DataSectionName))
+        {
+            return;
+        }
         await Task.Run(() =>
         {
             var (gridParams, voxelFeatureMatrix) = CreateVoxelFeatureMatrix(ionData, progress);
@@ -41,10 +54,7 @@ internal partial class VoxelizationAnalysis : StandardAnalysisFilterNodeBase<Vox
     {
         if (!isValid)
         {
-            if(Resources.GetValidIonData() is { } ionData)
-            {
-                ionData.DeleteSection(Resources.DataSectionName);
-            }
+            Resources.TopLevelNode.GetValidIonData()!.DeleteSection(Resources.DataSectionName);
             foreach (var child in Resources.Children)
             {
                 if (Services.DataStateProvider.Resolve(child.Id) is { } childDataState)

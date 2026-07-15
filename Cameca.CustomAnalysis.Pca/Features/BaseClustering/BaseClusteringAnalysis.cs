@@ -47,7 +47,6 @@ internal abstract partial class BaseClusteringAnalysis<TProperties> : BasicCusto
         base.OnAdded(eventArgs);
         if (eventArgs.Trigger == EventTrigger.Create)
         {
-            var ownderNode = eventArgs.NodeId;
             SyncPlaceholderExpectedSegments(Properties.ClusterCount);
         }
     }
@@ -81,8 +80,30 @@ internal abstract partial class BaseClusteringAnalysis<TProperties> : BasicCusto
         {
             return;
         }
-        int clusters = Properties.ClusterCount;
         var data = ionData.GetVoxelFeatureMatrixSectionData(Resources.Parent!.DataSectionName);
+
+        var existingResults = IonAssignmentSerializer.ReadFromIonDataSection(ionData, Resources.DataSectionName);
+        var sanitizedResults = existingResults ?? CalculateClustering(ionData, data);
+
+        CreateTicPlots(data, sanitizedResults);
+
+        // Created new, needs to be saved
+        if (existingResults is null)
+        {
+            IonAssignmentSerializer.WriteToIonDataSection(
+                ionData,
+                Resources.DataSectionName,
+                data.ExtraData.GridParameters,
+                data.VoxelFeatureMatrix.GetVoxelIndices(),
+                sanitizedResults);
+        }
+        UpdateSegmentedChildrenRois();
+        DataStateIsValid = true;
+    }
+
+    private byte[] CalculateClustering(IIonData ionData, VoxelFeatureMatrixSectionData data)
+    {
+        int clusters = Properties.ClusterCount;
 
         double voxelSize = data.ExtraData.GridParameters.VoxelSize;
         TicPlotXAxisLabel = CreateTicPlotXAxisLabel(voxelSize);
@@ -102,22 +123,8 @@ internal abstract partial class BaseClusteringAnalysis<TProperties> : BasicCusto
             byte sanitized = raw < clusters ? (byte)raw : byte.MaxValue;
             sanitizedResults[i] = sanitized;
         }
-
-        CreateTicPlots(data, sanitizedResults);
-        OnResults(data, sanitizedResults);
-
-        IonAssignmentSerializer.WriteToDataSection(
-            ionData,
-            Resources.DataSectionName,
-            data.ExtraData.GridParameters,
-            data.VoxelFeatureMatrix.GetVoxelIndices(),
-            sanitizedResults);
-
-        UpdateSegmentedChildrenRois();
-        DataStateIsValid = true;
+        return sanitizedResults;
     }
-
-    protected virtual void OnResults(VoxelFeatureMatrixSectionData data, byte[] results) { }
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
     protected override async IAsyncEnumerable<ReadOnlyMemory<ulong>> GetIndicesDelegateAsync(
@@ -229,6 +236,7 @@ internal abstract partial class BaseClusteringAnalysis<TProperties> : BasicCusto
         if (!isValid)
         {
             baseBinnedData = null;
+            Resources.TopLevelNode.GetValidIonData()!.DeleteSection(Resources.DataSectionName);
         }
     }
 
@@ -237,7 +245,14 @@ internal abstract partial class BaseClusteringAnalysis<TProperties> : BasicCusto
 
     private void CreateTicPlots(VoxelFeatureMatrixSectionData data, byte[] results)
     {
-        var newTics = new List<IRenderData>();
+        var voxelSize = data.ExtraData.GridParameters.VoxelSize;
+        TicPlotXAxisLabel = CreateTicPlotXAxisLabel(voxelSize);
+        if (lastVoxelSize != voxelSize)
+        {
+            SetClampedTicWidth((int)Math.Pow(Math.Round(voxelSize), 3));
+            lastVoxelSize = voxelSize;
+        }
+
 
         var voxelTic = new float[data.VoxelFeatureMatrix.VoxelCount];
         for (int i = 0; i < data.VoxelFeatureMatrix.FeatureCount; i++)
@@ -293,6 +308,7 @@ internal abstract partial class BaseClusteringAnalysis<TProperties> : BasicCusto
             baseBinnedData.Add(clusterRenderDataValues.ToArray());
         }
 
+        var newTics = new List<IRenderData>();
         foreach (var (d, i) in baseBinnedData.Select((data, i) => (data, i)))
         {
             var histRenderData = Resources.ChartObjects.CreateHistogram(
