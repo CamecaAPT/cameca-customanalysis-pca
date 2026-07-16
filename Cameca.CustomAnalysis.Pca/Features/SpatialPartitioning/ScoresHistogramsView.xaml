@@ -25,11 +25,27 @@
                     Orientation="Vertical" 
                     HorizontalAlignment="Center"
                     Background="#efefef">
-            <ListBox x:Name="ComponentSelector"
-                     DisplayMemberPath="Name"
-                     SelectedIndex="{Binding SelectedLoadingsIndex}"
-                     ItemsSource="{Binding PcaComponentsResults.Components}"
-                     />
+            <Button x:Name="PreviousHistogramButton" 
+                 Content="Go to Previous Histogram" 
+                 Height="32" 
+                 Width="170"
+                 Click="PreviousHistogramButton_Click" 
+                 Margin="10,10,10,0">
+            </Button>
+            <Button x:Name="AdvanceHistogramButton" 
+                 Content="Advance To Next Histogram" 
+                 Height="32" 
+                 Width="170"
+                 Click="AdvanceHistogramButton_Click" 
+                 Margin="10,10,10,0">
+            </Button>
+            <CheckBox x:Name="UseHistogramForPCAPhaseID" 
+                 Content="Use for PCA Phase ID" 
+                 Height="32" 
+                 Width="170"
+                 Click="UseHistogramForPCAPhaseID_Click" 
+                 Margin="10,10,10,0">
+            </CheckBox>
             <TextBox x:Name="HistogramInfoText" 
                  Width="170"
                  Margin="10,10,10,10"
@@ -39,12 +55,21 @@
                  ScrollViewer.CanContentScroll="True">
             </TextBox>
         </StackPanel>
+        <Label x:Name="HistogramLabel" 
+                 Grid.Column="1" 
+                 Grid.Row="0" 
+                 Content="Histogram Title" 
+                 Height="32" 
+                 Width="140" 
+                 FontSize="16" 
+                 FontFamily="Calibri"  
+                 FontWeight="Bold">
+        </Label>
         <controls:Chart2D x:Name="ScoresHistogram" 
-                DataSource="{Binding HistogramsSource, RelativeSource={RelativeSource AncestorType=local:ScoresHistogramsView}}"
+                DataSource="{Binding ScoresHistogramRenderData, RelativeSource={RelativeSource AncestorType=local:ScoresHistogramsView}}"
                 Grid.Column="2" 
-                Grid.Row="1"
+                Grid.Row="1"                                  
                 AxisXLabel="Score"
-                IsLegendVisible="False"
                 AxisYLabel="Voxels per PCA Unit"/>
      </Grid>
 </UserControl>

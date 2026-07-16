@@ -51,6 +51,10 @@ internal class CommonMenuFactory : IAnalysisMenuFactory
             {
                 menuItems.Add(CreateChildMenuItem(SelectComponentIsovalueAnalysis.UniqueId, SelectComponentIsovalueAnalysis.DisplayInfo));
             }
+            if (IsSpatialPartitioningEnabled(nodeType))
+            {
+                menuItems.Add(CreateChildMenuItem(SpatialPartitioningAnalysis.UniqueId, SpatialPartitioningAnalysis.DisplayInfo));
+            }
             if (IsMnMMEnabled(nodeType))
             {
                 menuItems.Add(CreateChildMenuItem(MnMMAnalysis.UniqueId, MnMMAnalysis.DisplayInfo));
@@ -90,6 +94,7 @@ internal class CommonMenuFactory : IAnalysisMenuFactory
     private CheckEnabled IsMnMMEnabled = IsAnyOf(VoxelizationAnalysis.UniqueId);
     private CheckEnabled IsNegMnMMEnabled = IsAnyOf(VoxelizationAnalysis.UniqueId);
     private CheckEnabled IsSelectComponentIsovalueEnabled = IsAnyOf(PrincipalComponentAnalysis.UniqueId);
+    private CheckEnabled IsSpatialPartitioningEnabled = IsAnyOf(PrincipalComponentAnalysis.UniqueId);
     private CheckEnabled IsGMMEnabled = IsAnyOf(VoxelizationAnalysis.UniqueId, PrincipalComponentAnalysis.UniqueId);
     private CheckEnabled IsONMFEnabled = IsAnyOf(VoxelizationAnalysis.UniqueId);
 

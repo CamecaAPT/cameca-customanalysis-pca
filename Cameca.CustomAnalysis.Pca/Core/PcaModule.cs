@@ -46,6 +46,10 @@ public class PcaModule : IModule
         containerRegistry.RegisterInstance(OrthNonNegMatrixFactorizationAnalysis.DisplayInfo, OrthNonNegMatrixFactorizationAnalysis.UniqueId);
         containerRegistry.Register<object, ONMFViewModel>(ONMFViewModel.UniqueId);
 
+        containerRegistry.Register<object, SpatialPartitioningAnalysis>(SpatialPartitioningAnalysis.UniqueId);
+        containerRegistry.RegisterInstance(SpatialPartitioningAnalysis.DisplayInfo, SpatialPartitioningAnalysis.UniqueId);
+        containerRegistry.Register<object, SpatialPartitioningViewModel>(SpatialPartitioningViewModel.UniqueId);
+
         containerRegistry.Register<IAnalysisMenuFactory, CommonMenuFactory>(nameof(CommonMenuFactory));
     }
 
@@ -59,6 +63,7 @@ public class PcaModule : IModule
         extensionRegistry.RegisterAnalysisView<ClusteringView, MnMMViewModel>(AnalysisViewLocation.Default);
         extensionRegistry.RegisterAnalysisView<ClusteringView, NegMnMMViewModel>(AnalysisViewLocation.Default);
         extensionRegistry.RegisterAnalysisView<ClusteringView, ONMFViewModel>(AnalysisViewLocation.Default);
+        extensionRegistry.RegisterAnalysisView<SpatialPartitioningView, SpatialPartitioningViewModel>(AnalysisViewLocation.Default);
 
         extensionRegistry.RegisterOptions<PcaGlobalOptions>("Principal Component Analysis");
     }

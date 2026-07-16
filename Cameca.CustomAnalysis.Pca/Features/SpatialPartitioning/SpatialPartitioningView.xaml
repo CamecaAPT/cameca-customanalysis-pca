@@ -1,0 +1,150 @@
+﻿<UserControl x:Class="Cameca.CustomAnalysis.Pca.SpatialPartitioningView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Cameca.CustomAnalysis.Pca"
+             xmlns:utils="clr-namespace:Cameca.CustomAnalysis.Utilities.Controls;assembly=Cameca.CustomAnalysis.Utilities"
+             xmlns:controls="clr-namespace:Cameca.Extensions.Controls;assembly=Cameca.Extensions.Controls"
+             xmlns:interface="clr-namespace:Cameca.CustomAnalysis.Interface;assembly=Cameca.CustomAnalysis.Interface"
+             xmlns:behaviors="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800"
+             DataContext="{Binding Node}">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <local:SingleRenderDataValueConverter x:Key="SingleRenderDataValueConverter" />
+        <local:ClusterNameConverter x:Key="ClusterNameConverter" />
+    </UserControl.Resources>
+
+    <utils:ButtonOverlayControl ButtonContent="Update"
+                                ButtonCommand="{Binding UpdateCommand}"
+                                Name="Test"
+                                OverlayVisibility="{Binding UpdateCommandCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
+        <TabControl>
+            
+            <TabItem Header="Scores">
+                <local:ScoresHistogramsView HistogramsSource="{Binding ScoresHistogramRenderData}" 
+                                            HistogramsUsageDelegate="{Binding HistogramsUsageDelegate}" />
+            </TabItem>
+
+            <TabItem Header="Grids">
+                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateGridsCommand}"
+                               ButtonContent="Update"
+                               OverlayVisibility="{Binding UpdateGridsCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <local:ProjectionGridsView GridsSourceTinted="{Binding SelectedGridRenderDataTinted}" 
+                                               GridsSourceUntinted="{Binding SelectedGridRenderDataUntinted}"  
+                                               GridsUsageDelegate="{Binding GridsUsageDelegate}" />
+                </utils:ButtonOverlayControl>
+            </TabItem>
+
+            <TabItem Header="PCA Phases">
+                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdatePCAPhasesCommand}"
+                                ButtonContent="Update"
+                                OverlayVisibility="{Binding UpdatePCAPhasesCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <local:ComponentsTileView Grid.Column="0"
+                                                  Grid.Row="0"
+                                                  Grid.RowSpan="3"
+                                                  IsPcaPhases="true" 
+                                                  ItemsSource="{Binding PcaPhasesRenderData}" />
+
+                    </Grid>
+                </utils:ButtonOverlayControl>
+            </TabItem>
+
+            <TabItem Header="Loading">
+                <utils:ButtonOverlayControl ButtonCommand="{Binding UpdateSelectedComponentCommand}"
+                                ButtonContent="Update"
+                                OverlayVisibility="{Binding UpdateSelectedComponentCanExecute, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="188" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="36" />
+                            <RowDefinition Height="36" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Button x:Name="PreviousComponentButton" 
+                                Content="Go to Previous Component" 
+                                Grid.Column="0" 
+                                Grid.Row="0"
+                                Height="32" 
+                                Width="180"
+                                Click="PreviousComponentButton_Click" 
+                                Margin="2,2,2,2">
+                        </Button>
+                        <Button x:Name="AdvanceComponentButton" 
+                                Content="Advance To Next Component" 
+                                Grid.Column="0" 
+                                Grid.Row="1"
+                                Height="32" 
+                                Width="180"
+                                Click="AdvanceComponentButton_Click" 
+                                Margin="2,2,2,2">
+                        </Button>
+                        <Label x:Name="GridLabel" 
+                            Grid.Column="1" 
+                            Grid.Row="0" 
+                            Content="{Binding LoadingsChartTitle}"
+                            Height="32" 
+                            Width="280" 
+                            FontSize="16" 
+                            FontFamily="Calibri"  
+                            FontWeight="Bold"   
+                            Background="White"   
+                            Foreground="Black">
+                        </Label>
+                        <lvc:CartesianChart Grid.Column="1"
+                                            Grid.Row="1"
+                                            Grid.RowSpan="2"
+                                            Series="{Binding LoadingsSeries}"
+                                            DisableAnimations="True"
+                                            LegendLocation="None"
+                                            Visibility="{Binding LoadingHistogramRenderData, Converter={local:CollectionVisibilityConverter Invert=True}}">
+                            <lvc:CartesianChart.Resources>
+                                <Style TargetType="lvc:DefaultTooltip">
+                                    <Setter Property="ShowSeries" Value="False" />
+                                </Style>
+                            </lvc:CartesianChart.Resources>
+                            <lvc:CartesianChart.AxisX>
+                                <lvc:Axis Labels="{Binding LoadingsLabels}"
+                                            LabelsRotation="{Binding LoadingsLabelsRotation}"
+                                            FontSize="18">
+                                    <lvc:Axis.Separator>
+                                        <lvc:Separator Step="1" />
+                                    </lvc:Axis.Separator>
+                                </lvc:Axis>
+                            </lvc:CartesianChart.AxisX>
+                            <lvc:CartesianChart.AxisY>
+                                <lvc:Axis Title="Loadings" FontSize="18" LabelFormatter="{Binding AxisYLabelFormatter, Mode=OneTime}" />
+                            </lvc:CartesianChart.AxisY>
+                        </lvc:CartesianChart>
+
+                        <controls:Chart2D Grid.Column="1"
+                                          Grid.Row="1"
+                                          Grid.RowSpan="2"
+                                          DataSource="{Binding LoadingHistogramRenderData}"
+                                          AxisYLabel="Loadings"
+                                          AxisXLabel="Bin Index"
+                                          Visibility="{Binding LoadingHistogramRenderData, Converter={local:CollectionVisibilityConverter}}" />
+                    </Grid>
+                </utils:ButtonOverlayControl>
+            </TabItem>
+
+        </TabControl>
+    </utils:ButtonOverlayControl>
+</UserControl>
