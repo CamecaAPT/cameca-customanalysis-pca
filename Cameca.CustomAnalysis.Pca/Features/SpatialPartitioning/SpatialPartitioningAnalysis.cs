@@ -209,6 +209,8 @@ internal partial class SpatialPartitioningAnalysis : BasicCustomAnalysisBase<Spa
     {
         base.OnAdded(eventArgs);
         this.gridsColorMapProvider.SetColorMapFactory(Resources.ColorMap);
+        gridsToUseForPCA = Properties.GridsToUseForPCA.ToHashSet();
+        histogramsToUseForPCA = Properties.HistogramsToUseForPCA.ToHashSet();
     }
 
     protected override byte[]? GetSaveContent()
@@ -217,6 +219,8 @@ internal partial class SpatialPartitioningAnalysis : BasicCustomAnalysisBase<Spa
         {
             Properties.PcaColorMap = SerializeColorMap(PcaColorMap);
         }
+        Properties.GridsToUseForPCA = gridsToUseForPCA.ToList();
+        Properties.HistogramsToUseForPCA = histogramsToUseForPCA.ToList();
         return base.GetSaveContent();
     }
 
@@ -812,17 +816,6 @@ internal partial class SpatialPartitioningAnalysis : BasicCustomAnalysisBase<Spa
         CanSave = true;
         switch (e.PropertyName)
         {
-            case nameof(SpatialPartitioningProperties.UsePhaseRois):
-                if (Properties.UsePhaseRois == RoiMode.UseChildPhaseRois)
-                {
-                    UpdateSegmentedChildrenRois();
-                }
-                else
-                {
-                    segmentedManager.RemoveChildren(DeleteChildPrompt.IfNotEmpty);
-                }
-                DataStateIsValid = false; // Need to recalucated filter indices for either allowing all for phase ROIs or the custom direct filter
-                break;
             case nameof(SpatialPartitioningProperties.ComponentIndex):
                 UpdateOptionsBounds();
                 InvalidateSelectedComponent();
@@ -892,10 +885,7 @@ internal partial class SpatialPartitioningAnalysis : BasicCustomAnalysisBase<Spa
     {
         PcaPhaseIDResults = results;
         WritePhaseDataSection(results);
-        if (Properties.UsePhaseRois == RoiMode.UseChildPhaseRois)
-        {
-            UpdateSegmentedChildrenRois();
-        }
+        UpdateSegmentedChildrenRois();
     }
 
     private void UpdateSegmentedChildrenRois()

@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
@@ -42,12 +43,11 @@ public partial class SpatialPartitioningProperties : ObservableObject
     private int pcaPhaseIndex = 0;
 
     [Display(AutoGenerateField = false)]
-    private bool UsePCAPhaseForDetatchedROI { get; set; } = true;
-
-    [ObservableProperty]
-    [field: Display(Name = "ROI Mode")]
-    private RoiMode usePhaseRois = RoiMode.UseChildPhaseRois;
+    public SerializableColorMap? PcaColorMap { get; set; }
 
     [Display(AutoGenerateField = false)]
-    public SerializableColorMap? PcaColorMap { get; set; }
+    public List<string> GridsToUseForPCA { get; set; } = new();
+
+    [Display(AutoGenerateField = false)]
+    public List<string> HistogramsToUseForPCA { get; set; } = new();
 }
