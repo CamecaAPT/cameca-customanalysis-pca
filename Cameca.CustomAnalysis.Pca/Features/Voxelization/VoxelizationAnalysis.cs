@@ -42,11 +42,15 @@ internal partial class VoxelizationAnalysis : StandardAnalysisFilterNodeBase<Vox
         await Task.Run(() =>
         {
             var (gridParams, voxelFeatureMatrix) = CreateVoxelFeatureMatrix(ionData, progress);
+            // in the case there are no features identified, avoid writing an empty section to the ion data,
+            // this could happen if the user is making an ionTypes feature matrix before applying range data.
+            if (voxelFeatureMatrix.DataLength > 0)
+            {
+                var extraData = new VoxelFeatureMatrixExtraData(gridParams, Properties.GridMethod);
+                var data = new VoxelFeatureMatrixSectionData(extraData, voxelFeatureMatrix);
 
-            var extraData = new VoxelFeatureMatrixExtraData(gridParams, Properties.GridMethod);
-            var data = new VoxelFeatureMatrixSectionData(extraData, voxelFeatureMatrix);
-
-            VoxelFeatureMatrixSerializer.WriteToIonDataSection(ionData, Resources.DataSectionName, data);
+                VoxelFeatureMatrixSerializer.WriteToIonDataSection(ionData, Resources.DataSectionName, data);
+            }
         }, cancellationToken);
     }
 

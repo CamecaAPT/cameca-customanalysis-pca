@@ -93,7 +93,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     }
 
     private GridMethod? SelectedGridMethod => Resources.GetValidIonData() is { } ionData
-        ? GetVoxelFeatureData(ionData).ExtraData.GridMethod
+        ? GetNullableVoxelFeatureData(ionData).ExtraData.GridMethod
         : null;
 
     public bool UpdateRankEstimationCanExecute => NoiseEigenvalueResults is null;
@@ -178,7 +178,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         if (await Resources.GetIonData(null, cancellationToken) is not { } ionData
             || ((Analysis ??= await GetAnalysis(cancellationToken)) is not { } pca)
             || pca.Matrix.DataLength == 0
-            || GetVoxelFeatureData(ionData) is not { } data)
+            || GetNullableVoxelFeatureData(ionData) is not { } data)
         {
             DataStateIsError = true;
             return;
@@ -230,6 +230,10 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     private async Task<EigenvalueResults?> GetEigenvalueResults(CancellationToken cancellationToken)
     {
         var pca = await GetAnalysis();
+        if (pca == null)
+        {
+            return null;
+        }
         var scores = pca.GetEigenvalues();
         return new EigenvalueResults(scores);
     }
@@ -247,11 +251,11 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         return Analysis;
     }
 
-    private PcaLibPrincipalComponentAnalysis CreateAnalysis(IIonData ionData)
+    private PcaLibPrincipalComponentAnalysis? CreateAnalysis(IIonData ionData)
     {
-        if (GetVoxelFeatureData(ionData) is not { } data)
+        if (GetNullableVoxelFeatureData(ionData) is not { } data)
         {
-            throw new InvalidOperationException("Parent must define a VoxelFeatureMatrix");
+            return null;
         }
 
         var gridParams = data.ExtraData.GridParameters;
@@ -260,8 +264,10 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         return new PcaLibPrincipalComponentAnalysis(gridParams, matrix);
     }
 
-    private VoxelFeatureMatrixSectionData GetVoxelFeatureData(IIonData ionData)
-        => ionData.GetVoxelFeatureMatrixSectionData(Resources.Parent!.DataSectionName);
+    // Some callers to GetVoxelFeatureData expected to handle returning null here rather than having an exception thrown
+    // These callers can use this method GetNullableVoxelFeatureData() to avoid the exception
+    private VoxelFeatureMatrixSectionData? GetNullableVoxelFeatureData(IIonData ionData)
+        => ionData.GetNullableVoxelFeatureMatrixSectionData(Resources.Parent!.DataSectionName);
 
     // Updates the noise eigenvalues tab plot when the computed eigenvalue data changes
     partial void OnEigenvalueResultsChanged(EigenvalueResults? value)
