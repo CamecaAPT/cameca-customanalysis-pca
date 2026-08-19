@@ -39,7 +39,12 @@ internal partial class SelectComponentIsovalueAnalysis : StandardAnalysisFilterN
         IProgress<double>? progress,
         [EnumeratorCancellation] CancellationToken token)
     {
-        var data = ownerIonData.GetVoxelFeatureMatrixSectionData(Resources.Parent!.DataSectionName);
+        var nullableData = ownerIonData.GetNullableVoxelFeatureMatrixSectionData(Resources.Parent!.DataSectionName);
+        if (nullableData is not { } data)
+        {
+            DataStateIsError = true;
+            yield break;
+        }
         DataStateIsError = false;
 
         var gridParams = data.ExtraData.GridParameters;

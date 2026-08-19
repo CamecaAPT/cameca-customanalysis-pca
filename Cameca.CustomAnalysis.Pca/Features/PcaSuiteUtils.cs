@@ -17,13 +17,10 @@ internal static class PcaSuiteUtils
         return (new UnmanagedMemoryManager<float>(nativePtr, dataLength)).Memory;
     }
 
-    public static VoxelFeatureMatrixSectionData GetVoxelFeatureMatrixSectionData(this IIonData ionData, string sectionName)
+    // Callers to GetNullableVoxelFeatureMatrixSectionData must handle the case where null is returned.
+    public static VoxelFeatureMatrixSectionData? GetNullableVoxelFeatureMatrixSectionData(this IIonData ionData, string sectionName)
     {
         // This isn't the top level -- .Parent! is safe
-        if (VoxelFeatureMatrixSerializer.ReadFromIonDataSection(ionData, sectionName) is not { } data)
-        {
-            throw new InvalidOperationException("Section does not define a VoxelFeatureMatrix");
-        }
-        return data;
+        return VoxelFeatureMatrixSerializer.ReadFromIonDataSection(ionData, sectionName);
     }
 }

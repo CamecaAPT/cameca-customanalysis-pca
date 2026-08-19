@@ -3,6 +3,7 @@ using Cameca.CustomAnalysis.Utilities;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 
@@ -24,6 +25,10 @@ internal static class PackedDataSerializer
 
     public static PackedDataDefinition<TExtraData>? Read<TExtraData>(IIonData ionData, string sectionName) where TExtraData : class
     {
+        if (!IonDataHasSection(ionData, sectionName))
+        {
+            return null;
+        }
         if (!TryGetPinnedHandle(ionData, sectionName, out var handle))
         {
             return null;
@@ -46,6 +51,12 @@ internal static class PackedDataSerializer
 
         return new PackedDataDefinition<TExtraData>(extraData, packedData);
     }
+
+    private static bool IonDataHasSection(IIonData ionData, string sectionName)
+    {
+        IReadOnlyDictionary<string, ISectionInfo> sections = ionData.Sections;
+        return sections.Keys.Contains(sectionName);
+	}
 
     private static bool TryGetPinnedHandle(IIonData ionData, string sectionName, out MemoryHandle handle)
     {
