@@ -29,7 +29,7 @@ namespace Cameca::CustomAnalysis::PcaLib::Interface {
 		{
 			auto result = GetInstance()->GetEigenvalues();
 			if (result.info > 0) {
-				throw gcnew System::Exception("The iterative algorithm for computing eigenvalues or eigenvectors fails to converge with the set parameters in the permitted number of iterations. Different inputs, specifically reducing the number of voxels or features, may help correct this issue.");
+				throw gcnew System::Exception("The iterative algorithm for computing eigenvalues or eigenvectors fails to converge with the set parameters in the permitted number of iterations. Different inputs, specifically reducing the number of voxels or features, may help. If this issue is encountered with reasonable numbers of voxels and features, please report the issue with repro steps.");
 			}
 
 			return VectorMarshaller::ToArray(result.value);
