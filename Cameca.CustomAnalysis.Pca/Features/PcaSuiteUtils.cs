@@ -1,6 +1,7 @@
 ﻿using Cameca.CustomAnalysis.Interface;
 using Cameca.CustomAnalysis.PcaLib.Interface;
 using System;
+using System.Windows;
 
 namespace Cameca.CustomAnalysis.Pca;
 
@@ -18,9 +19,18 @@ internal static class PcaSuiteUtils
     }
 
     // Callers to GetNullableVoxelFeatureMatrixSectionData must handle the case where null is returned.
-    public static VoxelFeatureMatrixSectionData? GetNullableVoxelFeatureMatrixSectionData(this IIonData ionData, string sectionName)
+    public static VoxelFeatureMatrixSectionData? GetNullableVoxelFeatureMatrixSectionData(this IIonData ionData, string sectionName, Func<bool> getErrorState, Action<bool> setErrorState)
     {
-        // This isn't the top level -- .Parent! is safe
-        return VoxelFeatureMatrixSerializer.ReadFromIonDataSection(ionData, sectionName);
+        var sectionData = VoxelFeatureMatrixSerializer.ReadFromIonDataSection(ionData, sectionName);
+        // If could not resolve the VoxelFeatureMatrixSectionData, then warn the user, set error state to true, and return null.
+        // Retrieve existing error state to avoid showing the message box multiple times.
+        if (sectionData is null && !getErrorState())
+        {
+            MessageBox.Show("There are no features in the grid on which to perform the analysis.", "PCA Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            setErrorState(true);
+            return null;
+        }
+        setErrorState(sectionData is null);
+        return sectionData;
     }
 }

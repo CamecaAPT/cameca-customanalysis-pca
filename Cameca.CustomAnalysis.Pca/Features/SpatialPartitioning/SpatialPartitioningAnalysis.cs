@@ -241,7 +241,7 @@ internal partial class SpatialPartitioningAnalysis : BasicCustomAnalysisBase<Spa
         {
             return false;
         }
-        data = ionData.GetNullableVoxelFeatureMatrixSectionData(Resources.Parent!.DataSectionName);
+        data = ionData.GetNullableVoxelFeatureMatrixSectionData(Resources.Parent!.DataSectionName, () => DataStateIsError, (errVal) => DataStateIsError = errVal);
         if (data is null || data.VoxelFeatureMatrix.DataLength == 0)
         {
             return false;
