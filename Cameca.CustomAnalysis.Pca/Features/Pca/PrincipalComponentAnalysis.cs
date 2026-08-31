@@ -93,7 +93,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     }
 
     private GridMethod? SelectedGridMethod => Resources.GetValidIonData() is { } ionData
-        ? GetNullableVoxelFeatureData(ionData).ExtraData.GridMethod
+        ? GetNullableVoxelFeatureData(ionData)?.ExtraData.GridMethod
         : null;
 
     public bool UpdateRankEstimationCanExecute => NoiseEigenvalueResults is null;
@@ -238,7 +238,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
         return new EigenvalueResults(scores);
     }
 
-    private async Task<PcaLibPrincipalComponentAnalysis> GetAnalysis(CancellationToken cancellationToken = default)
+    private async Task<PcaLibPrincipalComponentAnalysis?> GetAnalysis(CancellationToken cancellationToken = default)
     {
         if (Analysis is null)
         {
@@ -267,7 +267,7 @@ internal partial class PrincipalComponentAnalysis : BasicCustomAnalysisBase<PcaP
     // Some callers to GetVoxelFeatureData expected to handle returning null here rather than having an exception thrown
     // These callers can use this method GetNullableVoxelFeatureData() to avoid the exception
     private VoxelFeatureMatrixSectionData? GetNullableVoxelFeatureData(IIonData ionData)
-        => ionData.GetNullableVoxelFeatureMatrixSectionData(Resources.Parent!.DataSectionName);
+        => ionData.GetNullableVoxelFeatureMatrixSectionData(Resources.Parent!.DataSectionName, () => DataStateIsError, (errVal) => DataStateIsError = errVal);
 
     // Updates the noise eigenvalues tab plot when the computed eigenvalue data changes
     partial void OnEigenvalueResultsChanged(EigenvalueResults? value)

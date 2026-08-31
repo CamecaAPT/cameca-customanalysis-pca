@@ -80,7 +80,7 @@ internal abstract partial class BaseClusteringAnalysis<TProperties> : BasicCusto
         {
             return;
         }
-        var data = ionData.GetNullableVoxelFeatureMatrixSectionData(Resources.Parent!.DataSectionName);
+        var data = ionData.GetNullableVoxelFeatureMatrixSectionData(Resources.Parent!.DataSectionName, () => DataStateIsError, (errVal) => DataStateIsError = errVal);
         if (data is null || data.VoxelFeatureMatrix.DataLength == 0)
         {
             return;
